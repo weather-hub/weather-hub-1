@@ -34,4 +34,3 @@ def test(module_name, keyword):
 
 if __name__ == "__main__":
     test()
-    # This is a comment
