@@ -2,7 +2,7 @@ from flask import redirect, render_template, request, url_for
 from flask_login import current_user, login_user, logout_user
 
 from app.modules.auth import auth_bp
-from app.modules.auth.forms import LoginForm, SignupForm
+from app.modules.auth.forms import LoginForm, SignupForm, Verify2FAForm
 from app.modules.auth.services import AuthenticationService
 from app.modules.profile.services import UserProfileService
 
@@ -40,12 +40,46 @@ def login():
 
     form = LoginForm()
     if request.method == "POST" and form.validate_on_submit():
-        if authentication_service.login(form.email.data, form.password.data):
+        user = authentication_service.login(form.email.data, form.password.data)
+        if user:
+            # if user has 2FA enabled → redirect to verification
+            if user.twofa_enabled:
+                from flask import session
+                session["2fa_user_id"] = user.id
+                return redirect(url_for("auth.verify_2fa"))
+
+            # Si no, loguea directamente
+            login_user(user, remember=True)
             return redirect(url_for("public.index"))
 
         return render_template("auth/login_form.html", form=form, error="Invalid credentials")
 
     return render_template("auth/login_form.html", form=form)
+
+
+@auth_bp.route("/verify-2fa", methods=["GET", "POST"])
+def verify_2fa():
+    from flask import session
+    user_id = session.get("2fa_user_id")
+    if not user_id:
+        return redirect(url_for("auth.login"))
+    user = authentication_service.get_user_by_id(user_id)
+    if not user:
+        return redirect(url_for("auth.login"))
+
+    form = Verify2FAForm()
+
+    if request.method == "POST" and form.validate_on_submit():
+        otp = form.otp_code.data
+        import pyotp
+        totp = pyotp.TOTP(user.otp_secret)
+        if totp.verify(otp):
+            session.pop("2fa_user_id")
+            login_user(user, remember=True)
+            return redirect(url_for("public.index"))
+        else:
+            return render_template("auth/verify_2fa.html", form=form, error="Invalid 2FA code")
+    return render_template("auth/verify_2fa.html", form=form)
 
 
 @auth_bp.route("/logout")

@@ -39,14 +39,15 @@ def upgrade():
         sa.Column("not_solver", sa.Text(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_table(
-        "user",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("email", sa.String(length=256), nullable=False),
-        sa.Column("password", sa.String(length=256), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("email"),
+    op.create_table('user',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('email', sa.String(length=256), nullable=False),
+    sa.Column('password', sa.String(length=256), nullable=False),
+    sa.Column('otp_secret', sa.String(length=32), nullable=True),
+    sa.Column('twofa_enabled', sa.Boolean(), nullable=False, server_default=sa.false()),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('email')
     )
     op.create_table("webhook", sa.Column("id", sa.Integer(), nullable=False), sa.PrimaryKeyConstraint("id"))
     op.create_table("zenodo", sa.Column("id", sa.Integer(), nullable=False), sa.PrimaryKeyConstraint("id"))
