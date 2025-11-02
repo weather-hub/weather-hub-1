@@ -3,10 +3,11 @@ repos:
   # Hooks locales que usan herramientas del sistema o scripts versionados
   - repo: local
     hooks:
-      - id: rosemary-commit-tests
+      - id: rosemary-commit-test
         name: Run unit tests with rosemary (commit)
         entry: rosemary commit_test
         language: system
+        pass_filenames: false
         # Se ejecuta en la etapa 'commit' (antes de preparar el commit)
         stages: [commit]
 
