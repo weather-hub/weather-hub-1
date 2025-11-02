@@ -1,11 +1,13 @@
-<div style="text-align: center;">
-  <img src="https://www.uvlhub.io/static/img/logos/logo-light.svg" alt="Logo">
-</div>
 
-# uvlhub.io
 
-Repository of feature models in UVL format integrated with Zenodo and flamapy following Open Science principles - Developed by DiversoLab
+# Weather-hub
+
+Repository of a Weather Dataset following Open Science principles - Developed by Weather-hub-1
 
 ## Official documentation
 
-You can consult the official documentation of the project at [docs.uvlhub.io](https://docs.uvlhub.io/)
+1. Instalar el entorno virtual
+2. Instalar requirements.txt y rosemary
+3. # Instalar hooks de pre-commit
+  pre-commit install
+  pre-commit install --hook-type commit-msg
