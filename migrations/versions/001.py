@@ -40,6 +40,8 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(length=256), nullable=False),
     sa.Column('password', sa.String(length=256), nullable=False),
+    sa.Column('otp_secret', sa.String(length=32), nullable=True),
+    sa.Column('twofa_enabled', sa.Boolean(), nullable=False, server_default=sa.false()),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email')
