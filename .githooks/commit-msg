@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# Hook de git: valida que el mensaje de commit cumpla Conventional Commit
+#
+
+# Leemos el mensaje desde el archivo que Git pasa como argumento
+commit_msg_file="$1"
+commit_msg=$(head -n 1 "$commit_msg_file")
+
+# Expresión regular para validar conventional commits
+conventional_regex='^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9_.-]+\))?: .+$'
+
+if ! [[ $commit_msg =~ $conventional_regex ]]; then
+  echo "❌ Commit message inválido."
+  echo ""
+  echo "Formato esperado (Conventional Commit):"
+  echo "  tipo(scope opcional): mensaje breve"
+  echo ""
+  echo "Ejemplos válidos:"
+  echo "  feat: add user login"
+  echo "  fix(auth): handle invalid token"
+  echo ""
+  echo "Tipos permitidos: feat, fix, chore, docs, style, refactor, perf, test, build, ci, revert"
+  echo ""
+  exit 1
+fi
+
+echo "✅ Commit message cumple formato Conventional Commit"
+exit 0

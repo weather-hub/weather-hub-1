@@ -1,0 +1,40 @@
+# .pre-commit-config.yaml
+repos:
+  # Hooks locales que usan herramientas del sistema o scripts versionados
+  - repo: local
+    hooks:
+      - id: rosemary-commit-tests
+        name: Run unit tests with rosemary (commit)
+        entry: rosemary commit_test
+        language: system
+        # Se ejecuta en la etapa 'commit' (antes de preparar el commit)
+        stages: [commit]
+
+      - id: commit-msg-conventional
+        name: Conventional Commits check (commit-msg)
+        entry: bash .githooks/commit-msg
+        language: system
+        # Este hook se instala en la etapa commit-msg (valida el mensaje)
+        stages: [commit-msg]
+
+  # isort instalado en el entorno aislado del hook
+  - repo: local
+    hooks:
+      - id: isort
+        name: isort (sort imports)
+        entry: isort
+        language: python
+        types: [python]
+        files: \.py$
+        additional_dependencies: [isort==6.0.1]
+
+  # black instalado en el entorno aislado del hook
+  - repo: local
+    hooks:
+      - id: black
+        name: black (code formatter)
+        entry: black --quiet
+        language: python
+        types: [python]
+        files: \.py$
+        additional_dependencies: [black==25.1.0]
