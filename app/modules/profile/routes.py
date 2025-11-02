@@ -53,3 +53,39 @@ def my_profile():
         pagination=user_datasets_pagination,
         total_datasets=total_datasets_count,
     )
+
+
+@profile_bp.route("/profile/enable-2fa")
+@login_required
+def enable_2fa():
+    import pyotp
+    import qrcode
+    import io
+    import base64
+    from flask import session
+
+    secret = pyotp.random_base32()
+    current_user.otp_secret = secret
+    current_user.twofa_enabled = True
+    db.session.commit()
+
+    user_name = current_user.profile.name
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user_name, issuer_name="WEATHERHUB")
+
+    qr = qrcode.make(uri)
+    buf = io.BytesIO()
+    qr.save(buf, format="PNG")
+    qr_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+    session['qr_b64'] = qr_b64
+
+    # Pasamos el QR al template del perfil
+    return redirect(url_for("profile.edit_profile"))
+
+
+@profile_bp.route("/profile/disable-2fa")
+@login_required
+def disable_2fa():
+    current_user.otp_secret = None
+    current_user.twofa_enabled = False
+    db.session.commit()
+    return redirect(url_for("profile.edit_profile"))

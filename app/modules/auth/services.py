@@ -1,5 +1,5 @@
 import os
-from flask_login import current_user, login_user
+from flask_login import current_user
 from app.modules.auth.models import User
 from app.modules.auth.repositories import UserRepository
 from app.modules.profile.models import UserProfile
@@ -73,6 +73,6 @@ class AuthenticationService(BaseService):
 
     def temp_folder_by_user(self, user: User) -> str:
         return os.path.join(uploads_folder_name(), "temp", str(user.id))
-    
+
     def get_user_by_id(self, user_id: int) -> User | None:
         return self.repository.get_by_id(user_id)

@@ -16,8 +16,8 @@ class LoginForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired()])
     remember_me = BooleanField("Remember me")
     submit = SubmitField("Login")
-    
-    
+
+
 class Verify2FAForm(FlaskForm):
     otp_code = StringField(
         "Authentication Code",
