@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from zipfile import ZipFile
 
+# from valid_files import valid_files
 from flask import (
     abort,
     jsonify,
@@ -48,13 +49,14 @@ ds_view_record_service = DSViewRecordService()
 def create_dataset():
     form = DataSetForm()
     if request.method == "POST":
-
         dataset = None
 
         if not form.validate_on_submit():
+
             return jsonify({"message": form.errors}), 400
 
         try:
+
             logger.info("Creating dataset...")
             dataset = dataset_service.create_from_form(form=form, current_user=current_user)
             logger.info(f"Created dataset: {dataset}")
@@ -66,6 +68,7 @@ def create_dataset():
         # send dataset as deposition to Zenodo
         data = {}
         try:
+
             zenodo_response_json = zenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(zenodo_response_json)
             data = json.loads(response_data)
@@ -75,6 +78,7 @@ def create_dataset():
             logger.exception(f"Exception while create dataset data in Zenodo {exc}")
 
         if data.get("conceptrecid"):
+
             deposition_id = data.get("id")
 
             # update dataset with deposition id in Zenodo
@@ -121,10 +125,8 @@ def list_dataset():
 def upload():
     file = request.files["file"]
     temp_folder = current_user.temp_folder()
-
-    if not file or not file.filename.endswith(".uvl"):
+    if not file or not file.filename.endswith(("uvl", "txt")):
         return jsonify({"message": "No valid file"}), 400
-
     # create temp folder
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
@@ -195,7 +197,8 @@ def download_dataset(dataset_id):
 
     user_cookie = request.cookies.get("download_cookie")
     if not user_cookie:
-        user_cookie = str(uuid.uuid4())  # Generate a new unique identifier if it does not exist
+        # Generate a new unique identifier if it does not exist
+        user_cookie = str(uuid.uuid4())
         # Save the cookie to the user's browser
         resp = make_response(
             send_from_directory(

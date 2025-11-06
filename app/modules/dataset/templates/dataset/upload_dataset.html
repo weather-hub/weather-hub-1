@@ -228,11 +228,12 @@
                 <ul class="mt-2" id="file-list"></ul>
 
                 <script>
+                    const allowedExt = ['uvl', 'csv', 'json', 'txt'];
                     let dropzone = Dropzone.options.myDropzone = {
                         url: "/dataset/file/upload",
                         paramName: 'file',
                         maxFilesize: 10,
-                        acceptedFiles: '.uvl',
+                        acceptedFiles: ".uvl,.csv,.json,.txt",
                         init: function () {
 
                             let fileList = document.getElementById('file-list');
@@ -240,9 +241,9 @@
                             let alerts = document.getElementById('alerts');
 
                             this.on('addedfile', function (file) {
-
+                                console.log(file)
                                 let ext = file.name.split('.').pop();
-                                if (ext !== 'uvl') {
+                                if (!allowedExt.includes(ext)) {
                                     this.removeFile(file);
 
                                     let alert = document.createElement('p');
@@ -254,12 +255,10 @@
                             });
 
                             this.on('success', function (file, response) {
-
                                 let dropzone = this;
 
                                 show_upload_dataset();
 
-                                console.log("File uploaded: ", response);
                                 // actions when UVL model is uploaded
                                 let listItem = document.createElement('li');
                                 let h4Element = document.createElement('h4');
@@ -268,7 +267,6 @@
 
                                 // generate incremental id for form
                                 let formUniqueId = generateIncrementalId();
-
                                 /*
                                     ##########################################
                                     FORM BUTTON

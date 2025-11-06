@@ -1,0 +1,101 @@
+2025-11-05 15:16:24,505 - app.modules.dataset.routes - ERROR - Exception while create dataset data in Zenodo Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+Traceback (most recent call last):
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 69, in create_dataset
+    zenodo_response_json = zenodo_service.create_new_deposition(dataset)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/zenodo/services.py", line 178, in create_new_deposition
+    raise Exception(error_message)
+Exception: Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+2025-11-05 15:17:28,434 - app.modules.dataset.routes - ERROR - Exception while create dataset data in Zenodo Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+Traceback (most recent call last):
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 69, in create_dataset
+    zenodo_response_json = zenodo_service.create_new_deposition(dataset)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/zenodo/services.py", line 178, in create_new_deposition
+    raise Exception(error_message)
+Exception: Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+2025-11-05 15:18:57,032 - app.modules.dataset.routes - ERROR - Exception while create dataset data in Zenodo Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+Traceback (most recent call last):
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 72, in create_dataset
+    zenodo_response_json = zenodo_service.create_new_deposition(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/zenodo/services.py", line 178, in create_new_deposition
+    raise Exception(error_message)
+Exception: Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+2025-11-05 17:28:56,255 - app.modules.dataset.routes - ERROR - Exception while create dataset data in Zenodo Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+Traceback (most recent call last):
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 78, in create_dataset
+    zenodo_response_json = zenodo_service.create_new_deposition(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/zenodo/services.py", line 178, in create_new_deposition
+    raise Exception(error_message)
+Exception: Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+2025-11-06 13:43:28,293 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local 'filename' is an invalid keyword argument for FMMetaData
+Traceback (most recent call last):
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 64, in create_dataset
+    dataset = dataset_service.create_from_form(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 142, in create_from_form
+    raise exc
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 118, in create_from_form
+    fmmetadata = self.fmmetadata_repository.create(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/core/repositories/BaseRepository.py", line 14, in create
+    instance: T = self.model(**kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4, in __init__
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
+    with util.safe_reraise():
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py", line 2179, in _declarative_constructor
+    raise TypeError(
+TypeError: 'filename' is an invalid keyword argument for FMMetaData
+2025-11-06 13:45:44,313 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local 'filename' is an invalid keyword argument for FMMetaData
+Traceback (most recent call last):
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 64, in create_dataset
+    dataset = dataset_service.create_from_form(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 142, in create_from_form
+    raise exc
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 118, in create_from_form
+    fmmetadata = self.fmmetadata_repository.create(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/core/repositories/BaseRepository.py", line 14, in create
+    instance: T = self.model(**kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4, in __init__
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
+    with util.safe_reraise():
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py", line 2179, in _declarative_constructor
+    raise TypeError(
+TypeError: 'filename' is an invalid keyword argument for FMMetaData
+2025-11-06 13:50:13,698 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local 'filename' is an invalid keyword argument for FMMetaData
+Traceback (most recent call last):
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 64, in create_dataset
+    dataset = dataset_service.create_from_form(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 143, in create_from_form
+    raise exc
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 119, in create_from_form
+    fmmetadata = self.fmmetadata_repository.create(
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/core/repositories/BaseRepository.py", line 14, in create
+    instance: T = self.model(**kwargs)
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 4, in __init__
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py", line 571, in _initialize_instance
+    with util.safe_reraise():
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py", line 569, in _initialize_instance
+    manager.original_init(*mixed[1:], **kwargs)
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/sqlalchemy/orm/decl_base.py", line 2179, in _declarative_constructor
+    raise TypeError(
+TypeError: 'filename' is an invalid keyword argument for FMMetaData
