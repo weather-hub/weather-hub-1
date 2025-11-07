@@ -5,7 +5,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app import db
 
-
 # Association table between users and roles
 user_roles = db.Table(
     "user_roles",

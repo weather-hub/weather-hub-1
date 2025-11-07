@@ -1,6 +1,5 @@
-from app.modules.auth.models import User
+from app.modules.auth.models import Role, User
 from core.repositories.BaseRepository import BaseRepository
-from app.modules.auth.models import Role
 
 
 class UserRepository(BaseRepository):
