@@ -41,22 +41,81 @@ class AuthSeeder(BaseSeeder):
             self.seed(created_roles)
 
         # Example users to create (only if missing)
+        # Each user represents a different role type
         example_users = [
-            {"email": "user1@example.com", "password": "1234", "name": "John", "surname": "Doe"},
-            {"email": "user2@example.com", "password": "1234", "name": "Jane", "surname": "Doe"},
+            {
+                "email": "admin@example.com",
+                "password": "1234",
+                "name": "Admin",
+                "surname": "User",
+                "role": "admin"
+            },
+            {
+                "email": "curator@example.com",
+                "password": "1234",
+                "name": "Curator",
+                "surname": "User",
+                "role": "curator"
+            },
+            {
+                "email": "standard@example.com",
+                "password": "1234",
+                "name": "Standard",
+                "surname": "User",
+                "role": "standard"
+            },
+            {
+                "email": "guest@example.com",
+                "password": "1234",
+                "name": "Guest",
+                "surname": "User",
+                "role": "guest"
+            },
+            # Keep original example users for backwards compatibility
+            {
+                "email": "user1@example.com",
+                "password": "1234",
+                "name": "John",
+                "surname": "Doe",
+                "role": "admin"
+            },
+            {
+                "email": "user2@example.com",
+                "password": "1234",
+                "name": "Jane",
+                "surname": "Doe",
+                "role": "standard"
+            },
         ]
 
         for u in example_users:
             existing = user_repo.get_by_email(u["email"])
             if existing:
+                # If user exists but doesn't have the expected role, assign it
+                role = role_repo.get_by_name(u["role"])
+                if role and role not in existing.roles:
+                    existing.roles.append(role)
+                    self.db.session.add(existing)
                 continue
+            
             try:
                 user = auth_service.create_with_profile(
-                    email=u["email"], password=u["password"], name=u["name"], surname=u["surname"]
+                    email=u["email"], 
+                    password=u["password"], 
+                    name=u["name"], 
+                    surname=u["surname"]
                 )
+                # Assign the specified role
+                role = role_repo.get_by_name(u["role"])
+                if role and user:
+                    user.roles.append(role)
+                    self.db.session.add(user)
             except Exception:
                 # If creation fails, skip and continue with next
                 continue
+        
+        # Commit all role assignments
+        self.db.session.commit()
 
         # Optionally create an initial admin user if env vars are provided
         admin_email = os.getenv("ADMIN_EMAIL")
