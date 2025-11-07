@@ -1,0 +1,228 @@
+{% extends "base_template.html" %} {% block title %}Gestión de Usuarios y
+Roles{% endblock %} {% block content %}
+<div class="container mt-5">
+  <h1 class="mb-4">Gestión de Usuarios y Roles</h1>
+  <p class="text-muted">
+    Panel de administración para asignar roles a los usuarios del sistema.
+  </p>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-hover">
+      <thead class="table-dark">
+        <tr>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Roles Actuales</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr id="user-row-{{ user.id }}">
+          <td>{{ user.id }}</td>
+          <td>{{ user.email }}</td>
+          <td id="user-roles-{{ user.id }}">
+            {% if user.roles %} {% for role in user.roles %}
+            <span class="badge bg-primary me-1">{{ role.name }}</span>
+            {% endfor %} {% else %}
+            <em class="text-muted">Sin roles</em>
+            {% endif %}
+          </td>
+          <td>
+            <button
+              class="btn btn-sm btn-warning"
+              onclick="openRoleModal({{ user.id }}, '{{ user.email }}', {{ user.roles | map(attribute='id') | list | tojson }})"
+            >
+              Gestionar Roles
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal para gestionar roles -->
+<div
+  class="modal fade"
+  id="roleModal"
+  tabindex="-1"
+  aria-labelledby="roleModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="roleModalLabel">Gestionar Roles</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p>Usuario: <strong id="modal-user-email"></strong></p>
+        <input type="hidden" id="modal-user-id" />
+
+        <div class="alert alert-info" role="alert">
+          <small>
+            <strong>Nota:</strong> El rol <em>guest</em> es exclusivo. Si lo
+            seleccionas, los demás roles se desmarcarán automáticamente. El
+            usuario debe tener al menos un rol.
+          </small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Roles disponibles:</label>
+          {% for role in available_roles %}
+          <div class="form-check">
+            <input
+              class="form-check-input role-checkbox"
+              type="checkbox"
+              value="{{ role.id }}"
+              id="role-{{ role.id }}"
+            />
+            <label class="form-check-label" for="role-{{ role.id }}">
+              {{ role.name }}
+              <small class="text-muted">({{ role.description }})</small>
+            </label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-primary" onclick="saveUserRoles()">
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let roleModal;
+  let guestRoleId = null;
+
+  document.addEventListener("DOMContentLoaded", function () {
+    roleModal = new bootstrap.Modal(document.getElementById("roleModal"));
+
+    // Find guest role ID
+    {% for role in available_roles %}
+    {% if role.name == 'guest' %}
+    guestRoleId = {{ role.id }};
+    {% endif %}
+    {% endfor %}
+
+    // Add event listeners to checkboxes for guest exclusivity rule
+    document.querySelectorAll('.role-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        handleRoleChange(this);
+      });
+    });
+  });
+
+  function handleRoleChange(checkbox) {
+    const roleId = parseInt(checkbox.value);
+
+    // If guest is checked, uncheck all others
+    if (roleId === guestRoleId && checkbox.checked) {
+      document.querySelectorAll('.role-checkbox').forEach(cb => {
+        if (parseInt(cb.value) !== guestRoleId) {
+          cb.checked = false;
+        }
+      });
+    }
+    // If any other role is checked, uncheck guest
+    else if (roleId !== guestRoleId && checkbox.checked) {
+      const guestCheckbox = document.getElementById('role-' + guestRoleId);
+      if (guestCheckbox) {
+        guestCheckbox.checked = false;
+      }
+    }
+  }
+
+  function openRoleModal(userId, userEmail, currentRoleIds) {
+    document.getElementById("modal-user-id").value = userId;
+    document.getElementById("modal-user-email").textContent = userEmail;
+
+    // Reset all checkboxes first
+    document
+      .querySelectorAll(".role-checkbox")
+      .forEach((cb) => (cb.checked = false));
+
+    // Check current roles - ensure currentRoleIds is an array
+    const roleIds = Array.isArray(currentRoleIds) ? currentRoleIds : [];
+
+    roleIds.forEach((roleId) => {
+      const checkbox = document.getElementById("role-" + roleId);
+      if (checkbox) {
+        checkbox.checked = true;
+      }
+    });
+
+    roleModal.show();
+  }  function saveUserRoles() {
+    const userId = document.getElementById("modal-user-id").value;
+    const selectedRoles = Array.from(
+      document.querySelectorAll(".role-checkbox:checked")
+    ).map((cb) => parseInt(cb.value));
+
+    // Validate: user must have at least one role
+    if (selectedRoles.length === 0) {
+      alert("Error: El usuario debe tener al menos un rol asignado");
+      return;
+    }
+
+    fetch(`/admin/users/${userId}/roles`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role_ids: selectedRoles }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          // Update the roles display in the table
+          const rolesCell = document.getElementById("user-roles-" + userId);
+          if (data.roles.length > 0) {
+            rolesCell.innerHTML = data.roles
+              .map(
+                (role) =>
+                  `<span class="badge bg-primary me-1">${role.name}</span>`
+              )
+              .join("");
+          } else {
+            rolesCell.innerHTML = '<em class="text-muted">Sin roles</em>';
+          }
+
+          // Update the button's onclick attribute with new role IDs
+          const userRow = document.getElementById("user-row-" + userId);
+          const manageButton = userRow.querySelector('button');
+          const userEmail = document.getElementById("modal-user-email").textContent;
+          const newRoleIds = data.roles.map(r => r.id);
+
+          manageButton.setAttribute('onclick',
+            `openRoleModal(${userId}, '${userEmail}', ${JSON.stringify(newRoleIds)})`
+          );
+
+          roleModal.hide();
+
+          // Show success message
+          alert("Roles actualizados correctamente");
+        } else {
+          alert("Error: " + data.error);
+        }
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        alert("Error al actualizar roles");
+      });
+  }
+</script>
+{% endblock %}
