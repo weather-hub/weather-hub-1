@@ -45,6 +45,7 @@ def login():
             # if user has 2FA enabled → redirect to verification
             if user.twofa_enabled:
                 from flask import session
+
                 session["2fa_user_id"] = user.id
                 return redirect(url_for("auth.verify_2fa"))
 
@@ -60,6 +61,7 @@ def login():
 @auth_bp.route("/verify-2fa", methods=["GET", "POST"])
 def verify_2fa():
     from flask import session
+
     user_id = session.get("2fa_user_id")
     if not user_id:
         return redirect(url_for("auth.login"))
@@ -72,6 +74,7 @@ def verify_2fa():
     if request.method == "POST" and form.validate_on_submit():
         otp = form.otp_code.data
         import pyotp
+
         totp = pyotp.TOTP(user.otp_secret)
         if totp.verify(otp):
             session.pop("2fa_user_id")

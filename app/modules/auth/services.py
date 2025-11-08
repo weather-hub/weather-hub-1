@@ -1,5 +1,7 @@
 import os
+
 from flask_login import current_user
+
 from app.modules.auth.models import User
 from app.modules.auth.repositories import UserRepository
 from app.modules.profile.models import UserProfile

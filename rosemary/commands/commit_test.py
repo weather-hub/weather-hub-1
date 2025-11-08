@@ -36,4 +36,4 @@ def commit_test(module_name, keyword):
 
 
 if __name__ == "__main__":
-    test()
+    commit_test()

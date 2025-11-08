@@ -24,8 +24,8 @@ class Verify2FAForm(FlaskForm):
         validators=[
             DataRequired(message="Please enter your authentication code."),
             Length(min=6, max=6, message="The code must be 6 digits."),
-            Regexp(r'^\d{6}$', message="The code must contain only digits.")
-        ]
+            Regexp(r"^\d{6}$", message="The code must contain only digits."),
+        ],
     )
     remember_me = BooleanField("Remember me")
     submit = SubmitField("Verify")
