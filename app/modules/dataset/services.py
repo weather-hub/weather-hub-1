@@ -123,7 +123,6 @@ class DataSetService(BaseService):
                 uploaded_filenames.append(feature_model.filename.data)
 
             file_paths = [os.path.join(current_user.temp_folder(), fn) for fn in uploaded_filenames]
-            input("PRUEBA")
             try:
                 # Si tu flujo es que en create_from_form se añaden varios archivos por feature model,
                 # asegúrate de pasar aquí la lista completa de paths para validar juntos.
