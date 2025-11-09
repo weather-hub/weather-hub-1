@@ -24,7 +24,7 @@ class ExploreRepository(BaseRepository):
             filters.append(Author.name.ilike(f"%{word}%"))
             filters.append(Author.affiliation.ilike(f"%{word}%"))
             filters.append(Author.orcid.ilike(f"%{word}%"))
-            filters.append(FMMetaData.uvl_filename.ilike(f"%{word}%"))
+            filters.append(FMMetaData.filename.ilike(f"%{word}%"))
             filters.append(FMMetaData.title.ilike(f"%{word}%"))
             filters.append(FMMetaData.description.ilike(f"%{word}%"))
             filters.append(FMMetaData.publication_doi.ilike(f"%{word}%"))
@@ -37,7 +37,8 @@ class ExploreRepository(BaseRepository):
             .join(DataSet.feature_models)
             .join(FeatureModel.fm_meta_data)
             .filter(or_(*filters))
-            .filter(DSMetaData.dataset_doi.isnot(None))  # Exclude datasets with empty dataset_doi
+            # Exclude datasets with empty dataset_doi
+            .filter(DSMetaData.dataset_doi.isnot(None))
         )
 
         if publication_type != "any":

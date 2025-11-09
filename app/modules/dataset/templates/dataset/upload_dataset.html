@@ -116,7 +116,7 @@
                                 </button>
                               </div>
                               <div class="modal-body">
-                                ¡Cuidado! Los autores no se pueden editar una vez que el dataset se haya subido a UVLHub. Esta funcionalidad estará disponible para futuras versiones.
+                                ¡Cuidado! Los autores no se pueden editar una vez que el dataset se haya subido a WeatherHub. Esta funcionalidad estará disponible para futuras versiones.
                               </div>
                               <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
@@ -214,7 +214,7 @@
 
         <div class="col-xl-6 col-lg-12 col-md-12 col-sm-12">
 
-            <h1 class="h3 mb-3 mt-2">UVL models</h1>
+            <h1 class="h3 mb-3 mt-2">WeatherHub Files</h1>
 
             <div id="uploaded_models_form" style="padding-left: 2rem">
 
@@ -228,11 +228,12 @@
                 <ul class="mt-2" id="file-list"></ul>
 
                 <script>
+                    const allowedExt = ['md', 'csv', 'txt'];
                     let dropzone = Dropzone.options.myDropzone = {
                         url: "/dataset/file/upload",
                         paramName: 'file',
                         maxFilesize: 10,
-                        acceptedFiles: '.uvl',
+                        acceptedFiles: ".md,.csv,.txt",
                         init: function () {
 
                             let fileList = document.getElementById('file-list');
@@ -240,9 +241,9 @@
                             let alerts = document.getElementById('alerts');
 
                             this.on('addedfile', function (file) {
-
+                                console.log(file)
                                 let ext = file.name.split('.').pop();
-                                if (ext !== 'uvl') {
+                                if (!allowedExt.includes(ext)) {
                                     this.removeFile(file);
 
                                     let alert = document.createElement('p');
@@ -254,12 +255,10 @@
                             });
 
                             this.on('success', function (file, response) {
-
                                 let dropzone = this;
 
                                 show_upload_dataset();
 
-                                console.log("File uploaded: ", response);
                                 // actions when UVL model is uploaded
                                 let listItem = document.createElement('li');
                                 let h4Element = document.createElement('h4');
@@ -268,7 +267,6 @@
 
                                 // generate incremental id for form
                                 let formUniqueId = generateIncrementalId();
-
                                 /*
                                     ##########################################
                                     FORM BUTTON
@@ -354,7 +352,7 @@
 
                                 formContainer.innerHTML = `
                                     <div class="row">
-                                        <input type="hidden" value="${response.filename}" name="feature_models-${formUniqueId}-uvl_filename">
+                                        <input type="hidden" value="${response.filename}" name="feature_models-${formUniqueId}-filename">
                                         <div class="col-12">
                                             <div class="row">
                                                 <div class="col-12">
@@ -409,7 +407,7 @@
                                                 </div>
                                                 <div class="col-6">
                                                     <div class="mb-3">
-                                                        <label class="form-label">UVL version</label>
+                                                        <label class="form-label">Version</label>
                                                         <input type="text" class="form-control" name="feature_models-${formUniqueId}-uvl_version">
                                                     </div>
                                                 </div>
@@ -434,7 +432,7 @@
                             this.on('error', function (file, response) {
                                 console.error("Error uploading file: ", response);
                                 let alert = document.createElement('p');
-                                alert.textContent = 'UVL not valid: ' + file.name;
+                                alert.textContent = 'File not valid: ' + file.name;
                                 alerts.appendChild(alert);
                                 alerts.style.display = 'block';
                             });

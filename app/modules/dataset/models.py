@@ -71,6 +71,12 @@ class DataSet(db.Model):
     ds_meta_data_id = db.Column(db.Integer, db.ForeignKey("ds_meta_data.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+    # NUEVOS CAMPOS
+    # 'uvl' | 'weather' | 'other'
+    dataset_type = db.Column(db.String(50), nullable=False, default="uvl")
+    # ruta relativa o url en uploads/
+    storage_path = db.Column(db.String(1024), nullable=True)
+
     ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
     feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
 
@@ -88,6 +94,7 @@ class DataSet(db.Model):
         return self.ds_meta_data.publication_type.name.replace("_", " ").title()
 
     def get_zenodo_url(self):
+        # Mantengo la compatibilidad (puede quedar None si no aplicable)
         return f"https://zenodo.org/record/{self.ds_meta_data.deposition_id}" if self.ds_meta_data.dataset_doi else None
 
     def get_files_count(self):
@@ -125,6 +132,9 @@ class DataSet(db.Model):
             "files_count": self.get_files_count(),
             "total_size_in_bytes": self.get_file_total_size(),
             "total_size_in_human_format": self.get_file_total_size_for_human(),
+            # CAMPOS NUEVOS para compatibilidad con WeatherHub
+            "dataset_type": self.dataset_type,
+            "storage_path": self.storage_path,
         }
 
     def __repr__(self):
@@ -152,7 +162,8 @@ class DSViewRecord(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"))
     view_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    view_cookie = db.Column(db.String(36), nullable=False)  # Assuming UUID4 strings
+    # Assuming UUID4 strings
+    view_cookie = db.Column(db.String(36), nullable=False)
 
     def __repr__(self):
         return f"<View id={self.id} dataset_id={self.dataset_id} date={self.view_date} cookie={self.view_cookie}>"
