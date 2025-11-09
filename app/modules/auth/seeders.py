@@ -6,11 +6,9 @@ from core.seeders.BaseSeeder import BaseSeeder
 
 
 class AuthSeeder(BaseSeeder):
-
     priority = 1  # Higher priority
 
     def run(self):
-
         # Seeding users
         users = [
             User(email="user1@example.com", password="1234"),
@@ -76,8 +74,7 @@ class AuthSeeder(BaseSeeder):
             # Example users to create (only if missing)
             # Each user represents a different role type
             example_users = [
-                {"email": "admin@example.com", "password": "1234",
-                    "name": "Admin", "surname": "User", "role": "admin"},
+                {"email": "admin@example.com", "password": "1234", "name": "Admin", "surname": "User", "role": "admin"},
                 {
                     "email": "curator@example.com",
                     "password": "1234",
@@ -92,13 +89,16 @@ class AuthSeeder(BaseSeeder):
                     "surname": "User",
                     "role": "standard",
                 },
-                {"email": "guest@example.com", "password": "1234",
-                    "name": "Guest", "surname": "User", "role": "guest"},
+                {"email": "guest@example.com", "password": "1234", "name": "Guest", "surname": "User", "role": "guest"},
                 # Keep original example users for backwards compatibility
-                {"email": "user1@example.com", "password": "1234",
-                    "name": "John", "surname": "Doe", "role": "admin"},
-                {"email": "user2@example.com", "password": "1234",
-                    "name": "Jane", "surname": "Doe", "role": "standard"},
+                {"email": "user1@example.com", "password": "1234", "name": "John", "surname": "Doe", "role": "admin"},
+                {
+                    "email": "user2@example.com",
+                    "password": "1234",
+                    "name": "Jane",
+                    "surname": "Doe",
+                    "role": "standard",
+                },
             ]
 
             for u in example_users:

@@ -11,7 +11,6 @@ import docker
 @click.command("locust", help="Launches Locust for load testing based on the environment.")
 @click.argument("module", required=False)
 def locust(module):
-
     # Absolute paths
     working_dir = os.getenv("WORKING_DIR", "")
     core_dir = os.path.join(working_dir, "core")
@@ -91,7 +90,6 @@ def locust(module):
         return False
 
     def run_in_console(module):
-
         if is_locust_running():
             click.echo("Locust is already running.")
             return

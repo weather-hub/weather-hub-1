@@ -17,8 +17,7 @@ def selenium(module):
             module_path = os.path.join(modules_dir, module)
             if not os.path.exists(module_path):
                 raise click.UsageError(f"Module '{module}' does not exist.")
-            selenium_test_path = os.path.join(
-                module_path, "tests", "test_selenium.py")
+            selenium_test_path = os.path.join(module_path, "tests", "test_selenium.py")
             if not os.path.exists(selenium_test_path):
                 raise click.UsageError(
                     f"Selenium test for module '{module}' does not exist at path " f"'{selenium_test_path}'."
@@ -33,22 +32,18 @@ def selenium(module):
             module_names = []
             for mod in os.listdir(modules_dir):
                 tests_dir = os.path.join(modules_dir, mod, "tests")
-                selenium_test_path = os.path.join(
-                    tests_dir, "test_selenium.py")
+                selenium_test_path = os.path.join(tests_dir, "test_selenium.py")
                 if os.path.exists(selenium_test_path):
-                    module_names.append(
-                        f"app.modules.{mod}.tests.test_selenium")
+                    module_names.append(f"app.modules.{mod}.tests.test_selenium")
 
             # ejecutamos todos los módulos uno tras otro
             for module_name in module_names:
                 test_command = ["python", "-m", module_name]
-                click.echo(
-                    f"Running Selenium tests with command: {' '.join(test_command)}")
+                click.echo(f"Running Selenium tests with command: {' '.join(test_command)}")
                 subprocess.run(test_command, check=True)
             return  # importante: no seguimos con el bloque común
 
-        click.echo(
-            f"Running Selenium tests with command: {' '.join(test_command)}")
+        click.echo(f"Running Selenium tests with command: {' '.join(test_command)}")
         subprocess.run(test_command, check=True)
 
     # Validate module if provided
@@ -56,7 +51,6 @@ def selenium(module):
         validate_module(module)
 
     if working_dir == "/app/":
-
         click.echo(
             click.style(
                 "Currently it is not possible to run this "
@@ -69,7 +63,6 @@ def selenium(module):
         run_selenium_tests_in_local(module)
 
     elif working_dir == "/vagrant/":
-
         click.echo(
             click.style(
                 "Currently it is not possible to run this "
@@ -79,5 +72,4 @@ def selenium(module):
         )
 
     else:
-        click.echo(click.style(
-            f"Unrecognized WORKING_DIR: {working_dir}", fg="red"))
+        click.echo(click.style(f"Unrecognized WORKING_DIR: {working_dir}", fg="red"))

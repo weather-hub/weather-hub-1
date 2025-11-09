@@ -40,9 +40,7 @@ def login():
 
     form = LoginForm()
     if request.method == "POST" and form.validate_on_submit():
-
-        user = authentication_service.login(
-            form.email.data, form.password.data)
+        user = authentication_service.login(form.email.data, form.password.data)
         if user:
             # if user has 2FA enabled → redirect to verification
             if user.twofa_enabled:

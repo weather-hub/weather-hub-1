@@ -28,12 +28,10 @@ class FeatureModelForm(FlaskForm):
     desc = TextAreaField("Description", validators=[Optional()])
     publication_type = SelectField(
         "Publication type",
-        choices=[(pt.value, pt.name.replace("_", " ").title())
-                 for pt in PublicationType],
+        choices=[(pt.value, pt.name.replace("_", " ").title()) for pt in PublicationType],
         validators=[Optional()],
     )
-    publication_doi = StringField(
-        "Publication DOI", validators=[Optional(), URL()])
+    publication_doi = StringField("Publication DOI", validators=[Optional(), URL()])
     tags = StringField("Tags (separated by commas)")
     version = StringField("Version")
     authors = FieldList(FormField(AuthorForm))
@@ -61,12 +59,10 @@ class DataSetForm(FlaskForm):
     desc = TextAreaField("Description", validators=[DataRequired()])
     publication_type = SelectField(
         "Publication type",
-        choices=[(pt.value, pt.name.replace("_", " ").title())
-                 for pt in PublicationType],
+        choices=[(pt.value, pt.name.replace("_", " ").title()) for pt in PublicationType],
         validators=[DataRequired()],
     )
-    publication_doi = StringField(
-        "Publication DOI", validators=[Optional(), URL()])
+    publication_doi = StringField("Publication DOI", validators=[Optional(), URL()])
     dataset_doi = StringField("Dataset DOI", validators=[Optional(), URL()])
     tags = StringField("Tags (separated by commas)")
     authors = FieldList(FormField(AuthorForm))
@@ -75,9 +71,7 @@ class DataSetForm(FlaskForm):
     submit = SubmitField("Submit")
 
     def get_dsmetadata(self):
-
-        publication_type_converted = self.convert_publication_type(
-            self.publication_type.data)
+        publication_type_converted = self.convert_publication_type(self.publication_type.data)
 
         return {
             "title": self.title.data,

@@ -41,8 +41,7 @@ def my_profile():
         .paginate(page=page, per_page=per_page, error_out=False)
     )
 
-    total_datasets_count = db.session.query(DataSet).filter(
-        DataSet.user_id == current_user.id).count()
+    total_datasets_count = db.session.query(DataSet).filter(DataSet.user_id == current_user.id).count()
 
     print(user_datasets_pagination.items)
 
@@ -73,8 +72,7 @@ def setup_2fa():
 
     # Generar URI para el QR
     user_name = current_user.profile.name
-    uri = pyotp.totp.TOTP(secret).provisioning_uri(
-        name=user_name, issuer_name="WEATHERHUB")
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user_name, issuer_name="WEATHERHUB")
 
     # Generar QR code
     qr = qrcode.make(uri)

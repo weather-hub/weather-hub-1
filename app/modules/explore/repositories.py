@@ -49,12 +49,10 @@ class ExploreRepository(BaseRepository):
                     break
 
             if matching_type is not None:
-                datasets = datasets.filter(
-                    DSMetaData.publication_type == matching_type.name)
+                datasets = datasets.filter(DSMetaData.publication_type == matching_type.name)
 
         if tags:
-            datasets = datasets.filter(DSMetaData.tags.ilike(
-                any_(f"%{tag}%" for tag in tags)))
+            datasets = datasets.filter(DSMetaData.tags.ilike(any_(f"%{tag}%" for tag in tags)))
 
         # Order by created_at
         if sorting == "oldest":

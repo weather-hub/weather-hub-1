@@ -55,26 +55,21 @@ class DSMetaData(db.Model):
     deposition_id = db.Column(db.Integer)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=False)
-    publication_type = db.Column(
-        SQLAlchemyEnum(PublicationType), nullable=False)
+    publication_type = db.Column(SQLAlchemyEnum(PublicationType), nullable=False)
     publication_doi = db.Column(db.String(120))
     dataset_doi = db.Column(db.String(120))
     tags = db.Column(db.String(120))
     ds_metrics_id = db.Column(db.Integer, db.ForeignKey("ds_metrics.id"))
-    ds_metrics = db.relationship(
-        "DSMetrics", uselist=False, backref="ds_meta_data", cascade="all, delete")
-    authors = db.relationship(
-        "Author", backref="ds_meta_data", lazy=True, cascade="all, delete")
+    ds_metrics = db.relationship("DSMetrics", uselist=False, backref="ds_meta_data", cascade="all, delete")
+    authors = db.relationship("Author", backref="ds_meta_data", lazy=True, cascade="all, delete")
 
 
 class DataSet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
-    ds_meta_data_id = db.Column(db.Integer, db.ForeignKey(
-        "ds_meta_data.id"), nullable=False)
-    created_at = db.Column(db.DateTime, nullable=False,
-                           default=datetime.utcnow)
+    ds_meta_data_id = db.Column(db.Integer, db.ForeignKey("ds_meta_data.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     # NUEVOS CAMPOS
     # 'uvl' | 'weather' | 'other'
@@ -82,10 +77,8 @@ class DataSet(db.Model):
     # ruta relativa o url en uploads/
     storage_path = db.Column(db.String(1024), nullable=True)
 
-    ds_meta_data = db.relationship(
-        "DSMetaData", backref=db.backref("data_set", uselist=False))
-    feature_models = db.relationship(
-        "FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
+    ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
+    feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
 
     def name(self):
         return self.ds_meta_data.title
@@ -101,7 +94,6 @@ class DataSet(db.Model):
         return self.ds_meta_data.publication_type.name.replace("_", " ").title()
 
     def get_zenodo_url(self):
-
         # Mantengo la compatibilidad (puede quedar None si no aplicable)
         return f"https://zenodo.org/record/{self.ds_meta_data.deposition_id}" if self.ds_meta_data.dataset_doi else None
 
@@ -153,10 +145,8 @@ class DSDownloadRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"))
-    download_date = db.Column(
-        db.DateTime, nullable=False, default=datetime.utcnow)
-    download_cookie = db.Column(
-        db.String(36), nullable=False)  # Assuming UUID4 strings
+    download_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    download_cookie = db.Column(db.String(36), nullable=False)  # Assuming UUID4 strings
 
     def __repr__(self):
         return (

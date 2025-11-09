@@ -14,8 +14,7 @@ def test(module_name, keyword):
     if module_name:
         test_path = os.path.join(base_path, module_name)
         if not os.path.exists(test_path):
-            click.echo(click.style(
-                f"Module '{module_name}' does not exist.", fg="red"))
+            click.echo(click.style(f"Module '{module_name}' does not exist.", fg="red"))
             return
         click.echo(f"Running tests for the '{module_name}' module...")
     else:
