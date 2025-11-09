@@ -61,9 +61,16 @@ def create_dataset():
             dataset = dataset_service.create_from_form(form=form, current_user=current_user)
             logger.info(f"Created dataset: {dataset}")
             dataset_service.move_feature_models(dataset)
+        except ValueError as e:
+            # Business / validation error (e.g. our validate_dataset_package raised ValueError)
+            logger.info(f"Validation error while creating dataset: {e}")
+            return jsonify({"message": str(e)}), 400
+
         except Exception as exc:
-            logger.exception(f"Exception while create dataset data in local {exc}")
-            return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
+            # Unexpected error: log full trace, return generic message to client
+            logger.exception("Exception while creating dataset")
+            # For security do not leak internal trace to client; return generic message.
+            return jsonify({"message": "Internal server error while creating dataset"}), 500
 
         # send dataset as deposition to Zenodo
         data = {}
@@ -125,7 +132,7 @@ def list_dataset():
 def upload():
     file = request.files["file"]
     temp_folder = current_user.temp_folder()
-    if not file or not file.filename.endswith(("uvl", "txt")):
+    if not file or not file.filename.endswith(("csv", "txt", "md")):
         return jsonify({"message": "No valid file"}), 400
     # create temp folder
     if not os.path.exists(temp_folder):
@@ -152,7 +159,7 @@ def upload():
     return (
         jsonify(
             {
-                "message": "UVL uploaded and validated successfully",
+                "message": "File uploaded and validated successfully",
                 "filename": new_filename,
             }
         ),

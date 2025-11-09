@@ -191,7 +191,7 @@
                 <h3> Related publication </h3>
                 
                 David Romero-Organvidez, José A. Galindo, Chico Sundermann, Jose-Miguel Horcas, David Benavides,
-                <i>UVLHub: A feature model data repository using UVL and open science principles</i>,
+                <i>WeatherHub: A feature model data repository using CSV Files and open science principles</i>,
                 Journal of Systems and Software,
                 2024,
                 112150,
@@ -237,7 +237,7 @@
 
                 <div class="row">
                     <div class="col-12 d-flex justify-content-between align-items-center">
-                        <h4 style="margin-bottom: 0px">UVL models</h4>
+                        <h4 style="margin-bottom: 0px">Weather Files</h4>
                         <h4 style="margin-bottom: 0px;"><span class="badge bg-dark">{{ dataset.get_files_count() }}</span></h4>
                     </div>
                 </div>
@@ -296,7 +296,7 @@
                                     <ul class="dropdown-menu" aria-labelledby="btnGroupDropExport{{ file.id }}">
                                         <li>
                                             <a class="dropdown-item" href="{{ url_for('hubfile.download_file', file_id=file.id) }}">
-                                                UVL
+                                                File
                                             </a>
                                             <a class="dropdown-item" href="{{ url_for('flamapy.to_glencoe', file_id=file.id) }}">
                                                 Glencoe

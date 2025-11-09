@@ -1,89 +1,119 @@
-2025-11-06 18:54:43,001 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
+2025-11-06 18:58:39,958 - app.modules.dataset.routes - ERROR - Exception while create dataset data in Zenodo HTTPSConnectionPool(host='sandbox.zenodo.org', port=443): Max retries exceeded with url: /api/deposit/depositions (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)")))
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:44,846 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
+    self._validate_conn(conn)
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
+    conn.connect()
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connection.py", line 790, in connect
+    sock_and_verified = _ssl_wrap_socket_and_match_hostname(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connection.py", line 969, in _ssl_wrap_socket_and_match_hostname
+    ssl_sock = ssl_wrap_socket(
+               ^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/util/ssl_.py", line 480, in ssl_wrap_socket
+    ssl_sock = _ssl_wrap_socket_impl(sock, context, tls_in_tls, server_hostname)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/util/ssl_.py", line 524, in _ssl_wrap_socket_impl
+    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/ssl.py", line 455, in wrap_socket
+    return self.sslsocket_class._create(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/ssl.py", line 1042, in _create
+    self.do_handshake()
+  File "/usr/lib/python3.12/ssl.py", line 1320, in do_handshake
+    self._sslobj.do_handshake()
+ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)
+
+During handling of the above exception, another exception occurred:
+
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:47,089 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
+    raise new_e
+urllib3.exceptions.SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)
+
+The above exception was the direct cause of the following exception:
+
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:47,600 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/adapters.py", line 667, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 519, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='sandbox.zenodo.org', port=443): Max retries exceeded with url: /api/deposit/depositions (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)")))
+
+During handling of the above exception, another exception occurred:
+
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:49,349 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 73, in create_dataset
+    zenodo_response_json = zenodo_service.create_new_deposition(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/zenodo/services.py", line 175, in create_new_deposition
+    response = requests.post(self.ZENODO_API_URL, params=self.params, json=data, headers=self.headers)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/adapters.py", line 698, in send
+    raise SSLError(e, request=request)
+requests.exceptions.SSLError: HTTPSConnectionPool(host='sandbox.zenodo.org', port=443): Max retries exceeded with url: /api/deposit/depositions (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)")))
+2025-11-07 13:26:22,687 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local 'FeatureModelForm' object has no attribute 'uvl_filename'
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:50,440 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 61, in create_dataset
+    dataset = dataset_service.create_from_form(form=form, current_user=current_user)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 145, in create_from_form
+    raise exc
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 122, in create_from_form
+    commit=False, **feature_model.get_fmmetadata())
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/forms.py", line 49, in get_fmmetadata
+    "filename": self.uvl_filename.data,
+                ^^^^^^^^^^^^^^^^^
+AttributeError: 'FeatureModelForm' object has no attribute 'uvl_filename'
+2025-11-07 13:27:08,145 - app.modules.dataset.routes - ERROR - Exception while create dataset data in Zenodo Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:50,974 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 72, in create_dataset
+    zenodo_response_json = zenodo_service.create_new_deposition(dataset)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/zenodo/services.py", line 178, in create_new_deposition
+    raise Exception(error_message)
+Exception: Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+2025-11-07 13:32:25,765 - app.modules.dataset.routes - ERROR - Exception while create dataset data in Zenodo Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:51,515 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 72, in create_dataset
+    zenodo_response_json = zenodo_service.create_new_deposition(dataset)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/zenodo/services.py", line 178, in create_new_deposition
+    raise Exception(error_message)
+Exception: Failed to create deposition. Error details: {'status': 403, 'message': 'Permission denied.'}
+2025-11-09 10:19:54,430 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local Validation failed:
+ - No se subió ningún CSV. Se requiere 1 o 2 CSV.
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:52,244 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
-Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:54:52,935 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local name 'uvl_filename' is not defined
-Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, uvl_filename), dest_dir)
-                                         ^^^^^^^^^^^^
-NameError: name 'uvl_filename' is not defined
-2025-11-06 18:55:32,717 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local Destination path 'uploads/user_1/dataset_16/tree (5).txt' already exists
-Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 63, in create_dataset
-    dataset_service.move_feature_models(dataset)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 64, in move_feature_models
-    shutil.move(os.path.join(source_dir, filename), dest_dir)
-  File "/usr/lib/python3.12/shutil.py", line 884, in move
-    raise Error("Destination path '%s' already exists" % real_dst)
-shutil.Error: Destination path 'uploads/user_1/dataset_16/tree (5).txt' already exists
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 61, in create_dataset
+    dataset = dataset_service.create_from_form(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 158, in create_from_form
+    raise exc
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 137, in create_from_form
+    validate_dataset_files(
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/validator.py", line 154, in validate_dataset_files
+    raise ValueError("\n".join(msg_lines))
+ValueError: Validation failed:
+ - No se subió ningún CSV. Se requiere 1 o 2 CSV.

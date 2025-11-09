@@ -1,75 +1,34 @@
-2025-11-06 18:56:54,275 - app.modules.dataset.routes - ERROR - Exception while create dataset data in Zenodo HTTPSConnectionPool(host='sandbox.zenodo.org', port=443): Max retries exceeded with url: /api/deposit/depositions (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)")))
+2025-11-09 10:24:05,213 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local Validation failed:
+ - Falta README (.md o .txt). Debe incluirse un fichero README.
+ - Faltan columnas requeridas en 'weather_prediction_dataset (1).csv': ['_cloud_cover', '_global_radiation', '_humidity', '_precipitation', '_pressure', '_sunshine', '_temp_max', '_temp_mean', '_temp_min', '_wind_gust', '_wind_speed']
+Warnings (no bloqueantes):
+ - Columnas extra en 'weather_prediction_dataset (1).csv': ['BASEL_cloud_cover', 'BASEL_global_radiation', 'BASEL_humidity', 'BASEL_precipitation', 'BASEL_pressure', 'BASEL_sunshine', 'BASEL_temp_max', 'BASEL_temp_mean', 'BASEL_temp_min', 'BUDAPEST_cloud_cover', 'BUDAPEST_global_radiation', 'BUDAPEST_humidity', 'BUDAPEST_precipitation', 'BUDAPEST_pressure', 'BUDAPEST_sunshine', 'BUDAPEST_temp_max', 'BUDAPEST_temp_mean', 'DATE', 'DE_BILT_cloud_cover', 'DE_BILT_global_radiation', 'DE_BILT_humidity', 'DE_BILT_precipitation', 'DE_BILT_pressure', 'DE_BILT_sunshine', 'DE_BILT_temp_max', 'DE_BILT_temp_mean', 'DE_BILT_temp_min', 'DE_BILT_wind_gust', 'DE_BILT_wind_speed', 'DRESDEN_cloud_cover', 'DRESDEN_global_radiation', 'DRESDEN_humidity', 'DRESDEN_precipitation', 'DRESDEN_sunshine', 'DRESDEN_temp_max', 'DRESDEN_temp_mean', 'DRESDEN_temp_min', 'DRESDEN_wind_gust', 'DRESDEN_wind_speed', 'DUSSELDORF_cloud_cover', 'DUSSELDORF_global_radiation', 'DUSSELDORF_humidity', 'DUSSELDORF_precipitation', 'DUSSELDORF_pressure', 'DUSSELDORF_sunshine', 'DUSSELDORF_temp_max', 'DUSSELDORF_temp_mean', 'DUSSELDORF_temp_min', 'DUSSELDORF_wind_gust', 'DUSSELDORF_wind_speed', 'HEATHROW_cloud_cover', 'HEATHROW_global_radiation', 'HEATHROW_humidity', 'HEATHROW_precipitation', 'HEATHROW_pressure', 'HEATHROW_sunshine', 'HEATHROW_temp_max', 'HEATHROW_temp_mean', 'HEATHROW_temp_min', 'KASSEL_global_radiation', 'KASSEL_humidity', 'KASSEL_precipitation', 'KASSEL_pressure', 'KASSEL_sunshine', 'KASSEL_temp_max', 'KASSEL_temp_mean', 'KASSEL_temp_min', 'KASSEL_wind_gust', 'KASSEL_wind_speed', 'LJUBLJANA_cloud_cover', 'LJUBLJANA_global_radiation', 'LJUBLJANA_humidity', 'LJUBLJANA_precipitation', 'LJUBLJANA_pressure', 'LJUBLJANA_sunshine', 'LJUBLJANA_temp_max', 'LJUBLJANA_temp_mean', 'LJUBLJANA_temp_min', 'LJUBLJANA_wind_speed', 'MAASTRICHT_cloud_cover', 'MAASTRICHT_global_radiation', 'MAASTRICHT_humidity', 'MAASTRICHT_precipitation', 'MAASTRICHT_pressure', 'MAASTRICHT_sunshine', 'MAASTRICHT_temp_max', 'MAASTRICHT_temp_mean', 'MAASTRICHT_temp_min', 'MAASTRICHT_wind_gust', 'MAASTRICHT_wind_speed', 'MALMO_precipitation', 'MALMO_temp_max', 'MALMO_temp_mean', 'MALMO_temp_min', 'MALMO_wind_speed', 'MONTELIMAR_global_radiation', 'MONTELIMAR_humidity', 'MONTELIMAR_precipitation', 'MONTELIMAR_pressure', 'MONTELIMAR_temp_max', 'MONTELIMAR_temp_mean', 'MONTELIMAR_temp_min', 'MONTELIMAR_wind_speed', 'MONTH', 'MUENCHEN_cloud_cover', 'MUENCHEN_global_radiation', 'MUENCHEN_humidity', 'MUENCHEN_precipitation', 'MUENCHEN_pressure', 'MUENCHEN_sunshine', 'MUENCHEN_temp_max', 'MUENCHEN_temp_mean', 'MUENCHEN_temp_min', 'MUENCHEN_wind_gust', 'MUENCHEN_wind_speed', 'OSLO_cloud_cover', 'OSLO_global_radiation', 'OSLO_humidity', 'OSLO_precipitation', 'OSLO_pressure', 'OSLO_sunshine', 'OSLO_temp_max', 'OSLO_temp_mean', 'OSLO_temp_min', 'OSLO_wind_gust', 'OSLO_wind_speed', 'PERPIGNAN_global_radiation', 'PERPIGNAN_humidity', 'PERPIGNAN_precipitation', 'PERPIGNAN_pressure', 'PERPIGNAN_temp_max', 'PERPIGNAN_temp_mean', 'PERPIGNAN_temp_min', 'PERPIGNAN_wind_speed', 'ROMA_cloud_cover', 'ROMA_global_radiation', 'ROMA_humidity', 'ROMA_pressure', 'ROMA_sunshine', 'ROMA_temp_max', 'ROMA_temp_mean', 'ROMA_temp_min', 'SONNBLICK_cloud_cover', 'SONNBLICK_global_radiation', 'SONNBLICK_humidity', 'SONNBLICK_precipitation', 'SONNBLICK_sunshine', 'SONNBLICK_temp_max', 'SONNBLICK_temp_mean', 'SONNBLICK_temp_min', 'STOCKHOLM_cloud_cover', 'STOCKHOLM_precipitation', 'STOCKHOLM_pressure', 'STOCKHOLM_sunshine', 'STOCKHOLM_temp_max', 'STOCKHOLM_temp_mean', 'STOCKHOLM_temp_min', 'TOURS_global_radiation', 'TOURS_humidity', 'TOURS_precipitation', 'TOURS_pressure', 'TOURS_temp_max', 'TOURS_temp_mean', 'TOURS_temp_min', 'TOURS_wind_speed'] (se permiten, revise que no haya nombres erróneos)
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 464, in _make_request
-    self._validate_conn(conn)
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 1093, in _validate_conn
-    conn.connect()
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connection.py", line 790, in connect
-    sock_and_verified = _ssl_wrap_socket_and_match_hostname(
-                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connection.py", line 969, in _ssl_wrap_socket_and_match_hostname
-    ssl_sock = ssl_wrap_socket(
-               ^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/util/ssl_.py", line 480, in ssl_wrap_socket
-    ssl_sock = _ssl_wrap_socket_impl(sock, context, tls_in_tls, server_hostname)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/util/ssl_.py", line 524, in _ssl_wrap_socket_impl
-    return ssl_context.wrap_socket(sock, server_hostname=server_hostname)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/ssl.py", line 455, in wrap_socket
-    return self.sslsocket_class._create(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/ssl.py", line 1042, in _create
-    self.do_handshake()
-  File "/usr/lib/python3.12/ssl.py", line 1320, in do_handshake
-    self._sslobj.do_handshake()
-ssl.SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)
-
-During handling of the above exception, another exception occurred:
-
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 61, in create_dataset
+    dataset = dataset_service.create_from_form(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 158, in create_from_form
+    raise exc
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 137, in create_from_form
+    validate_dataset_files(
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/validator.py", line 154, in validate_dataset_files
+    raise ValueError("\n".join(msg_lines))
+ValueError: Validation failed:
+ - Falta README (.md o .txt). Debe incluirse un fichero README.
+ - Faltan columnas requeridas en 'weather_prediction_dataset (1).csv': ['_cloud_cover', '_global_radiation', '_humidity', '_precipitation', '_pressure', '_sunshine', '_temp_max', '_temp_mean', '_temp_min', '_wind_gust', '_wind_speed']
+Warnings (no bloqueantes):
+ - Columnas extra en 'weather_prediction_dataset (1).csv': ['BASEL_cloud_cover', 'BASEL_global_radiation', 'BASEL_humidity', 'BASEL_precipitation', 'BASEL_pressure', 'BASEL_sunshine', 'BASEL_temp_max', 'BASEL_temp_mean', 'BASEL_temp_min', 'BUDAPEST_cloud_cover', 'BUDAPEST_global_radiation', 'BUDAPEST_humidity', 'BUDAPEST_precipitation', 'BUDAPEST_pressure', 'BUDAPEST_sunshine', 'BUDAPEST_temp_max', 'BUDAPEST_temp_mean', 'DATE', 'DE_BILT_cloud_cover', 'DE_BILT_global_radiation', 'DE_BILT_humidity', 'DE_BILT_precipitation', 'DE_BILT_pressure', 'DE_BILT_sunshine', 'DE_BILT_temp_max', 'DE_BILT_temp_mean', 'DE_BILT_temp_min', 'DE_BILT_wind_gust', 'DE_BILT_wind_speed', 'DRESDEN_cloud_cover', 'DRESDEN_global_radiation', 'DRESDEN_humidity', 'DRESDEN_precipitation', 'DRESDEN_sunshine', 'DRESDEN_temp_max', 'DRESDEN_temp_mean', 'DRESDEN_temp_min', 'DRESDEN_wind_gust', 'DRESDEN_wind_speed', 'DUSSELDORF_cloud_cover', 'DUSSELDORF_global_radiation', 'DUSSELDORF_humidity', 'DUSSELDORF_precipitation', 'DUSSELDORF_pressure', 'DUSSELDORF_sunshine', 'DUSSELDORF_temp_max', 'DUSSELDORF_temp_mean', 'DUSSELDORF_temp_min', 'DUSSELDORF_wind_gust', 'DUSSELDORF_wind_speed', 'HEATHROW_cloud_cover', 'HEATHROW_global_radiation', 'HEATHROW_humidity', 'HEATHROW_precipitation', 'HEATHROW_pressure', 'HEATHROW_sunshine', 'HEATHROW_temp_max', 'HEATHROW_temp_mean', 'HEATHROW_temp_min', 'KASSEL_global_radiation', 'KASSEL_humidity', 'KASSEL_precipitation', 'KASSEL_pressure', 'KASSEL_sunshine', 'KASSEL_temp_max', 'KASSEL_temp_mean', 'KASSEL_temp_min', 'KASSEL_wind_gust', 'KASSEL_wind_speed', 'LJUBLJANA_cloud_cover', 'LJUBLJANA_global_radiation', 'LJUBLJANA_humidity', 'LJUBLJANA_precipitation', 'LJUBLJANA_pressure', 'LJUBLJANA_sunshine', 'LJUBLJANA_temp_max', 'LJUBLJANA_temp_mean', 'LJUBLJANA_temp_min', 'LJUBLJANA_wind_speed', 'MAASTRICHT_cloud_cover', 'MAASTRICHT_global_radiation', 'MAASTRICHT_humidity', 'MAASTRICHT_precipitation', 'MAASTRICHT_pressure', 'MAASTRICHT_sunshine', 'MAASTRICHT_temp_max', 'MAASTRICHT_temp_mean', 'MAASTRICHT_temp_min', 'MAASTRICHT_wind_gust', 'MAASTRICHT_wind_speed', 'MALMO_precipitation', 'MALMO_temp_max', 'MALMO_temp_mean', 'MALMO_temp_min', 'MALMO_wind_speed', 'MONTELIMAR_global_radiation', 'MONTELIMAR_humidity', 'MONTELIMAR_precipitation', 'MONTELIMAR_pressure', 'MONTELIMAR_temp_max', 'MONTELIMAR_temp_mean', 'MONTELIMAR_temp_min', 'MONTELIMAR_wind_speed', 'MONTH', 'MUENCHEN_cloud_cover', 'MUENCHEN_global_radiation', 'MUENCHEN_humidity', 'MUENCHEN_precipitation', 'MUENCHEN_pressure', 'MUENCHEN_sunshine', 'MUENCHEN_temp_max', 'MUENCHEN_temp_mean', 'MUENCHEN_temp_min', 'MUENCHEN_wind_gust', 'MUENCHEN_wind_speed', 'OSLO_cloud_cover', 'OSLO_global_radiation', 'OSLO_humidity', 'OSLO_precipitation', 'OSLO_pressure', 'OSLO_sunshine', 'OSLO_temp_max', 'OSLO_temp_mean', 'OSLO_temp_min', 'OSLO_wind_gust', 'OSLO_wind_speed', 'PERPIGNAN_global_radiation', 'PERPIGNAN_humidity', 'PERPIGNAN_precipitation', 'PERPIGNAN_pressure', 'PERPIGNAN_temp_max', 'PERPIGNAN_temp_mean', 'PERPIGNAN_temp_min', 'PERPIGNAN_wind_speed', 'ROMA_cloud_cover', 'ROMA_global_radiation', 'ROMA_humidity', 'ROMA_pressure', 'ROMA_sunshine', 'ROMA_temp_max', 'ROMA_temp_mean', 'ROMA_temp_min', 'SONNBLICK_cloud_cover', 'SONNBLICK_global_radiation', 'SONNBLICK_humidity', 'SONNBLICK_precipitation', 'SONNBLICK_sunshine', 'SONNBLICK_temp_max', 'SONNBLICK_temp_mean', 'SONNBLICK_temp_min', 'STOCKHOLM_cloud_cover', 'STOCKHOLM_precipitation', 'STOCKHOLM_pressure', 'STOCKHOLM_sunshine', 'STOCKHOLM_temp_max', 'STOCKHOLM_temp_mean', 'STOCKHOLM_temp_min', 'TOURS_global_radiation', 'TOURS_humidity', 'TOURS_precipitation', 'TOURS_pressure', 'TOURS_temp_max', 'TOURS_temp_mean', 'TOURS_temp_min', 'TOURS_wind_speed'] (se permiten, revise que no haya nombres erróneos)
+2025-11-09 10:44:24,027 - app.modules.dataset.routes - ERROR - Exception while create dataset data in local Validation failed:
+ - Falta README (.md o .txt). Debe incluirse un fichero README.
 Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 787, in urlopen
-    response = self._make_request(
-               ^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 488, in _make_request
-    raise new_e
-urllib3.exceptions.SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/adapters.py", line 667, in send
-    resp = conn.urlopen(
-           ^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/connectionpool.py", line 841, in urlopen
-    retries = retries.increment(
-              ^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/urllib3/util/retry.py", line 519, in increment
-    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='sandbox.zenodo.org', port=443): Max retries exceeded with url: /api/deposit/depositions (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)")))
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 73, in create_dataset
-    zenodo_response_json = zenodo_service.create_new_deposition(
-                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/zenodo/services.py", line 175, in create_new_deposition
-    response = requests.post(self.ZENODO_API_URL, params=self.params, json=data, headers=self.headers)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/api.py", line 115, in post
-    return request("post", url, data=data, json=json, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/api.py", line 59, in request
-    return session.request(method=method, url=url, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/sessions.py", line 589, in request
-    resp = self.send(prep, **send_kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/sessions.py", line 703, in send
-    r = adapter.send(request, **kwargs)
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/venv/lib/python3.12/site-packages/requests/adapters.py", line 698, in send
-    raise SSLError(e, request=request)
-requests.exceptions.SSLError: HTTPSConnectionPool(host='sandbox.zenodo.org', port=443): Max retries exceeded with url: /api/deposit/depositions (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'sandbox.zenodo.org'. (_ssl.c:1000)")))
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/routes.py", line 61, in create_dataset
+    dataset = dataset_service.create_from_form(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 165, in create_from_form
+    raise exc
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/services.py", line 138, in create_from_form
+    validate_dataset_package(
+  File "/home/miguel/Documents/Universidad/4_Curso/EGC/weather-hub-1/app/modules/dataset/validator.py", line 150, in validate_dataset_package
+    raise ValueError("\n".join(msg_lines))
+ValueError: Validation failed:
+ - Falta README (.md o .txt). Debe incluirse un fichero README.

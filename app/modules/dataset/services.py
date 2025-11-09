@@ -17,6 +17,7 @@ from app.modules.dataset.repositories import (
     DSMetaDataRepository,
     DSViewRecordRepository,
 )
+from app.modules.dataset.validator import validate_dataset_package
 from app.modules.featuremodel.repositories import FeatureModelRepository, FMMetaDataRepository
 from app.modules.hubfile.repositories import (
     HubfileDownloadRecordRepository,
@@ -106,10 +107,11 @@ class DataSetService(BaseService):
                 dsmetadata.authors.append(author)
 
             dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
-
+            # llenalo con los nombres de los ficheros que componen el paquete
+            uploaded_filenames = []
             for feature_model in form.feature_models:
 
-                uvl_filename = feature_model.uvl_filename.data
+                filename = feature_model.filename.data
                 fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
                 for author_data in feature_model.get_authors():
                     author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
@@ -118,13 +120,34 @@ class DataSetService(BaseService):
                 fm = self.feature_model_repository.create(
                     commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
                 )
+                uploaded_filenames.append(feature_model.filename.data)
 
-                # associated files in feature model
-                file_path = os.path.join(current_user.temp_folder(), uvl_filename)
+            file_paths = [os.path.join(current_user.temp_folder(), fn) for fn in uploaded_filenames]
+            input("PRUEBA")
+            try:
+                # Si tu flujo es que en create_from_form se añaden varios archivos por feature model,
+                # asegúrate de pasar aquí la lista completa de paths para validar juntos.
+                validate_dataset_package(
+                    # o la lista completa de archivos del paquete
+                    # o True si quieres forzar EXACTAMENTE esas columnas
+                    file_paths=file_paths
+                )
+
+            except Exception as ex:
+                # rollback y propaga error (tu código ya maneja rollback en el except general)
+                self.repository.session.rollback()
+                raise
+
+            for e in range(0, len(uploaded_filenames)):
+
+                filename = uploaded_filenames[e]
+
+                file_path = file_paths[e]
+
                 checksum, size = calculate_checksum_and_size(file_path)
 
                 file = self.hubfilerepository.create(
-                    commit=False, name=uvl_filename, checksum=checksum, size=size, feature_model_id=fm.id
+                    commit=False, name=filename, checksum=checksum, size=size, feature_model_id=fm.id
                 )
                 fm.files.append(file)
             self.repository.session.commit()
