@@ -139,7 +139,7 @@ class DataSetService(BaseService):
                     file_paths=file_paths
                 )
 
-            except Exception as ex:
+            except Exception:
                 # rollback y propaga error (tu código ya maneja rollback en el except general)
                 self.repository.session.rollback()
                 raise

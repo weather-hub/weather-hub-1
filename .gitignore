@@ -25,7 +25,6 @@ __pycache__/
 *.log
 app.log
 app.log.*
-
 deployments.log
 .coverage
 htmlcov/
