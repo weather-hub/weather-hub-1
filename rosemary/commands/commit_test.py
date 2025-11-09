@@ -4,19 +4,19 @@ import subprocess
 import click
 
 
-@click.command("test", help="Runs pytest on the blueprints directory or a specific module.")
+@click.command("commit_test", help="Runs pytest on the blueprints directory or a specific module.")
 @click.argument("module_name", required=False)
 @click.option("-k", "keyword", help="Only run tests that match the given substring expression.")
-def test(module_name, keyword):
+def commit_test(module_name, keyword):
     base_path = os.path.join(os.getenv("WORKING_DIR", ""), "app/modules")
     test_path = base_path
 
     if module_name:
         test_path = os.path.join(base_path, module_name)
         if not os.path.exists(test_path):
-            click.echo(click.style(
-                f"Module '{module_name}' does not exist.", fg="red"))
-            return
+            click.echo(click.style(f"Module '{module_name}' does not exist.", fg="red"))
+            # Salimos con código de error
+            raise SystemExit(1)
         click.echo(f"Running tests for the '{module_name}' module...")
     else:
         click.echo("Running tests for all modules...")
@@ -27,10 +27,13 @@ def test(module_name, keyword):
         pytest_cmd.extend(["-k", keyword])
 
     try:
+        # Ejecutamos pytest y dejamos que falle si hay errores
         subprocess.run(pytest_cmd, check=True)
     except subprocess.CalledProcessError as e:
         click.echo(click.style(f"Error running tests: {e}", fg="red"))
+        # Propagamos el error para que el código de salida sea != 0
+        raise e
 
 
 if __name__ == "__main__":
-    test()
+    commit_test()

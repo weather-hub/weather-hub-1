@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from zipfile import ZipFile
 
+# from valid_files import valid_files
 from flask import (
     abort,
     jsonify,
@@ -56,41 +57,54 @@ def create_dataset():
 
         try:
             logger.info("Creating dataset...")
-            dataset = dataset_service.create_from_form(form=form, current_user=current_user)
+            dataset = dataset_service.create_from_form(
+                form=form, current_user=current_user)
             logger.info(f"Created dataset: {dataset}")
             dataset_service.move_feature_models(dataset)
+        except ValueError as e:
+            # Business / validation error (e.g. our validate_dataset_package raised ValueError)
+            logger.info(f"Validation error while creating dataset: {e}")
+            return jsonify({"message": str(e)}), 400
+
         except Exception as exc:
-            logger.exception(f"Exception while create dataset data in local {exc}")
-            return jsonify({"Exception while create dataset data in local: ": str(exc)}), 400
+            # Unexpected error: log full trace, return generic message to client
+            logger.exception("Exception while creating dataset")
+            # For security do not leak internal trace to client; return generic message.
+            return jsonify({"message": "Internal server error while creating dataset"}), 500
 
         # send dataset as deposition to Zenodo
         data = {}
         try:
-            zenodo_response_json = zenodo_service.create_new_deposition(dataset)
+            zenodo_response_json = zenodo_service.create_new_deposition(
+                dataset)
             response_data = json.dumps(zenodo_response_json)
             data = json.loads(response_data)
         except Exception as exc:
             data = {}
             zenodo_response_json = {}
-            logger.exception(f"Exception while create dataset data in Zenodo {exc}")
+            logger.exception(
+                f"Exception while create dataset data in Zenodo {exc}")
 
         if data.get("conceptrecid"):
             deposition_id = data.get("id")
 
             # update dataset with deposition id in Zenodo
-            dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
+            dataset_service.update_dsmetadata(
+                dataset.ds_meta_data_id, deposition_id=deposition_id)
 
             try:
                 # iterate for each feature model (one feature model = one request to Zenodo)
                 for feature_model in dataset.feature_models:
-                    zenodo_service.upload_file(dataset, deposition_id, feature_model)
+                    zenodo_service.upload_file(
+                        dataset, deposition_id, feature_model)
 
                 # publish deposition
                 zenodo_service.publish_deposition(deposition_id)
 
                 # update DOI
                 deposition_doi = zenodo_service.get_doi(deposition_id)
-                dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
+                dataset_service.update_dsmetadata(
+                    dataset.ds_meta_data_id, dataset_doi=deposition_doi)
             except Exception as e:
                 msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
@@ -121,10 +135,8 @@ def list_dataset():
 def upload():
     file = request.files["file"]
     temp_folder = current_user.temp_folder()
-
-    if not file or not file.filename.endswith(".uvl"):
+    if not file or not file.filename.endswith(("csv", "txt", "md")):
         return jsonify({"message": "No valid file"}), 400
-
     # create temp folder
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
@@ -150,7 +162,7 @@ def upload():
     return (
         jsonify(
             {
-                "message": "UVL uploaded and validated successfully",
+                "message": "File uploaded and validated successfully",
                 "filename": new_filename,
             }
         ),
@@ -190,12 +202,14 @@ def download_dataset(dataset_id):
 
                 zipf.write(
                     full_path,
-                    arcname=os.path.join(os.path.basename(zip_path[:-4]), relative_path),
+                    arcname=os.path.join(os.path.basename(
+                        zip_path[:-4]), relative_path),
                 )
 
     user_cookie = request.cookies.get("download_cookie")
     if not user_cookie:
-        user_cookie = str(uuid.uuid4())  # Generate a new unique identifier if it does not exist
+        # Generate a new unique identifier if it does not exist
+        user_cookie = str(uuid.uuid4())
         # Save the cookie to the user's browser
         resp = make_response(
             send_from_directory(
@@ -253,7 +267,8 @@ def subdomain_index(doi):
 
     # Save the cookie to the user's browser
     user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
-    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset))
+    resp = make_response(render_template(
+        "dataset/view_dataset.html", dataset=dataset))
     resp.set_cookie("view_cookie", user_cookie)
 
     return resp
@@ -264,7 +279,8 @@ def subdomain_index(doi):
 def get_unsynchronized_dataset(dataset_id):
 
     # Get dataset
-    dataset = dataset_service.get_unsynchronized_dataset(current_user.id, dataset_id)
+    dataset = dataset_service.get_unsynchronized_dataset(
+        current_user.id, dataset_id)
 
     if not dataset:
         abort(404)

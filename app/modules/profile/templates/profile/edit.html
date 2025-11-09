@@ -4,125 +4,245 @@
 
 {% block content %}
 
-    <h1 class="h3 mb-3">Edit profile</h1>
+<h1 class="h3 mb-3">Personal Information</h1>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="row">
-            <div class="col-12 mb-3">
-              <!-- Aquí se elige la clase en función de la categoría del mensaje -->
-              <div class="alert alert-{{ category }}" role="alert">
-                <div class="alert-message">
-                  {% if category == 'success' %}
-                    <h4 class="alert-heading"><i class="align-middle" data-feather="check-circle"></i> Success</h4>
-                  {% elif category == 'error' %}
-                    <h4 class="alert-heading"><i class="align-middle" data-feather="x-circle"></i> Error</h4>
-                  {% endif %}
-                  <p style="margin-bottom: 0px">{{ message }}</p>
-                </div>
-              </div>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="row">
+    <div class="col-12 mb-3">
+        <div class="alert alert-{{ category }}" role="alert">
+            <div class="alert-message">
+                {% if category == 'success' %}
+                <h4 class="alert-heading"><i class="align-middle" data-feather="check-circle"></i> Success</h4>
+                {% elif category == 'error' %}
+                <h4 class="alert-heading"><i class="align-middle" data-feather="x-circle"></i> Error</h4>
+                {% endif %}
+                <p style="margin-bottom: 0px">{{ message }}</p>
             </div>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
 
+<div class="row">
+
+    <div class="col-12 col-lg-6">
+
+        <form method="POST" action="{{ url_for('profile.edit_profile') }}" class="needs-validation" novalidate>
+            {{ form.hidden_tag() }}
+
+            <div class="row form-group">
+
+                <div class="col-6">
+                    {{ form.surname.label(class="form-label") }}
+                    {% set surname_value = form.surname.data if form.surname.data else current_user.profile.surname %}
+                    {{ form.surname(class="form-control", placeholder="Enter your surname", required=true,
+                    value=surname_value) }}
+                    {% for error in form.surname.errors %}
+                    <span style="color: red;">{{ error }}</span>
+                    <br>
+                    {% endfor %}
+                </div>
+
+                <div class="col-6">
+                    {{ form.name.label(class="form-label") }}
+                    {% set name_value = form.name.data if form.name.data else current_user.profile.name %}
+                    {{ form.name(class="form-control", placeholder="Enter your name",
+                    required=true, value=name_value) }}
+                    {% for error in form.name.errors %}
+                    <span style="color: red;">{{ error }}</span>
+                    <br>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+            <div class="row form-group mt-3">
+
+                <div class="col-6">
+                    {{ form.affiliation.label(class="form-label") }}
+                    {% set affiliation_value = form.affiliation.data if form.affiliation.data else
+                    (current_user.profile.affiliation if current_user.profile.affiliation else '') %}
+                    {{ form.affiliation(class="form-control", placeholder="Enter your affiliation", required=true,
+                    value=affiliation_value) }}
+                    {% for error in form.affiliation.errors %}
+                    <span style="color: red;">{{ error }}</span>
+                    <br>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+            <div class="row form-group mt-3">
+
+                <div class="col-12">
+                    {{ form.orcid.label(class="form-label") }}
+                    {% set orcid_value = form.orcid.data if form.orcid.data else (current_user.profile.orcid if
+                    current_user.profile.orcid else '') %}
+                    {{ form.orcid(class="form-control", placeholder="Enter your ORCID (0000-0123-4567-8901)",
+                    required=true, value=orcid_value) }}
+                    {% for error in form.orcid.errors %}
+                    <span style="color: red;">{{ error }}</span>
+                    <br>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+            <div class="row form-group">
+
+                <div class="col-12 mt-3">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+
+            </div>
+        </form>
+
+    </div>
 
     <div class="row">
 
-        <div class="col-12 col-lg-6">
+        <div class="col-lg-6 col-12">
 
-            <form method="POST" action="{{ url_for('profile.edit_profile') }}" class="needs-validation" novalidate>
-                {{ form.hidden_tag() }}
+            {% if error %}
 
-                <div class="row form-group">
-
-                    <div class="col-6">
-                        {{ form.surname.label(class="form-label") }}
-                        {% set surname_value = form.surname.data if form.surname.data else current_user.profile.surname %}
-                        {{ form.surname(class="form-control", placeholder="Enter your surname", required=true, value=surname_value) }}
-                        {% for error in form.surname.errors %}
-                            <span style="color: red;">{{ error }}</span>
-                            <br>
-                        {% endfor %}
-                    </div>
-
-                    <div class="col-6">
-                        {{ form.name.label(class="form-label") }}
-                        {% set name_value = form.name.data if form.name.data else current_user.profile.name %}
-                        {{ form.name(class="form-control", placeholder="Enter your name",
-                        required=true, value=name_value) }}
-                        {% for error in form.name.errors %}
-                            <span style="color: red;">{{ error }}</span>
-                            <br>
-                        {% endfor %}
-                    </div>
-
-                </div>
-
-                <div class="row form-group mt-3">
-
-                    <div class="col-6">
-                        {{ form.affiliation.label(class="form-label") }}
-                        {% set affiliation_value = form.affiliation.data if form.affiliation.data else (current_user.profile.affiliation  if current_user.profile.affiliation else '') %}
-                        {{ form.affiliation(class="form-control", placeholder="Enter your affiliation", required=true, value=affiliation_value) }}
-                        {% for error in form.affiliation.errors %}
-                            <span style="color: red;">{{ error }}</span>
-                            <br>
-                        {% endfor %}
-                    </div>
-
-                </div>
-
-                <div class="row form-group mt-3">
-
-                    <div class="col-12">
-                        {{ form.orcid.label(class="form-label") }}
-                        {% set orcid_value = form.orcid.data if form.orcid.data else (current_user.profile.orcid  if current_user.profile.orcid else '') %}
-                        {{ form.orcid(class="form-control", placeholder="Enter your ORCID (0000-0123-4567-8901)",
-                        required=true, value=orcid_value) }}
-                        {% for error in form.orcid.errors %}
-                            <span style="color: red;">{{ error }}</span>
-                            <br>
-                        {% endfor %}
-                    </div>
-
-                </div>
-
-                <div class="row form-group">
-
-                    <div class="col-12 mt-3">
-                        {{ form.submit(class="btn btn-primary") }}
-                    </div>
-
-
-                </div>
-            </form>
-
-
-        </div>
-
-        <div class="row">
-
-            <div class="col-lg-6 col-12">
-
-                {% if error %}
-
-                    <div class="mt-3">
-                        <p style="color: red;"><strong>Error:</strong> {{ error }}
-                    </div>
-
-                {% endif %}
-
+            <div class="mt-3">
+                <p style="color: red;"><strong>Error:</strong> {{ error }}
             </div>
+
+            {% endif %}
 
         </div>
 
     </div>
 
+</div>
+
+<!-- Columna derecha: seguridad -->
+<div class="col-12 col-lg-6">
+    <h1 class="h3 mb-3 mt-3">Security</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <p><strong>Two-Factor Authentication (2FA):</strong></p>
+            {% if current_user.twofa_enabled %}
+            <p>2FA is <span class="text-success fw-bold">enabled</span>.</p>
+            <a href="{{ url_for('profile.disable_2fa') }}" class="btn btn-danger btn-sm">Disable 2FA</a>
+            {% else %}
+            <p>2FA is <span class="text-danger fw-bold">disabled</span>.</p>
+            <a href="{{ url_for('profile.setup_2fa') }}" class="btn btn-success btn-sm">Enable 2FA</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para configurar 2FA (solo se muestra si hay QR en sesión) -->
+{% if session.qr_b64 and session.temp_otp_secret %}
+<div class="modal fade show" id="enable2faModal" tabindex="-1" aria-labelledby="enable2faModalLabel" aria-modal="true"
+    role="dialog" style="display: block; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background-color: #1a1a1a; color: #e0e0e0; border-radius: 12px;">
+            <div class="modal-header" style="border-bottom: none; padding: 24px 24px 16px;">
+                <h5 class="modal-title" id="enable2faModalLabel"
+                    style="font-size: 24px; font-weight: 600;color: #e0e0e0;">Setup
+                    authenticator app</h5>
+                <a href="{{ url_for('profile.cancel_2fa') }}" class="btn-close btn-close-white" aria-label="Close"></a>
+            </div>
+            <div class="modal-body" style="padding: 16px 24px 24px;">
+
+                <!-- Descripción con enlaces -->
+                <p style="color: #a0a0a0; margin-bottom: 20px; line-height: 1.6;">
+                    Authenticator apps and browser extensions like
+                    <a href="https://1password.com/" target="_blank"
+                        style="color: #4a9eff; text-decoration: underline;">1Password</a>,
+                    <a href="https://authy.com/" target="_blank"
+                        style="color: #4a9eff; text-decoration: underline;">Authy</a>,
+                    <a href="https://www.microsoft.com/en-us/security/mobile-authenticator-app" target="_blank"
+                        style="color: #4a9eff; text-decoration: underline;">Microsoft Authenticator</a>, etc.
+                    generate one-time passwords that are used as a second factor to verify your identity when prompted
+                    during sign-in.
+                </p>
+
+                <!-- Instrucciones QR -->
+                <h6 style="font-weight: 600; margin-bottom: 8px; font-size: 16px;color: #e0e0e0;">Scan the QR code</h6>
+                <p style="color: #a0a0a0; margin-bottom: 16px; font-size: 14px;">
+                    Use an authenticator app or browser extension to scan.
+                    <a href="https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/configuring-two-factor-authentication"
+                        target="_blank" style="color: #4a9eff; text-decoration: underline;">Learn more about enabling
+                        2FA</a>.
+                </p>
+
+                <!-- QR Code -->
+                <div
+                    style="background-color: white; padding: 20px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
+                    <img src="data:image/png;base64,{{ session.qr_b64 }}" alt="QR Code"
+                        style="display: block; width: 200px; height: 200px;">
+                </div>
+
+                <!-- Setup key alternativo -->
+                <!-- <p style="color: #a0a0a0; margin-bottom: 12px; font-size: 14px;">
+                    Unable to scan? You can use the
+                    <a href="#" id="showSetupKey" style="color: #4a9eff; text-decoration: underline;">setup key</a>
+                    to manually configure your authenticator app.
+                </p> -->
+
+                <!-- Setup key oculto (se muestra al hacer clic) -->
+                <!-- <div id="setupKeyContainer"
+                    style="display: none; background-color: #2a2a2a; padding: 12px; border-radius: 6px; margin-bottom: 24px;">
+                    <p
+                        style="margin: 0; font-family: monospace; color: #e0e0e0; word-break: break-all; font-size: 14px;">
+                        {{ session.temp_otp_secret }}
+                    </p>
+                </div> -->
+
+                <!-- Campo de verificación -->
+                <form method="POST" action="{{ url_for('profile.verify_2fa') }}" id="verify2faForm">
+                    <h6 style="font-weight: 600; margin-bottom: 12px; font-size: 16px;color: #e0e0e0;">Verify the code
+                        from the app
+                    </h6>
+                    <input type="text" name="verification_code" class="form-control" placeholder="XXXXXX" maxlength="6"
+                        pattern="[0-9]{6}" required autocomplete="off" autofocus
+                        style="background-color: #2a2a2a; border: 1px solid #444; color: #e0e0e0; padding: 12px; border-radius: 6px; font-size: 18px; letter-spacing: 4px; text-align: center;">
+
+                    <!-- Mensaje de error dentro del modal -->
+                    {% if session.get('2fa_error') %}
+                    <div class="alert alert-danger" role="alert"
+                        style="background-color: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.3); color: #ff6b6b; border-radius: 6px; padding: 12px; margin-bottom: 16px;">
+                        <i class="align-middle" data-feather="alert-circle"></i>
+                        <span style="margin-left: 8px;">{{ session['2fa_error'] }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="mt-4 d-flex justify-content-end gap-3">
+                        <a href="{{ url_for('profile.cancel_2fa') }}" class="btn btn-secondary"
+                            style="background-color: transparent; border: 1px solid #444; color: #e0e0e0; padding: 8px 24px; border-radius: 6px; text-decoration: none;">Cancel</a>
+                        <button type="submit" class="btn btn-success"
+                            style="background-color: #28a745; border: none; color: white; padding: 8px 24px; border-radius: 6px;">Continue</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
-    <script src="{{ url_for('profile.scripts') }}"></script>
+<script src="{{ url_for('profile.scripts') }}"></script>
+<script>
+    // Validación del formulario 2FA
+    const verify2faForm = document.getElementById('verify2faForm');
+    if (verify2faForm) {
+        verify2faForm.addEventListener('submit', function (e) {
+            const code = this.querySelector('input[name="verification_code"]').value;
+            if (!/^\d{6}$/.test(code)) {
+                e.preventDefault();
+                alert('Please enter a valid 6-digit code');
+            }
+        });
+    }
+</script>
 {% endblock %}

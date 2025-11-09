@@ -121,6 +121,19 @@ chico sundermann">
                         </a>
                     </li>
 
+                    {% if current_user.roles | selectattr('name', 'equalto', 'admin') | list | length > 0 %}
+                    <li class="sidebar-header">
+                        Administration
+                    </li>
+
+                    <li class="sidebar-item {{ 'active' if request.endpoint == 'admin.list_users' else '' }}">
+                        <a class="sidebar-link" href="{{ url_for('admin.list_users') }}">
+                            <i class="align-middle" data-feather="shield"></i> <span
+                                class="align-middle">Manage users & roles</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
                     <li class="sidebar-item">
                         <a class="sidebar-link" href="{{ url_for('auth.logout') }}">
                             <i class="align-middle" data-feather="log-out"></i> <span

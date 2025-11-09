@@ -69,13 +69,13 @@ class DataSetSeeder(BaseSeeder):
         # Assume there are 12 UVL files, create corresponding FMMetaData and FeatureModel
         fm_meta_data_list = [
             FMMetaData(
-                uvl_filename=f"file{i+1}.uvl",
+                filename=f"file{i+1}.uvl",
                 title=f"Feature Model {i+1}",
                 description=f"Description for feature model {i+1}",
                 publication_type=PublicationType.SOFTWARE_DOCUMENTATION,
                 publication_doi=f"10.1234/fm{i+1}",
                 tags="tag1, tag2",
-                uvl_version="1.0",
+                version="1.0",
             )
             for i in range(12)
         ]
@@ -94,7 +94,8 @@ class DataSetSeeder(BaseSeeder):
         self.seed(fm_authors)
 
         feature_models = [
-            FeatureModel(data_set_id=seeded_datasets[i // 3].id, fm_meta_data_id=seeded_fm_meta_data[i].id)
+            FeatureModel(
+                data_set_id=seeded_datasets[i // 3].id, fm_meta_data_id=seeded_fm_meta_data[i].id)
             for i in range(12)
         ]
         seeded_feature_models = self.seed(feature_models)
@@ -102,14 +103,17 @@ class DataSetSeeder(BaseSeeder):
         # Create files, associate them with FeatureModels and copy files
         load_dotenv()
         working_dir = os.getenv("WORKING_DIR", "")
-        src_folder = os.path.join(working_dir, "app", "modules", "dataset", "uvl_examples")
+        src_folder = os.path.join(
+            working_dir, "app", "modules", "dataset", "uvl_examples")
         for i in range(12):
             file_name = f"file{i+1}.uvl"
             feature_model = seeded_feature_models[i]
-            dataset = next(ds for ds in seeded_datasets if ds.id == feature_model.data_set_id)
+            dataset = next(ds for ds in seeded_datasets if ds.id ==
+                           feature_model.data_set_id)
             user_id = dataset.user_id
 
-            dest_folder = os.path.join(working_dir, "uploads", f"user_{user_id}", f"dataset_{dataset.id}")
+            dest_folder = os.path.join(
+                working_dir, "uploads", f"user_{user_id}", f"dataset_{dataset.id}")
             os.makedirs(dest_folder, exist_ok=True)
             shutil.copy(os.path.join(src_folder, file_name), dest_folder)
 
