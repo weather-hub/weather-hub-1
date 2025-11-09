@@ -82,4 +82,4 @@ jobs:
 
       # Step 7: Run the pytest test suite (ignoring Selenium tests)
       - name: Run Tests
-        run: pytest app/modules/ --ignore-glob='*selenium*'%  
+        run: pytest app/modules/ --ignore-glob='*selenium*'
