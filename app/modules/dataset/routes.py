@@ -66,7 +66,7 @@ def create_dataset():
             logger.info(f"Validation error while creating dataset: {e}")
             return jsonify({"message": str(e)}), 400
 
-        except Exception as exc:
+        except Exception:
             # Unexpected error: log full trace, return generic message to client
             logger.exception("Exception while creating dataset")
             # For security do not leak internal trace to client; return generic message.
