@@ -20,10 +20,6 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Login")
 
 
-<< << << < HEAD
-== == == =
-
-
 class Verify2FAForm(FlaskForm):
     otp_code = StringField(
         "Authentication Code",
@@ -35,6 +31,3 @@ class Verify2FAForm(FlaskForm):
     )
     remember_me = BooleanField("Remember me")
     submit = SubmitField("Verify")
-
-
->>>>>> > source/trunk
