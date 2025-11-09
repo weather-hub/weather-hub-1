@@ -9,7 +9,7 @@ name: Pytest
 
 on:
   push:
-    branches: [main]
+    branches: [main, trunk]
   pull_request:
     branches: [main]
 
@@ -67,6 +67,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 5: Run the pytest test suite (ignoring Selenium tests)
+      # Step 5: Security scanning
+      - name: Security audit with pip-audit
+        run: |
+          pip install pip-audit bandit
+          pip-audit --ignore-vuln GHSA-g8c6-8fjj-2r4m --ignore-vuln GHSA-4xh5-x5gv-qwph
+          bandit -r app rosemary core -lll
+
+      # Step 6: Run pytest with coverage
+      - name: Run Tests with Coverage
+        run: |
+          pip install pytest-cov
+          pytest app/modules/ --ignore-glob='*selenium*' --cov=app --cov-report=xml --cov-report=term
+
+      # Step 7: Run the pytest test suite (ignoring Selenium tests)
       - name: Run Tests
-        run: pytest app/modules/ --ignore-glob='*selenium*'
+        run: pytest app/modules/ --ignore-glob='*selenium*'%  
