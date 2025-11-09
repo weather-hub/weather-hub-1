@@ -284,6 +284,28 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_table(
+        "role",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("name", sa.String(length=50), nullable=False, unique=True),
+        sa.Column("description", sa.String(length=255), nullable=True),
+        sa.Column("created_at", sa.DateTime(), nullable=False),
+    )
+
+    op.create_table(
+        "user_roles",
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("role_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["role_id"],
+            ["role.id"],
+        ),
+        sa.PrimaryKeyConstraint("user_id", "role_id"),
+    )
     # ### end Alembic commands ###
 
 
