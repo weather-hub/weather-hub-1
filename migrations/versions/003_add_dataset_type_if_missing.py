@@ -1,7 +1,7 @@
 """add dataset_type column if missing
 
 Revision ID: 003_add_dataset_type_if_missing
-Revises: 002
+Revises: 002_add_schema_changes
 Create Date: 2025-11-10 12:00:00.000000
 
 """

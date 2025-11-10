@@ -1,7 +1,7 @@
 """add fields and rename columns to match desired schema
 
-Revision ID: 002
-Revises: 001
+Revision ID: 002_add_schema_changes
+Revises: 002_add_roles
 Create Date: 2025-11-10 12:00:00.000000
 
 """

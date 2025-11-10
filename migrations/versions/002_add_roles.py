@@ -1,6 +1,6 @@
 """add roles table and user_roles association
 
-Revision ID: 002
+Revision ID: 002_add_roles
 Revises: 001
 Create Date: 2025-11-07 10:00:00.000000
 
