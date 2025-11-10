@@ -85,10 +85,24 @@ class DataSetRepository(BaseRepository):
         )
 
     def count_synchronized_datasets(self):
-        return self.model.query.join(DSMetaData).filter(DSMetaData.dataset_doi.isnot(None)).count()
+        # Use an aggregate count to avoid SQLAlchemy selecting all model columns
+        # (which fails if the DB schema is missing a column like `dataset_type`).
+        return (
+            self.model.query.join(DSMetaData)
+            .filter(DSMetaData.dataset_doi.isnot(None))
+            .with_entities(func.count())
+            .scalar()
+        )
 
     def count_unsynchronized_datasets(self):
-        return self.model.query.join(DSMetaData).filter(DSMetaData.dataset_doi.is_(None)).count()
+        # Use an aggregate count to avoid SQLAlchemy selecting all model columns
+        # (which fails if the DB schema is missing a column like `dataset_type`).
+        return (
+            self.model.query.join(DSMetaData)
+            .filter(DSMetaData.dataset_doi.is_(None))
+            .with_entities(func.count())
+            .scalar()
+        )
 
     def latest_synchronized(self):
         return (
