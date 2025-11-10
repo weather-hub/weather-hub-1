@@ -24,7 +24,7 @@ def main():
     port = int(os.environ.get("FAKENODO_PORT", "5001"))
     host = os.environ.get("FAKENODO_HOST", "0.0.0.0")
     app = create_app()
-    app.run(host=host, port=port, debug=True)
+    app.run(host=host, port=port)
 
 
 if __name__ == "__main__":
