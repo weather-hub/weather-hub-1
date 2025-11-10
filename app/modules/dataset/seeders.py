@@ -1,3 +1,4 @@
+"""
 import os
 import shutil
 from datetime import datetime, timezone
@@ -122,3 +123,4 @@ class DataSetSeeder(BaseSeeder):
                 feature_model_id=feature_model.id,
             )
             self.seed([uvl_file])
+#"""
