@@ -1,11 +1,11 @@
 import os
-import shutil
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
 from app.modules.auth.models import User
 from app.modules.dataset.models import Author, DataSet, DSMetaData, DSMetrics, PublicationType
+from app.modules.dataset.validator import REQUIRED_COLUMNS
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from app.modules.hubfile.models import Hubfile
 from core.seeders.BaseSeeder import BaseSeeder
@@ -65,59 +65,64 @@ class DataSetSeeder(BaseSeeder):
         ]
         seeded_datasets = self.seed(datasets)
 
-        # Assume there are 12 UVL files, create corresponding FMMetaData and FeatureModel
-        fm_meta_data_list = [
-            FMMetaData(
-                filename=f"file{i+1}.uvl",
-                title=f"Feature Model {i+1}",
-                description=f"Description for feature model {i+1}",
-                publication_type=PublicationType.SOFTWARE_DOCUMENTATION,
-                publication_doi=f"10.1234/fm{i+1}",
-                tags="tag1, tag2",
-                version="1.0",
+        # For each dataset create one CSV and one README (md)
+        fm_meta_data_list = []
+        for i in range(len(seeded_datasets)):
+            fm_meta_data_list.append(
+                FMMetaData(
+                    filename=f"dataset_{i+1}.csv",
+                    title=f"Dataset file {i+1}",
+                    description=f"CSV data file for dataset {i+1}",
+                    publication_type=PublicationType.SOFTWARE_DOCUMENTATION,
+                    publication_doi=f"10.1234/fm{i+1}",
+                    tags="tag1, tag2",
+                    version="1.0",
+                )
             )
-            for i in range(12)
-        ]
+
         seeded_fm_meta_data = self.seed(fm_meta_data_list)
 
-        # Create Author instances and associate with FMMetaData
-        fm_authors = [
-            Author(
-                name=f"Author {i+5}",
-                affiliation=f"Affiliation {i+5}",
-                orcid=f"0000-0000-0000-000{i+5}",
-                fm_meta_data_id=seeded_fm_meta_data[i].id,
-            )
-            for i in range(12)
-        ]
-        self.seed(fm_authors)
-
+        # Create one FeatureModel per dataset and attach FMMetaData
         feature_models = [
-            FeatureModel(data_set_id=seeded_datasets[i // 3].id, fm_meta_data_id=seeded_fm_meta_data[i].id)
-            for i in range(12)
+            FeatureModel(data_set_id=seeded_datasets[i].id, fm_meta_data_id=seeded_fm_meta_data[i].id)
+            for i in range(len(seeded_datasets))
         ]
         seeded_feature_models = self.seed(feature_models)
 
-        # Create files, associate them with FeatureModels and copy files
+        # Create CSV and README files programmatically and associate them with FeatureModels
         load_dotenv()
         working_dir = os.getenv("WORKING_DIR", "")
-        src_folder = os.path.join(working_dir, "app", "modules", "dataset", "uvl_examples")
-        for i in range(12):
-            file_name = f"file{i+1}.uvl"
-            feature_model = seeded_feature_models[i]
+        for i, feature_model in enumerate(seeded_feature_models):
             dataset = next(ds for ds in seeded_datasets if ds.id == feature_model.data_set_id)
             user_id = dataset.user_id
-
             dest_folder = os.path.join(working_dir, "uploads", f"user_{user_id}", f"dataset_{dataset.id}")
             os.makedirs(dest_folder, exist_ok=True)
-            shutil.copy(os.path.join(src_folder, file_name), dest_folder)
 
-            file_path = os.path.join(dest_folder, file_name)
+            # CSV file
+            csv_name = feature_model.fm_meta_data.filename
+            csv_path = os.path.join(dest_folder, csv_name)
+            # write a minimal CSV with required headers
+            with open(csv_path, "w", encoding="utf-8") as fh:
+                fh.write(",".join([c.lstrip("_") for c in REQUIRED_COLUMNS]) + "\n")
+                fh.write(",".join(["0" for _ in REQUIRED_COLUMNS]) + "\n")
 
-            uvl_file = Hubfile(
-                name=file_name,
-                checksum=f"checksum{i+1}",
-                size=os.path.getsize(file_path),
+            # README file
+            readme_name = f"README_{i+1}.md"
+            readme_path = os.path.join(dest_folder, readme_name)
+            with open(readme_path, "w", encoding="utf-8") as fh:
+                fh.write(f"# README for dataset {dataset.id}\n\nThis is a seeded README file.\n")
+
+            # Create Hubfile entries for CSV and README
+            csv_file = Hubfile(
+                name=csv_name,
+                checksum=f"checksum_csv_{i+1}",
+                size=os.path.getsize(csv_path),
                 feature_model_id=feature_model.id,
             )
-            self.seed([uvl_file])
+            readme_file = Hubfile(
+                name=readme_name,
+                checksum=f"checksum_readme_{i+1}",
+                size=os.path.getsize(readme_path),
+                feature_model_id=feature_model.id,
+            )
+            self.seed([csv_file, readme_file])

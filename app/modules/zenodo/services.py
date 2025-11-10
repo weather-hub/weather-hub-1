@@ -3,7 +3,7 @@ import os
 
 import requests
 from dotenv import load_dotenv
-from flask import Response, jsonify
+from flask import Response, has_request_context, jsonify, session
 from flask_login import current_user
 
 from app.modules.dataset.models import DataSet
@@ -18,18 +18,33 @@ load_dotenv()
 
 
 class ZenodoService(BaseService):
+
     def get_zenodo_url(self):
+        """Return the base URL for depositions.
+
+        Preference order:
+        - If the session indicates 'fakenodo', use FAKENODO_URL env var if present.
+        - Otherwise, use ZENODO_API_URL based on FLASK_ENV as before.
+        """
+        # If a per-session override was set (via the UI), honor it — but only when
+        # there is an active request context. Accessing `session` outside a
+        # request context raises a RuntimeError (this happens when CLI tools or
+        # app-start code import or construct services). We therefore guard with
+        # `has_request_context()`.
+        repo_choice = session.get("repository_service") if has_request_context() else None
+        if repo_choice == "fakenodo":
+            return os.getenv(
+                "FAKENODO_URL",
+                os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions"),
+            )
+
         FLASK_ENV = os.getenv("FLASK_ENV", "development")
-        ZENODO_API_URL = ""
-
         if FLASK_ENV == "development":
-            ZENODO_API_URL = os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
+            return os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
         elif FLASK_ENV == "production":
-            ZENODO_API_URL = os.getenv("ZENODO_API_URL", "https://zenodo.org/api/deposit/depositions")
+            return os.getenv("ZENODO_API_URL", "https://zenodo.org/api/deposit/depositions")
         else:
-            ZENODO_API_URL = os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
-
-        return ZENODO_API_URL
+            return os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
 
     def get_zenodo_access_token(self):
         return os.getenv("ZENODO_ACCESS_TOKEN")
@@ -188,10 +203,11 @@ class ZenodoService(BaseService):
         Returns:
             dict: The response in JSON format with the details of the uploaded file.
         """
-        uvl_filename = feature_model.fm_meta_data.uvl_filename
-        data = {"name": uvl_filename}
+        # feature model metadata stores the filename in `filename` field
+        filename = feature_model.fm_meta_data.filename
+        data = {"name": filename}
         user_id = current_user.id if user is None else user.id
-        file_path = os.path.join(uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", uvl_filename)
+        file_path = os.path.join(uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", filename)
         files = {"file": open(file_path, "rb")}
 
         publish_url = f"{self.ZENODO_API_URL}/{deposition_id}/files"

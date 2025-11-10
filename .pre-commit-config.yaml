@@ -8,7 +8,7 @@ repos:
         entry: rosemary commit_test
         language: system
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: commit-msg-conventional
         name: Conventional Commits check (commit-msg)
@@ -48,3 +48,4 @@ repos:
         types: [python]
         files: \.py$
         additional_dependencies: [flake8==6.1.0]
+        args: ["--max-line-length", "120"]
