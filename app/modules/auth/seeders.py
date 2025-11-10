@@ -11,7 +11,7 @@ class AuthSeeder(BaseSeeder):
     - Optionally creates an admin user from ENV vars
     """
 
-    priority = 5
+    priority = 1
 
     def run(self):
         from app.modules.auth.models import Role

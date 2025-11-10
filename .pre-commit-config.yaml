@@ -1,50 +1,54 @@
-# .pre-commit-config.yaml
 repos:
-  # Hooks locales que usan herramientas del sistema o scripts versionados
+  # Hooks locales
   - repo: local
     hooks:
       - id: rosemary-commit-test
-        name: Run unit tests with rosemary (commit)
+        name: Run unit tests with rosemary
         entry: rosemary commit_test
         language: system
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: commit-msg-conventional
-        name: Conventional Commits check (commit-msg)
+        name: Conventional Commits check
         entry: bash .githooks/commit-msg
         language: system
         stages: [commit-msg]
 
-  # isort instalado en el entorno aislado del hook
+  # Formateo de código
   - repo: local
     hooks:
       - id: isort
         name: isort (sort imports)
-        entry: isort
+        entry: isort --profile black
         language: python
         types: [python]
         files: \.py$
         additional_dependencies: [isort==6.0.1]
 
-  # black instalado en el entorno aislado del hook
-  - repo: local
-    hooks:
       - id: black
         name: black (code formatter)
-        entry: black --quiet
+        entry: black
         language: python
         types: [python]
         files: \.py$
         additional_dependencies: [black==25.1.0]
 
-  # flake8 para linting
-  - repo: local
+  # Linting rápido
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.287
     hooks:
-      - id: flake8
-        name: flake8 (linting)
-        entry: flake8
-        language: python
+      - id: ruff
+        args: ["--ignore=E501", --fix]
         types: [python]
-        files: \.py$
-        additional_dependencies: [flake8==6.1.0]
+
+  # Control de commits y hooks útiles
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict

@@ -1,6 +1,5 @@
-"""
+import csv
 import os
-import shutil
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -10,6 +9,21 @@ from app.modules.dataset.models import Author, DataSet, DSMetaData, DSMetrics, P
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from app.modules.hubfile.models import Hubfile
 from core.seeders.BaseSeeder import BaseSeeder
+
+# Si tienes REQUIRED_COLUMNS definido centralmente, también podrías importarlo.
+REQUIRED_COLUMNS = [
+    "_temp_mean",
+    "_temp_max",
+    "_temp_min",
+    "_cloud_cover",
+    "_global_radiation",
+    "_humidity",
+    "_pressure",
+    "_precipitation",
+    "_sunshine",
+    "_wind_gust",
+    "_wind_speed",
+]
 
 
 class DataSetSeeder(BaseSeeder):
@@ -28,7 +42,7 @@ class DataSetSeeder(BaseSeeder):
         ds_metrics = DSMetrics(number_of_models="5", number_of_features="50")
         seeded_ds_metrics = self.seed([ds_metrics])[0]
 
-        # Create DSMetaData instances
+        # Create DSMetaData instances (ahora 6 datasets para poder distribuir 12 CSV -> 2 CSV por dataset)
         ds_meta_data_list = [
             DSMetaData(
                 deposition_id=1 + i,
@@ -40,7 +54,7 @@ class DataSetSeeder(BaseSeeder):
                 tags="tag1, tag2",
                 ds_metrics_id=seeded_ds_metrics.id,
             )
-            for i in range(4)
+            for i in range(6)  # 6 datasets
         ]
         seeded_ds_meta_data = self.seed(ds_meta_data_list)
 
@@ -50,27 +64,27 @@ class DataSetSeeder(BaseSeeder):
                 name=f"Author {i+1}",
                 affiliation=f"Affiliation {i+1}",
                 orcid=f"0000-0000-0000-000{i}",
-                ds_meta_data_id=seeded_ds_meta_data[i % 4].id,
+                ds_meta_data_id=seeded_ds_meta_data[i % 6].id,
             )
-            for i in range(4)
+            for i in range(6)
         ]
         self.seed(authors)
 
-        # Create DataSet instances
+        # Create DataSet instances (6 datasets)
         datasets = [
             DataSet(
                 user_id=user1.id if i % 2 == 0 else user2.id,
                 ds_meta_data_id=seeded_ds_meta_data[i].id,
                 created_at=datetime.now(timezone.utc),
             )
-            for i in range(4)
+            for i in range(6)
         ]
         seeded_datasets = self.seed(datasets)
 
-        # Assume there are 12 UVL files, create corresponding FMMetaData and FeatureModel
+        # Create 12 FMMetaData instances
         fm_meta_data_list = [
             FMMetaData(
-                filename=f"file{i+1}.uvl",
+                filename=f"file{i+1}.csv",
                 title=f"Feature Model {i+1}",
                 description=f"Description for feature model {i+1}",
                 publication_type=PublicationType.SOFTWARE_DOCUMENTATION,
@@ -85,42 +99,72 @@ class DataSetSeeder(BaseSeeder):
         # Create Author instances and associate with FMMetaData
         fm_authors = [
             Author(
-                name=f"Author {i+5}",
-                affiliation=f"Affiliation {i+5}",
-                orcid=f"0000-0000-0000-000{i+5}",
+                name=f"Author {i+7}",
+                affiliation=f"Affiliation {i+7}",
+                orcid=f"0000-0000-0000-00{i+7}",
                 fm_meta_data_id=seeded_fm_meta_data[i].id,
             )
             for i in range(12)
         ]
         self.seed(fm_authors)
 
+        # Create 12 FeatureModel instances, asignando 2 por dataset (para no superar max_csv=2 por paquete)
         feature_models = [
-            FeatureModel(data_set_id=seeded_datasets[i // 3].id, fm_meta_data_id=seeded_fm_meta_data[i].id)
+            FeatureModel(
+                data_set_id=seeded_datasets[i // 2].id, fm_meta_data_id=seeded_fm_meta_data[i].id  # 2 FMs por dataset
+            )
             for i in range(12)
         ]
         seeded_feature_models = self.seed(feature_models)
 
-        # Create files, associate them with FeatureModels and copy files
+        # Create CSV + README files, associate them with FeatureModels and create Hubfile entries
         load_dotenv()
         working_dir = os.getenv("WORKING_DIR", "")
-        src_folder = os.path.join(working_dir, "app", "modules", "dataset", "uvl_examples")
+        # Si querías copiar plantillas, podrías usar src_folder; aquí generamos CSVs dinámicamente.
         for i in range(12):
-            file_name = f"file{i+1}.uvl"
+            csv_name = f"file{i+1}.csv"
+            readme_name = f"readme{i+1}.txt"
+
             feature_model = seeded_feature_models[i]
             dataset = next(ds for ds in seeded_datasets if ds.id == feature_model.data_set_id)
             user_id = dataset.user_id
 
             dest_folder = os.path.join(working_dir, "uploads", f"user_{user_id}", f"dataset_{dataset.id}")
             os.makedirs(dest_folder, exist_ok=True)
-            shutil.copy(os.path.join(src_folder, file_name), dest_folder)
 
-            file_path = os.path.join(dest_folder, file_name)
+            # Crear CSV: incluir DATE + todas las columnas requeridas para asegurar que el validador pase.
+            csv_path = os.path.join(dest_folder, csv_name)
+            with open(csv_path, "w", encoding="utf-8", newline="") as csvfile:
+                writer = csv.writer(csvfile, delimiter=",")
+                headers = ["DATE"] + REQUIRED_COLUMNS
+                writer.writerow(headers)
+                # Una fila de ejemplo (DATE + ceros)
+                example_row = ["2020-01-01"] + ["0"] * len(REQUIRED_COLUMNS)
+                writer.writerow(example_row)
 
-            uvl_file = Hubfile(
-                name=file_name,
-                checksum=f"checksum{i+1}",
-                size=os.path.getsize(file_path),
+            # Crear README mínimo
+            readme_path = os.path.join(dest_folder, readme_name)
+            with open(readme_path, "w", encoding="utf-8") as fh:
+                fh.write(f"Readme for {csv_name}\n")
+                fh.write("This is a generated README for seeding purposes.\n")
+
+            # Crear Hubfile para CSV
+            csv_size = os.path.getsize(csv_path)
+            csv_hf = Hubfile(
+                name=csv_name,
+                checksum=f"csv_checksum_{i+1}",
+                size=csv_size,
                 feature_model_id=feature_model.id,
             )
-            self.seed([uvl_file])
-#"""
+
+            # Crear Hubfile para README
+            readme_size = os.path.getsize(readme_path)
+            readme_hf = Hubfile(
+                name=readme_name,
+                checksum=f"readme_checksum_{i+1}",
+                size=readme_size,
+                feature_model_id=feature_model.id,
+            )
+
+            # Guardar ambos Hubfiles
+            self.seed([csv_hf, readme_hf])
