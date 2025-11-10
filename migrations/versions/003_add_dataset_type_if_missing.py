@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "003_add_dataset_type_if_missing"
-down_revision = "002"
+down_revision = "002_add_schema_changes"
 branch_labels = None
 depends_on = None
 
