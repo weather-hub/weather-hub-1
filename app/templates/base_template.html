@@ -166,9 +166,13 @@ chico sundermann">
             </a>
 
             <form class="d-none d-sm-inline-block" onsubmit="submitSearchForm(event)">
-                <div class="input-group input-group-navbar">
-                    <input type="text" id="search-query" class="form-control rounded-search"
-                           placeholder="Search datasets..." aria-label="Search">
+                <div class="input-group input-group-navbar" style="max-width: 520px;">
+                    <input type="text" id="search-query" class="form-control rounded-start"
+                        placeholder="Search datasets..." aria-label="Search">
+                    <a class="btn btn-outline-secondary" href="{{ url_for('explore.index') }}"
+                       title="Advanced search">
+                    <i class="align-middle" data-feather="sliders"></i>
+                    </a>
                 </div>
             </form>
 
@@ -302,8 +306,16 @@ Romero-Organvidez, D., Galindo, J. A., Sundermann, C., Horcas, J.-M., & Benavide
 
     function submitSearchForm(event) {
         event.preventDefault();
-        let query = document.getElementById('search-query').value;
-        window.location.href = '/explore?query=' + encodeURIComponent(query);
+        const query = document.getElementById('search-query').value || "";
+        const url = new URL("{{ url_for('explore.index') }}", window.location.origin);
+        if (query.trim() !== "") url.searchParams.set("query", query.trim());
+        // Conserva filtros ya activos si estás en /explore
+        const current = new URL(window.location.href);
+        ["publication_type", "tags", "start_date", "end_date", "sort_by"].forEach(p => {
+        const v = current.searchParams.get(p);
+        if (v) url.searchParams.set(p, v);
+        });
+        window.location.href = url.toString();
     }
 
     function copyText(div_identifier) {
