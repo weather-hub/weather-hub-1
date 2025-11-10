@@ -39,7 +39,7 @@ repos:
     rev: v0.0.287
     hooks:
       - id: ruff
-        args: ["--ignore=E501", --fix]
+        args: ["--ignore=E501", "--fix"]
         types: [python]
 
   # Control de commits y hooks útiles
