@@ -129,12 +129,6 @@ class DataSetRepository(BaseRepository):
             query = query.filter(DSMetaData.title.ilike(f"%{title}%"))
         if publication_type:
             query = query.filter(DSMetaData.publication_type == publication_type)
-        if doi:
-            query = query.filter(DSMetaData.doi.ilike(f"%{doi}%"))
-        if min_size:
-            query = query.filter(DataSet.size >= min_size)
-        if max_size:
-            query = query.filter(DataSet.size <= max_size)
 
         return query.order_by(DataSet.created_at.desc()).all()
 
