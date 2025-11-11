@@ -1,5 +1,5 @@
-from app.modules.fakenodo.services import FakenodoService
 from app.modules.dataset.routes import FakenodoAdapter
+from app.modules.fakenodo.services import FakenodoService
 
 
 def test_metadata_edit_does_not_create_new_doi(tmp_path):
