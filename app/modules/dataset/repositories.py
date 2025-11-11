@@ -108,9 +108,6 @@ class DataSetRepository(BaseRepository):
         end_date=None,
         title=None,
         publication_type=None,
-        doi=None,
-        min_size=None,
-        max_size=None,
     ):
 
         query = self.model.query.join(DSMetaData, isouter=True)
