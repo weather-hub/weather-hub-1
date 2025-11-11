@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - trunk
+      - feature/*
+      - task/*
   pull_request:
     branches:
       - main
