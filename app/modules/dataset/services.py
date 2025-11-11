@@ -11,6 +11,7 @@ from app.modules.auth.services import AuthenticationService
 from app.modules.dataset.models import DataSet, DSMetaData, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
+    DataSetConceptRepository,
     DataSetRepository,
     DOIMappingRepository,
     DSDownloadRecordRepository,
@@ -55,7 +56,13 @@ class DataSetService(BaseService):
         source_dir = current_user.temp_folder()
 
         working_dir = os.getenv("WORKING_DIR", "")
-        dest_dir = os.path.join(working_dir, "uploads", f"user_{current_user.id}", f"dataset_{dataset.id}")
+        dest_dir = os.path.join(
+            working_dir,
+            "uploads",
+            f"user_{current_user.id}",
+            f"dataset_{dataset.id}",
+            f"_{dataset.get_version_number()}",
+        )
 
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -132,7 +139,7 @@ class DataSetService(BaseService):
                     file_paths=file_paths
                 )
 
-            except Exception as ex:
+            except Exception:
                 # rollback y propaga error (tu código ya maneja rollback en el except general)
                 self.repository.session.rollback()
                 raise
@@ -172,6 +179,17 @@ class AuthorService(BaseService):
 class DSDownloadRecordService(BaseService):
     def __init__(self):
         super().__init__(DSDownloadRecordRepository())
+
+
+class DataSetConceptService(BaseService):
+    def __init__(self):
+        super().__init__(DataSetConceptRepository())
+
+    def filter_by_doi(self, doi: str):
+        return self.repository.ds_concept_by_conceptual_doi(doi)
+
+    def update(self, id, **kwargs):
+        return self.repository.update(id, **kwargs)
 
 
 class DSMetaDataService(BaseService):

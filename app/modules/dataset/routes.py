@@ -25,6 +25,7 @@ from app.modules.dataset.forms import DataSetForm
 from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
+    DataSetConceptService,
     DataSetService,
     DOIMappingService,
     DSDownloadRecordService,
@@ -39,6 +40,7 @@ logger = logging.getLogger(__name__)
 dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
+dataset_concept_service = DataSetConceptService()
 zenodo_service = ZenodoService()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
@@ -66,7 +68,7 @@ def create_dataset():
             logger.info(f"Validation error while creating dataset: {e}")
             return jsonify({"message": str(e)}), 400
 
-        except Exception as exc:
+        except Exception:
             # Unexpected error: log full trace, return generic message to client
             logger.exception("Exception while creating dataset")
             # For security do not leak internal trace to client; return generic message.
@@ -252,18 +254,41 @@ def subdomain_index(doi):
         # Redirect to the same path with the new DOI
         return redirect(url_for("dataset.subdomain_index", doi=new_doi), code=302)
 
-    # Try to search the dataset by the provided DOI (which should already be the new one)
-    ds_meta_data = dsmetadata_service.filter_by_doi(doi)
+    current_dataset = None
+    # si es una conceptual DOI devuelve el latest dataset
+    concept = dataset_concept_service.filter_by_doi(doi=doi) if dataset_concept_service.filter_by_doi(doi=doi) else None
 
-    if not ds_meta_data:
+    if concept:
+        if concept.versions:
+            current_dataset = concept.versions.first()
+        else:
+            abort(404)
+    else:
+
+        ds_meta_data = dsmetadata_service.filter_by_doi(doi)
+        if ds_meta_data:
+            # Es especifico
+            current_dataset = ds_meta_data.data_set
+            concept = current_dataset.concept
+        else:
+            abort(404)
+
+    if not current_dataset or not concept:
         abort(404)
 
-    # Get dataset
-    dataset = ds_meta_data.data_set
+    all_versions = concept.versions.all()
+    latest_version = all_versions[0]
 
-    # Save the cookie to the user's browser
-    user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
-    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset))
+    user_cookie = ds_view_record_service.create_cookie(dataset=current_dataset)
+    resp = make_response(
+        render_template(
+            "dataset/view_dataset.html",
+            dataset=current_dataset,
+            all_versions=all_versions,
+            latest_version=latest_version,
+            conceptual_doi=concept.conceptual_doi,
+        )
+    )
     resp.set_cookie("view_cookie", user_cookie)
 
     return resp
