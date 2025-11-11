@@ -132,7 +132,7 @@ class DataSetService(BaseService):
                     file_paths=file_paths
                 )
 
-            except Exception as ex:
+            except Exception:
                 # rollback y propaga error (tu código ya maneja rollback en el except general)
                 self.repository.session.rollback()
                 raise
@@ -162,6 +162,9 @@ class DataSetService(BaseService):
     def get_uvlhub_doi(self, dataset: DataSet) -> str:
         domain = os.getenv("DOMAIN", "localhost")
         return f"http://{domain}/doi/{dataset.ds_meta_data.dataset_doi}"
+
+    def search(self, **filters):
+        return self.repository.search(**filters)
 
 
 class AuthorService(BaseService):

@@ -316,3 +316,22 @@ def get_unsynchronized_dataset(dataset_id):
         comment_form=comment_form,
         comments=comments,
     )
+
+
+@dataset_bp.route("/dataset/search", methods=["GET", "POST"])
+@login_required
+def search_dataset():
+    filters = {
+        "author": request.args.get("author"),
+        "affiliation": request.args.get("affiliation"),
+        "tags": request.args.get("tags", "").split(","),
+        "start_date": request.args.get("start_date"),
+        "end_date": request.args.get("end_date"),
+        "title": request.args.get("title"),
+        "publication_type": request.args.get("publication_type"),
+        "doi": request.args.get("doi"),
+        "min_size": request.args.get("min_size"),
+        "max_size": request.args.get("max_size"),
+    }
+    results = dataset_service.search(**filters)
+    return render_template("dataset/search_results.html", datasets=results, filters=filters)

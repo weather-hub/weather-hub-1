@@ -99,6 +99,45 @@ class DataSetRepository(BaseRepository):
             .all()
         )
 
+    def search(
+        self,
+        author=None,
+        affiliation=None,
+        tags=None,
+        start_date=None,
+        end_date=None,
+        title=None,
+        publication_type=None,
+        doi=None,
+        min_size=None,
+        max_size=None,
+    ):
+
+        query = self.model.query.join(DSMetaData, isouter=True)
+        if author:
+            query = query.filter(DSMetaData.authors.ilike(f"%{author}%"))
+        if affiliation:
+            query = query.filter(DSMetaData.affiliation.ilike(f"%{affiliation}%"))
+        if tags:
+            for tag in tags:
+                query = query.filter(DSMetaData.tags.ilike(f"%{tag.strip()}%"))
+        if start_date:
+            query = query.filter(DataSet.created_at >= start_date)
+        if end_date:
+            query = query.filter(DataSet.created_at <= end_date)
+        if title:
+            query = query.filter(DSMetaData.title.ilike(f"%{title}%"))
+        if publication_type:
+            query = query.filter(DSMetaData.publication_type == publication_type)
+        if doi:
+            query = query.filter(DSMetaData.doi.ilike(f"%{doi}%"))
+        if min_size:
+            query = query.filter(DataSet.size >= min_size)
+        if max_size:
+            query = query.filter(DataSet.size <= max_size)
+
+        return query.order_by(DataSet.created_at.desc()).all()
+
 
 class DOIMappingRepository(BaseRepository):
     def __init__(self):
