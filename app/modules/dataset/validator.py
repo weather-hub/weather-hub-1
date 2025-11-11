@@ -1,7 +1,7 @@
 # app/modules/dataset/validators.py
 import csv
 import os
-from typing import List, Tuple
+from typing import List
 
 REQUIRED_COLUMNS = [
     "_temp_mean",
@@ -114,7 +114,7 @@ def validate_dataset_package(
         if not headers:
             errors.append(f"CSV sin cabecera detectada: {os.path.basename(csvp)}")
             continue
-        headers_set = {h.strip() for h in headers if h.strip()}
+        {h.strip() for h in headers if h.strip()}
 
         missing = []
         matched_map = {}  # required -> list of matching headers
