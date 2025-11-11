@@ -1,40 +1,48 @@
-# fakenodo
+# Fakenodo
 
-This module provides a small fake implementation of the Zenodo deposition API for local development and tests.
+This module provides a lightweight local emulation of a Zenodo-like API for development and testing.
 
-Run standalone:
+Purpose
+- Emulate basic Zenodo behaviour (create deposition, upload files, publish versions) without calling external services.
+- Allow uvlhub development and CI to run without network dependency on Zenodo.
 
-```bash
-# from repository root
-python -m app.modules.fakenodo.run
-```
+Usage
+- By default the application uses the real `ZenodoService` for production flows. To prefer the fake service set one of the environment variables:
+  - `FAKENODO_URL` (any value) or
+  - `USE_FAKE_ZENODO=true`
 
-By default it listens on port 5001. You can change port with:
+  Example (bash):
 
-```bash
-FAKENODO_PORT=5002 python -m app.modules.fakenodo.run
-```
+  ```bash
+  export USE_FAKE_ZENODO=true
+  # then run the app
+  ```
 
-Point the main app to the fake service by setting the `FAKENODO_URL` environment variable, for example:
+Behaviour notes
+- Endpoints implemented:
+  - POST `/fakenodo/deposit/depositions` — create a deposition (accepts JSON with `metadata`).
+  - GET `/fakenodo/deposit/depositions` — list depositions.
+  - GET `/fakenodo/deposit/depositions/<id>` — get a deposition.
+  - PUT `/fakenodo/deposit/depositions/<id>` — update only metadata (will NOT mark the deposition as dirty).
+  - DELETE `/fakenodo/deposit/depositions/<id>` — delete a deposition.
+  - POST `/fakenodo/deposit/depositions/<id>/files` — upload a file (multipart form `file`). Marks the deposition as dirty.
+  - POST `/fakenodo/deposit/depositions/<id>/actions/publish` — publish deposition; creates a new DOI/version if there is no previous version or if the deposition is dirty.
+  - GET `/fakenodo/deposit/depositions/<id>/versions` — list versions for a deposition.
 
-```bash
-export FAKENODO_URL=http://localhost:5001/deposit/depositions
-# then start the main app normally
-flask run
-```
+- DOI generation: a fake DOI of the form `10.1234/fakenodo.{id}.v{version}` is returned on publish.
 
-Basic sequence to exercise the fake:
+Persistence & cleanup
+- Data is persisted to `fakenodo_db.json` in `WORKING_DIR` (or current working dir if `WORKING_DIR` not set).
+- Files uploaded are recorded in the DB metadata but their bytes are not stored on disk by default.
+- `fakenodo_db.json` is added to `.gitignore` — do not commit it.
 
-```bash
-# create
-curl -s -X POST -H "Content-Type: application/json" -d '{"metadata": {"title":"test"}}' http://localhost:5001/deposit/depositions | jq
+Cleaning between runs
+- In CI or when running tests in parallel, set `WORKING_DIR` to a unique temporary folder per job and remove that folder after the run.
 
-# upload (multipart)
-curl -s -X POST -F "file=@test.csv" http://localhost:5001/deposit/depositions/1/files | jq
+Security
+- This is a development-only service. Do NOT expose it in production.
 
-# publish
-curl -s -X POST http://localhost:5001/deposit/depositions/1/actions/publish | jq
+Testing
+- Unit tests live in `app/modules/fakenodo/tests` and demonstrate the create/edit/publish behaviour.
 
-# get
-curl -s http://localhost:5001/deposit/depositions/1 | jq
-```
+If you want behaviour changes (e.g. persist file bytes, different DOI format, additional endpoints) open a PR with the desired behaviour and tests.

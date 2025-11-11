@@ -3,7 +3,7 @@ import os
 
 import requests
 from dotenv import load_dotenv
-from flask import Response, has_request_context, jsonify, session
+from flask import Response, jsonify
 from flask_login import current_user
 
 from app.modules.dataset.models import DataSet
@@ -20,24 +20,6 @@ load_dotenv()
 class ZenodoService(BaseService):
 
     def get_zenodo_url(self):
-        """Return the base URL for depositions.
-
-        Preference order:
-        - If the session indicates 'fakenodo', use FAKENODO_URL env var if present.
-        - Otherwise, use ZENODO_API_URL based on FLASK_ENV as before.
-        """
-        # If a per-session override was set (via the UI), honor it — but only when
-        # there is an active request context. Accessing `session` outside a
-        # request context raises a RuntimeError (this happens when CLI tools or
-        # app-start code import or construct services). We therefore guard with
-        # `has_request_context()`.
-        repo_choice = session.get("repository_service") if has_request_context() else None
-        if repo_choice == "fakenodo":
-            return os.getenv(
-                "FAKENODO_URL",
-                os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions"),
-            )
-
         FLASK_ENV = os.getenv("FLASK_ENV", "development")
         if FLASK_ENV == "development":
             return os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
@@ -157,16 +139,17 @@ class ZenodoService(BaseService):
         """
 
         logger.info("Dataset sending to Zenodo...")
-        logger.info(f"Publication type...{dataset.ds_meta_data.publication_type.value}")
+        # publication_type is stored in the DB as an Enum whose .name maps to the
+        # tokens defined in the DB migration (e.g. 'NONE', 'OTHER'). For Zenodo we
+        # need the lowercase token (e.g. 'none', 'other'), so use `.name.lower()`
+        # which is stable regardless of whether seeders use .name or .value.
+        pub_type_normalized = dataset.ds_meta_data.publication_type.name.lower()
+        logger.info(f"Publication type...{pub_type_normalized}")
 
         metadata = {
             "title": dataset.ds_meta_data.title,
-            "upload_type": "dataset" if dataset.ds_meta_data.publication_type.value == "none" else "publication",
-            "publication_type": (
-                dataset.ds_meta_data.publication_type.value
-                if dataset.ds_meta_data.publication_type.value != "none"
-                else None
-            ),
+            "upload_type": "dataset" if pub_type_normalized == "none" else "publication",
+            "publication_type": (pub_type_normalized if pub_type_normalized != "none" else None),
             "description": dataset.ds_meta_data.description,
             "creators": [
                 {

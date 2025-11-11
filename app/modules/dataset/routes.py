@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 from zipfile import ZipFile
 
 # from valid_files import valid_files
@@ -22,6 +23,7 @@ from app.modules.dataset.services import (
     DSMetaDataService,
     DSViewRecordService,
 )
+from app.modules.fakenodo.services import FakenodoService
 from app.modules.zenodo.services import ZenodoService
 
 logger = logging.getLogger(__name__)
@@ -30,7 +32,87 @@ logger = logging.getLogger(__name__)
 dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
-zenodo_service = ZenodoService()
+
+
+class FakenodoAdapter:
+    """Adapter that exposes create_new_deposition, upload_file, publish_deposition
+    and get_doi so the rest of the code doesn't need to change.
+    """
+
+    def __init__(self, working_dir: str | None = None):
+        self.service = FakenodoService(working_dir=working_dir)
+
+    def create_new_deposition(self, dataset) -> dict:
+        metadata = {
+            "title": getattr(dataset, "title", f"dataset-{getattr(dataset, 'id', '')}"),
+        }
+        rec = self.service.create_deposition(metadata=metadata)
+        return {"id": rec["id"], "conceptrecid": True, "metadata": rec.get("metadata", {})}
+
+    def upload_file(self, dataset, deposition_id, feature_model) -> Optional[dict]:
+
+        name = getattr(feature_model, "filename", None) or getattr(feature_model, "name", None)
+        path = getattr(feature_model, "file_path", None) or getattr(feature_model, "path", None)
+        content = None
+        try:
+            if path and os.path.exists(path):
+                with open(path, "rb") as fh:
+                    content = fh.read()
+        except Exception:
+            content = None
+
+        if not name:
+            name = f"feature_model_{getattr(feature_model, 'id', uuid.uuid4())}.bin"
+
+        return self.service.upload_file(deposition_id, name, content)
+
+    def publish_deposition(self, deposition_id):
+        return self.service.publish_deposition(deposition_id)
+
+    def get_doi(self, deposition_id):
+        rec = self.service.get_deposition(deposition_id)
+        if not rec:
+            return None
+        doi = rec.get("doi")
+        if doi:
+            return doi
+        versions = rec.get("versions") or []
+        if versions:
+            return versions[-1].get("doi")
+        return None
+
+
+def get_zenodo_client(working_dir: str | None = None):
+    """Return a zenodo-like client depending on environment configuration.
+
+    If the environment variable `FAKENODO_URL` or `USE_FAKE_ZENODO` is set the
+    function returns a `FakenodoAdapter`, otherwise it returns the real
+    `ZenodoService`.
+    """
+    # Prefer explicit environment opt-in for the fake service
+    if os.getenv("FAKENODO_URL") or os.getenv("USE_FAKE_ZENODO"):
+        return FakenodoAdapter(working_dir=working_dir)
+
+    # Otherwise try real Zenodo and fall back to the fake service if the
+    # connection fails (e.g. SSL verification issues in some environments).
+    try:
+        zs = ZenodoService()
+        try:
+            if zs.test_connection():
+                return zs
+        except Exception:
+            # test_connection failed (network/ssl); fall through to fake
+            logger = logging.getLogger(__name__)
+            logger.warning("ZenodoService test_connection failed, falling back to FakenodoAdapter")
+            return FakenodoAdapter(working_dir=working_dir)
+    except Exception:
+        # constructing ZenodoService failed for any reason -> fallback
+        logger = logging.getLogger(__name__)
+        logger.warning("Unable to initialize ZenodoService, using FakenodoAdapter")
+        return FakenodoAdapter(working_dir=working_dir)
+
+
+zenodo_service = get_zenodo_client()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
 

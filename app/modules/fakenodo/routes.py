@@ -1,93 +1,110 @@
-from flask import jsonify, request, session
+from flask import jsonify, request
 
 from app.modules.fakenodo import fakenodo_bp
+from app.modules.fakenodo.services import FakenodoService
 
-# Minimal in-memory store
-_store = {}
-_next_id = 1
-
-
-def _get_next_id():
-    global _next_id
-    nid = _next_id
-    _next_id += 1
-    return nid
+_service = FakenodoService()
 
 
-def _generate_doi(deposition_id: int, version: int = 1) -> str:
-    return f"10.5072/fakenodo.{deposition_id}.v{version}"
+@fakenodo_bp.route("/fakenodo", methods=["GET"])
+def test_connection_fakenodo():
+    return jsonify({"status": "success", "message": "Connected to FakenodoAPI"})
 
 
 @fakenodo_bp.route("/deposit/depositions", methods=["POST"])
 def create_deposition():
-    data = request.get_json() or {}
-    metadata = data.get("metadata", {})
-    dep_id = _get_next_id()
-    dep = {
-        "id": dep_id,
-        "metadata": metadata,
-        "files": [],
-        "published": False,
-        "versions": [],
-    }
-    _store[dep_id] = dep
-    # Return conceptrecid so the client (dataset flow) proceeds
-    return jsonify({"id": dep_id, "conceptrecid": dep_id, "metadata": metadata}), 201
+    payload = request.get_json(silent=True) or {}
+    metadata = payload.get("metadata") if isinstance(payload, dict) else None
+    record = _service.create_deposition(metadata=metadata)
+    return jsonify(record), 201
 
 
-@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/files", methods=["POST"])
-def upload_file(deposition_id):
-    dep = _store.get(deposition_id)
-    if not dep:
-        return jsonify({"message": "Deposition not found"}), 404
-    uploaded = []
-    for key, f in request.files.items():
-        filename = f.filename
-        content = f.read()
-        filesize = len(content)
-        dep["files"].append({"filename": filename, "filesize": filesize})
-        uploaded.append({"filename": filename, "filesize": filesize})
-    return jsonify({"files": uploaded}), 201
-
-
-@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/actions/publish", methods=["POST"])
-def publish(deposition_id):
-    dep = _store.get(deposition_id)
-    if not dep:
-        return jsonify({"message": "Deposition not found"}), 404
-    version = len(dep["versions"]) + 1
-    doi = _generate_doi(deposition_id, version)
-    snapshot = {"version": version, "doi": doi, "metadata": dict(dep["metadata"]), "files": list(dep["files"])}
-    dep["versions"].append(snapshot)
-    dep["published"] = True
-    return jsonify({"id": deposition_id, "doi": doi}), 202
+@fakenodo_bp.route("/deposit/depositions", methods=["GET"])
+def get_all_depositions():
+    records = _service.list_depositions()
+    return jsonify({"depositions": records}), 200
 
 
 @fakenodo_bp.route("/deposit/depositions/<int:deposition_id>", methods=["GET"])
 def get_deposition(deposition_id):
-    dep = _store.get(deposition_id)
-    if not dep:
+    rec = _service.get_deposition(deposition_id)
+    if not rec:
         return jsonify({"message": "Deposition not found"}), 404
-    result = dict(dep)
-    if dep.get("versions"):
-        result["doi"] = dep["versions"][-1]["doi"]
-    return jsonify(result), 200
+    return jsonify(rec), 200
 
 
-@fakenodo_bp.route("/repository/select", methods=["POST"])
-def set_repository():
-    """Set which repository backend to use for the current session.
-
-    Body: {"service": "zenodo" | "fakenodo"}
-    """
-    data = request.get_json() or {}
-    service = data.get("service")
-    if service not in ("zenodo", "fakenodo"):
-        return jsonify({"message": "Invalid service"}), 400
-    session["repository_service"] = service
-    return jsonify({"service": service}), 200
+@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>", methods=["PUT"])
+def update_deposition(deposition_id):
+    payload = request.get_json(silent=True) or {}
+    metadata = payload.get("metadata") if isinstance(payload, dict) else None
+    rec = _service.update_metadata(deposition_id, metadata)
+    if not rec:
+        return jsonify({"message": "Deposition not found"}), 404
+    return jsonify(rec), 200
 
 
-@fakenodo_bp.route("/repository/current", methods=["GET"])
-def get_repository():
-    return jsonify({"service": session.get("repository_service", "zenodo")}), 200
+@fakenodo_bp.route("/deposit/depositions/<depositionId>", methods=["DELETE"])
+def delete_deposition_fakenodo(depositionId):
+    success = _service.delete_deposition(depositionId)
+    if success:
+        return jsonify({"status": "success", "message": f"Succesfully deleted deposition {depositionId}"}), 200
+    return jsonify({"status": "error", "message": "Not found"}), 404
+
+
+@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/files", methods=["POST"])
+def upload_file(deposition_id):
+    uploaded = request.files.get("file")
+    name = request.form.get("name") or (uploaded.filename if uploaded else None)
+    content = uploaded.read() if uploaded else None
+
+    if not name:
+        return jsonify({"message": "No file name provided"}), 400
+
+    file_record = _service.upload_file(deposition_id, name, content)
+    if not file_record:
+        return jsonify({"message": "Deposition not found"}), 404
+    return jsonify(file_record), 201
+
+
+@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/actions/publish", methods=["POST"])
+def publish_deposition(deposition_id):
+    version = _service.publish_deposition(deposition_id)
+    if not version:
+        return jsonify({"message": "Deposition not found"}), 404
+    return jsonify(version), 202
+
+
+@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/versions", methods=["GET"])
+def list_deposition_versions(deposition_id):
+    versions = _service.list_versions(deposition_id)
+    if versions is None:
+        return jsonify({"message": "Deposition not found"}), 404
+    return jsonify({"versions": versions}), 200
+
+
+@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/nonexistent", methods=["GET"])
+def deposition_not_found(deposition_id):
+    return jsonify({"message": "Deposition not found"}), 404
+
+
+@fakenodo_bp.route("/test", methods=["GET"])
+def test_endpoint():
+    messages = []
+    try:
+        rec = _service.create_deposition(metadata={"title": "fakenodo-test"})
+        messages.append(f"created:{rec['id']}")
+
+        uploaded = _service.upload_file(rec["id"], "test.txt", b"hola")
+        if uploaded:
+            messages.append("uploaded")
+
+        version = _service.publish_deposition(rec["id"])
+        if version:
+            messages.append(f"published:{version.get('doi')}")
+
+        _service.delete_deposition(rec["id"])
+        messages.append("deleted")
+
+        return jsonify({"success": True, "messages": messages}), 200
+    except Exception as exc:
+        return jsonify({"success": False, "messages": [str(exc)]}), 500
