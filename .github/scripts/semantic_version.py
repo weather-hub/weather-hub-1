@@ -1,18 +1,26 @@
 import subprocess
-
 import semver
 import toml
 
-# Leer versión actual
-pyproject = toml.load("pyproject.toml")
-version = pyproject["tool"]["poetry"]["version"]
+# Cargar pyproject.toml
+pyproject_path = "pyproject.toml"
+pyproject = toml.load(pyproject_path)
+
+# Leer versión actual desde [project]
+version = pyproject["project"]["version"]
 
 # Obtener commits desde la última etiqueta
 try:
-    last_tag = subprocess.check_output(["git", "describe", "--tags", "--abbrev=0"], text=True).strip()
-    commits = subprocess.check_output(["git", "log", f"{last_tag}..HEAD", "--pretty=format:%s"], text=True).splitlines()
+    last_tag = subprocess.check_output(
+        ["git", "describe", "--tags", "--abbrev=0"], text=True
+    ).strip()
+    commits = subprocess.check_output(
+        ["git", "log", f"{last_tag}..HEAD", "--pretty=format:%s"], text=True
+    ).splitlines()
 except subprocess.CalledProcessError:
-    commits = subprocess.check_output(["git", "log", "--pretty=format:%s"], text=True).splitlines()
+    commits = subprocess.check_output(
+        ["git", "log", "--pretty=format:%s"], text=True
+    ).splitlines()
 
 # Determinar tipo de incremento
 bump_type = "patch"
@@ -34,9 +42,9 @@ elif bump_type == "minor":
 else:
     new_version = v.bump_patch()
 
-# Guardar nueva versión
-pyproject["tool"]["poetry"]["version"] = str(new_version)
-with open("pyproject.toml", "w") as f:
+# Guardar nueva versión de vuelta en pyproject.toml
+pyproject["project"]["version"] = str(new_version)
+with open(pyproject_path, "w") as f:
     toml.dump(pyproject, f)
 
 print(f"Versión actualizada: {version} -> {new_version}")

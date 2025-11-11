@@ -1,4 +1,4 @@
-from config import ConfigManager
+from core.managers.config_manager import ConfigManager
 from flask import Flask
 from flask_mail import Mail, Message
 

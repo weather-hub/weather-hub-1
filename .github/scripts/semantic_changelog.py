@@ -1,18 +1,38 @@
 import subprocess
+import toml
+import os
+from datetime import datetime
 
-# Obtener última etiqueta
+# Cargar pyproject.toml para obtener la versión actual
+pyproject_path = "pyproject.toml"
+pyproject = toml.load(pyproject_path)
+version = pyproject["project"]["version"]
+
+# Obtener última etiqueta (opcional)
 try:
-    last_tag = subprocess.check_output(["git", "describe", "--tags", "--abbrev=0"], text=True).strip()
+    last_tag = subprocess.check_output(
+        ["git", "describe", "--tags", "--abbrev=0"], text=True
+    ).strip()
 except subprocess.CalledProcessError:
     last_tag = ""
 
-# Obtener commits desde la última etiqueta
+# Obtener commits desde la última etiqueta o desde el inicio
 if last_tag:
-    commits = subprocess.check_output(["git", "log", f"{last_tag}..HEAD", "--pretty=format:%s"], text=True).splitlines()
+    commits = subprocess.check_output(
+        ["git", "log", f"{last_tag}..HEAD", "--pretty=format:%s"], text=True
+    ).splitlines()
 else:
-    commits = subprocess.check_output(["git", "log", "--pretty=format:%s"], text=True).splitlines()
+    commits = subprocess.check_output(
+        ["git", "log", "--pretty=format:%s"], text=True
+    ).splitlines()
 
-sections = {"Features": [], "Fixes": [], "Docs": [], "Others": []}
+# Clasificar commits por tipo
+sections = {
+    "Features": [],
+    "Fixes": [],
+    "Docs": [],
+    "Others": []
+}
 
 for c in commits:
     if c.startswith("feat"):
@@ -24,13 +44,32 @@ for c in commits:
     else:
         sections["Others"].append(c)
 
-with open("CHANGELOG.md", "w") as f:
-    f.write("# Changelog\n\n")
-    for section, items in sections.items():
-        if items:
-            f.write(f"## {section}\n")
-            for item in items:
-                f.write(f"- {item}\n")
-            f.write("\n")
+# Preparar contenido del changelog
+header = f"# Changelog - Version {version} ({datetime.today().strftime('%Y-%m-%d')})\n\n"
 
-print("Changelog actualizado con secciones")
+changelog_lines = [header]
+
+for section, items in sections.items():
+    if items:
+        changelog_lines.append(f"## {section}\n")
+        for item in items:
+            changelog_lines.append(f"- {item}")
+        changelog_lines.append("")  # línea en blanco entre secciones
+
+# Guardar en CHANGELOG.md
+changelog_path = "CHANGELOG.md"
+
+# Si existe, leerlo y añadir al final para no perder cambios previos
+if os.path.exists(changelog_path):
+    with open(changelog_path, "r") as f:
+        old_content = f.read()
+else:
+    old_content = ""
+
+# Escribimos la nueva versión al inicio del changelog
+with open(changelog_path, "w") as f:
+    f.write("\n".join(changelog_lines))
+    f.write("\n")
+    f.write(old_content)  # conservar el changelog previo
+
+print(f"Changelog actualizado con la versión {version}")
