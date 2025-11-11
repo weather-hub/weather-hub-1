@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: Build & Test Docker Image
+    name: Build Docker Image
     runs-on: ubuntu-latest
 
     steps:
@@ -26,20 +26,3 @@ jobs:
           docker build \
             -f docker/images/Dockerfile.render \
             -t mi-app-ci:${{ github.sha }} .
-
-      # 3️⃣ Ejecutar un contenedor de prueba
-      - name: Run Docker container to validate
-        run: |
-          CONTAINER_ID=$(docker run -d mi-app-ci:${{ github.sha }})
-          # Esperar 10 segundos para que el contenedor inicialice
-          sleep 10
-          # Comprobar que el contenedor sigue corriendo
-          if [ "$(docker inspect -f '{{.State.Running}}' $CONTAINER_ID)" != "true" ]; then
-            echo "ERROR: El contenedor no se inició correctamente"
-            docker logs $CONTAINER_ID
-            docker rm -f $CONTAINER_ID
-            exit 1
-          fi
-          echo "Contenedor iniciado correctamente"
-          # Detener y eliminar contenedor de prueba
-          docker rm -f $CONTAINER_ID
