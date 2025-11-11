@@ -30,3 +30,6 @@ def index():
         query=filters["query"],
         request_args=request.args,
     )
+
+
+# For dinamic frontend implementation @explore_bp.route("/", methods=["POST"])

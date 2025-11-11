@@ -1,5 +1,4 @@
 {% extends "base_template.html" %}
-
 {% block title %}Explore{% endblock %}
 
 {% block content %}
@@ -13,33 +12,97 @@
       </h3>
 
       {% if datasets %}
-        {% for ds in datasets %}
-          <div class="card mb-3 shadow-sm">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start">
-                <h4 class="mb-1">{{ ds.ds_meta_data.title }}</h4>
-                <span class="badge text-bg-light">{{ ds.get_cleaned_publication_type() }}</span>
-              </div>
-              <small class="text-muted d-block mb-2">
-                {{ ds.created_at.strftime('%d %b %Y, %H:%M') }}
-              </small>
-              <p class="mb-2">
-                {{ ds.ds_meta_data.description[:250] }}{% if ds.ds_meta_data.description|length > 250 %}…{% endif %}
-              </p>
-              {% if ds.ds_meta_data.tags %}
-                <div class="mt-2">
-                  {% for tag in ds.ds_meta_data.tags.split(',') %}
-                    <span class="badge bg-primary-subtle text-primary-emphasis me-1">{{ tag.strip() }}</span>
-                  {% endfor %}
+        {% for dataset in datasets %}
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <h2>
+
+                                <a href="{{ dataset.get_uvlhub_doi() }}">
+                                    {{ dataset.ds_meta_data.title }}
+                                </a>
+
+                            </h2>
+                            <div>
+                                <span class="badge bg-secondary">{{ dataset.get_cleaned_publication_type() }}</span>
+                            </div>
+                        </div>
+                        <p class="text-secondary">{{ dataset.created_at.strftime('%B %d, %Y at %I:%M %p') }}</p>
+
+                        <div class="row mb-2">
+
+                            <div class="col-12">
+                                <p class="card-text">{{ dataset.ds_meta_data.description }}</p>
+                            </div>
+
+                        </div>
+
+                        <div class="row mb-2 mt-4">
+
+                            <div class="col-12">
+                                {% for author in dataset.ds_meta_data.authors %}
+                                    <p class="p-0 m-0">
+                                        {{ author.name }}
+                                        {% if author.affiliation %}
+                                            ({{ author.affiliation }})
+                                        {% endif %}
+                                        {% if author.orcid %}
+                                            ({{ author.orcid }})
+                                        {% endif %}
+                                    </p>
+                                {% endfor %}
+                            </div>
+
+
+                        </div>
+
+                        <div class="row mb-2">
+
+                            <div class="col-12">
+                                <a href="{{ dataset.get_uvlhub_doi() }}">{{ dataset.get_uvlhub_doi() }}</a>
+                                 <div id="dataset_doi_uvlhub_{{ dataset.id }}" style="display: none">
+                                {{ dataset.get_uvlhub_doi() }}
+                            </div>
+
+                            <i data-feather="clipboard" class="center-button-icon"
+                               style="cursor: pointer"
+                               onclick="copyText('dataset_doi_uvlhub_{{ dataset.id }}')"></i>
+                            </div>
+
+
+
+                        </div>
+
+                        <div class="row mb-2">
+
+                            <div class="col-12">
+                                {% for tag in dataset.ds_meta_data.tags.split(',') %}
+                                    <span class="badge bg-secondary">{{ tag.strip() }}</span>
+                                {% endfor %}
+                            </div>
+
+                        </div>
+
+                        <div class="row  mt-4">
+                            <div class="col-12">
+                                <a href="{{ dataset.get_uvlhub_doi() }}" class="btn btn-outline-primary btn-sm"
+                                   style="border-radius: 5px;">
+                                    <i data-feather="eye" class="center-button-icon"></i>
+                                    View dataset
+                                </a>
+
+                                <a href="/dataset/download/{{ dataset.id }}" class="btn btn-outline-primary btn-sm"
+                                   style="border-radius: 5px;">
+                                    <i data-feather="download" class="center-button-icon"></i>
+                                    Download ({{ dataset.get_file_total_size_for_human() }})
+                                </a>
+                            </div>
+                        </div>
+
+
+                    </div>
                 </div>
-              {% endif %}
-              <div class="mt-3">
-                <a href="{{ ds.get_uvlhub_doi() }}" class="btn btn-outline-primary btn-sm">View dataset</a>
-                <a href="{{ url_for('dataset.download_dataset', dataset_id=ds.id) }}" class="btn btn-outline-primary btn-sm">Download ({{ ds.get_file_total_size_for_human() }})</a>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
+            {% endfor %}
       {% else %}
         <div class="text-center text-muted py-5">No datasets found for the selected filters.</div>
       {% endif %}
@@ -95,10 +158,24 @@
 
             <!-- Date range -->
             <div class="mb-3">
-              <label class="form-label d-block">Creation date</label>
-              <div class="d-flex gap-2">
-                <input type="date" name="start_date" class="form-control" value="{{ request_args.get('start_date','') }}">
-                <input type="date" name="end_date" class="form-control" value="{{ request_args.get('end_date','') }}">
+              <label class="form-label mb-0">Creation date</label>
+              <div class="row g-2 mt-1">
+                <div class="col-12 col-sm-6">
+                  <label for="filter-date-from" class="form-text d-block mb-1">From</label>
+                  <input id="filter-date-from"
+                        type="date"
+                        name="start_date"
+                        class="form-control"
+                        value="{{ request.args.get('start_date','') }}">
+                </div>
+                <div class="col-12 col-sm-6">
+                  <label for="filter-date-to" class="form-text d-block mb-1">To</label>
+                  <input id="filter-date-to"
+                        type="date"
+                        name="end_date"
+                        class="form-control"
+                        value="{{ request.args.get('end_date','') }}">
+                </div>
               </div>
             </div>
 
