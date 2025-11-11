@@ -1,0 +1,28 @@
+name: Notificación de Push al Equipo
+
+# Se ejecuta cada vez que hay un push a main
+on:
+  push:
+    branches:
+      - main # Cambia a la rama que quieras
+      - trunk
+
+jobs:
+  send_email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install Flask Flask-Mail
+
+      - name: Enviar correo al equipo
+        run: python .github/scripts/push_email_team_flask.py
+        env:
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}

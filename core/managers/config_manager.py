@@ -6,12 +6,11 @@ class ConfigManager:
     def __init__(self, app):
         self.app = app
 
-    def load_config(self, config_name="development"):
-        # If config_name is not provided, use the environment variable FLASK_ENV
+    def load_config(self, config_name=None):
+        # Si no se indica, usar la variable FLASK_ENV
         if config_name is None:
             config_name = os.getenv("FLASK_ENV", "development")
 
-        # Load configuration
         if config_name == "testing":
             self.app.config.from_object(TestingConfig)
         elif config_name == "production":
@@ -33,6 +32,16 @@ class Config:
     TIMEZONE = "Europe/Madrid"
     TEMPLATES_AUTO_RELOAD = True
     UPLOAD_FOLDER = "uploads"
+
+    # Configuración de correo
+    MAIL_SERVER = "smtp.gmail.com"
+    MAIL_PORT = 587
+    MAIL_USE_TLS = True
+    MAIL_USE_SSL = False
+    MAIL_USERNAME = "Miguelmirceballos@gmail.com"
+    # usar GitHub secret o variable de entorno
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = "Miguelmirceballos@gmail.com"
 
 
 class DevelopmentConfig(Config):
