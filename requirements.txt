@@ -141,6 +141,4 @@ toml
 
 semver
 
-subprocess
-
 yagmail
