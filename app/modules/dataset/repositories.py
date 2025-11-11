@@ -5,7 +5,15 @@ from typing import Optional
 from flask_login import current_user
 from sqlalchemy import desc, func
 
-from app.modules.dataset.models import Author, DataSet, DOIMapping, DSDownloadRecord, DSMetaData, DSViewRecord
+from app.modules.dataset.models import (
+    Author,
+    DataSet,
+    DataSetConcept,
+    DOIMapping,
+    DSDownloadRecord,
+    DSMetaData,
+    DSViewRecord,
+)
 from core.repositories.BaseRepository import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -23,6 +31,14 @@ class DSDownloadRecordRepository(BaseRepository):
     def total_dataset_downloads(self) -> int:
         max_id = self.model.query.with_entities(func.max(self.model.id)).scalar()
         return max_id if max_id is not None else 0
+
+
+class DataSetConceptRepository(BaseRepository):
+    def __init__(self):
+        super().__init__(DataSetConcept)
+
+    def ds_concept_by_conceptual_doi(self, doi: str):
+        return self.model.query.filter_by(conceptual_doi=doi).first()
 
 
 class DSMetaDataRepository(BaseRepository):

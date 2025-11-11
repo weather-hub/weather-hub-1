@@ -64,6 +64,20 @@ class DSMetaData(db.Model):
     authors = db.relationship("Author", backref="ds_meta_data", lazy=True, cascade="all, delete")
 
 
+class DataSetConcept(db.Model):
+    """
+    Contiene el versionado y el conceptual DOI
+    """
+
+    __tablename__ = "dataset_concept"
+    id = db.Column(db.Integer, primary_key=True)
+    conceptual_doi = db.Column(db.String(120), unique=True, nullable=False)
+    versions = db.relationship("DataSet", backref="concept", lazy="dynamic", order_by="DataSet.created_at.desc()")
+
+    def __repr__(self):
+        return f"<DatasetConcept DOI = {self.conceptual_doi}>"
+
+
 class DataSet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
@@ -76,6 +90,13 @@ class DataSet(db.Model):
     dataset_type = db.Column(db.String(50), nullable=False, default="uvl")
     # ruta relativa o url en uploads/
     storage_path = db.Column(db.String(1024), nullable=True)
+    # id de concepto para versionado múltiple
+    ds_concept_id = db.Column(db.Integer, db.ForeignKey("dataset_concept.id"), nullable=True)
+    # flags de version
+    version_number = db.Column(db.String(64), default="v1.0.0")
+    # puntero de last version
+    is_latest = db.Column(db.Boolean, default=True)  # Puede sobrar
+    is_major_edition = db.Column(db.Boolean, default=True)
 
     ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
     feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
@@ -92,6 +113,9 @@ class DataSet(db.Model):
 
     def get_cleaned_publication_type(self):
         return self.ds_meta_data.publication_type.name.replace("_", " ").title()
+
+    def get_version_number(self):
+        return self.version_number
 
     def get_zenodo_url(self):
         # Mantengo la compatibilidad (puede quedar None si no aplicable)
@@ -113,6 +137,9 @@ class DataSet(db.Model):
 
         return DataSetService().get_uvlhub_doi(self)
 
+    def get_conceptual_doi(self):
+        return self.concept.conceptual_doi if self.concept else None
+
     def to_dict(self):
         return {
             "title": self.ds_meta_data.title,
@@ -124,6 +151,7 @@ class DataSet(db.Model):
             "publication_type": self.get_cleaned_publication_type(),
             "publication_doi": self.ds_meta_data.publication_doi,
             "dataset_doi": self.ds_meta_data.dataset_doi,
+            "conceptual_doi": self.get_conceptual_doi(),
             "tags": self.ds_meta_data.tags.split(",") if self.ds_meta_data.tags else [],
             "url": self.get_uvlhub_doi(),
             "download": f'{request.host_url.rstrip("/")}/dataset/download/{self.id}',
