@@ -25,7 +25,13 @@ def edit_profile():
             result, errors, "profile.edit_profile", "Profile updated successfully", "profile/edit.html", form
         )
 
-    return render_template("profile/edit.html", form=form)
+    # load user's communities to show in the profile edit page
+    try:
+        user_communities = current_user.communities.all() if hasattr(current_user, "communities") else []
+    except Exception:
+        user_communities = []
+
+    return render_template("profile/edit.html", form=form, communities=user_communities)
 
 
 @profile_bp.route("/profile/summary")
@@ -45,6 +51,13 @@ def my_profile():
 
     print(user_datasets_pagination.items)
 
+    # Load the communities the current user is curator/member of
+    try:
+        # `communities` is a dynamic relationship on User created by Community.curators backref
+        user_communities = current_user.communities.all() if hasattr(current_user, "communities") else []
+    except Exception:
+        user_communities = []
+
     return render_template(
         "profile/summary.html",
         user_profile=current_user.profile,
@@ -52,6 +65,7 @@ def my_profile():
         datasets=user_datasets_pagination.items,
         pagination=user_datasets_pagination,
         total_datasets=total_datasets_count,
+        communities=user_communities,
     )
 
 
