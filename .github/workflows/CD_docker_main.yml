@@ -1,0 +1,32 @@
+# ----------------------------------------------------------------------------
+# Publish image in Docker Hub Workflow
+# This workflow builds and pushes a Docker image to Docker Hub whenever
+# the main branch receives a push.
+# ----------------------------------------------------------------------------
+
+name: Publish main image in Docker Hub
+on:
+  push:
+    branches:
+      - main
+jobs:
+  push_to_registry:
+    runs-on: ubuntu-24.04
+
+    steps:
+      
+      # Step 1: Check out the repository code
+      - uses: actions/checkout@v5
+
+      # Step 2: Log in to Docker Hub using secrets
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3.6.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 3: Build and push the Docker image
+      - name: Build and push Docker image
+        run: |
+          docker build -t flamyon/weather-hub-2:main .
+          docker push flamyon/weather-hub-2:main
