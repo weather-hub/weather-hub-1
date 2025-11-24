@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 from app.modules.auth.models import User
 from app.modules.dataset.models import Author, DataSet, DSMetaData, DSMetrics, PublicationType
-from app.modules.dataset.validator import REQUIRED_COLUMNS
 from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from app.modules.hubfile.models import Hubfile
 from core.seeders.BaseSeeder import BaseSeeder
@@ -28,6 +27,7 @@ REQUIRED_COLUMNS = [
 
 
 class DataSetSeeder(BaseSeeder):
+
     priority = 2  # Lower priority
 
     def run(self):
@@ -48,7 +48,7 @@ class DataSetSeeder(BaseSeeder):
                 deposition_id=1 + i,
                 title=f"Sample dataset {i+1}",
                 description=f"Description for dataset {i+1}",
-                publication_type=PublicationType.NONE.name,
+                publication_type=PublicationType.NATIONAL,
                 publication_doi=f"10.1234/dataset{i+1}",
                 dataset_doi=f"10.1234/dataset{i+1}",
                 tags="tag1, tag2",
@@ -81,21 +81,19 @@ class DataSetSeeder(BaseSeeder):
         ]
         seeded_datasets = self.seed(datasets)
 
-        # For each dataset create one CSV and one README (md)
-        fm_meta_data_list = []
-        for i in range(len(seeded_datasets)):
-            fm_meta_data_list.append(
-                FMMetaData(
-                    filename=f"dataset_{i+1}.csv",
-                    title=f"Dataset file {i+1}",
-                    description=f"CSV data file for dataset {i+1}",
-                    publication_type=PublicationType.NONE.name,
-                    publication_doi=f"10.1234/fm{i+1}",
-                    tags="tag1, tag2",
-                    version="1.0",
-                )
+        # Create 12 FMMetaData instances
+        fm_meta_data_list = [
+            FMMetaData(
+                filename=f"file{i+1}.csv",
+                title=f"Feature Model {i+1}",
+                description=f"Description for feature model {i+1}",
+                publication_type=PublicationType.OTHER,
+                publication_doi=f"10.1234/fm{i+1}",
+                tags="tag1, tag2",
+                version="1.0",
             )
-
+            for i in range(12)
+        ]
         seeded_fm_meta_data = self.seed(fm_meta_data_list)
 
         # Create Author instances and associate with FMMetaData
@@ -132,6 +130,7 @@ class DataSetSeeder(BaseSeeder):
             feature_model = seeded_feature_models[i]
             dataset = next(ds for ds in seeded_datasets if ds.id == feature_model.data_set_id)
             user_id = dataset.user_id
+
             dest_folder = os.path.join(working_dir, "uploads", f"user_{user_id}", f"dataset_{dataset.id}")
             os.makedirs(dest_folder, exist_ok=True)
 
