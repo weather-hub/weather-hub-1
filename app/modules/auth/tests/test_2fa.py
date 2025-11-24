@@ -38,7 +38,7 @@ def test_verify_2fa_redirects_to_login_if_user_not_found(test_client, monkeypatc
     def fake_get_user_by_id(_):
         return None
 
-    monkeypatch.setattr(auth_routes.authentication_service, "get_user_by_id", fake_get_user_by_id)
+    monkeypatch.setattr(auth_routes.authentication_service, "get_user_by_id", fake_get_user_by_id, raising=False)
 
     with test_client.session_transaction() as sess:
         sess["2fa_user_id"] = 999
@@ -51,7 +51,7 @@ def test_verify_2fa_successful_login(test_client, monkeypatch, twofa_dummy_user)
     def fake_get_user_by_id(_):
         return twofa_dummy_user
 
-    monkeypatch.setattr(auth_routes.authentication_service, "get_user_by_id", fake_get_user_by_id)
+    monkeypatch.setattr(auth_routes.authentication_service, "get_user_by_id", fake_get_user_by_id, raising=False)
 
     with test_client.session_transaction() as sess:
         sess["2fa_user_id"] = twofa_dummy_user.id
@@ -74,7 +74,7 @@ def test_verify_2fa_invalid_code_shows_error(test_client, monkeypatch, twofa_dum
     def fake_get_user_by_id(_):
         return twofa_dummy_user
 
-    monkeypatch.setattr(auth_routes.authentication_service, "get_user_by_id", fake_get_user_by_id)
+    monkeypatch.setattr(auth_routes.authentication_service, "get_user_by_id", fake_get_user_by_id, raising=False)
 
     with test_client.session_transaction() as sess:
         sess["2fa_user_id"] = twofa_dummy_user.id
