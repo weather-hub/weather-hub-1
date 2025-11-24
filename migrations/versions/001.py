@@ -44,6 +44,7 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("email", sa.String(length=256), nullable=False),
         sa.Column("password", sa.String(length=256), nullable=False),
+        << << << < HEAD
         sa.Column("otp_secret", sa.String(length=32), nullable=True),
         sa.Column(
             "twofa_enabled",
@@ -51,6 +52,8 @@ def upgrade():
             nullable=False,
             server_default=sa.false(),
         ),
+        == == == =
+        >>>>>> > f292b59e8f2fbd56bcaa83a664dd23786bbdd8b5
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email"),
@@ -110,7 +113,7 @@ def upgrade():
     op.create_table(
         "fm_meta_data",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("filename", sa.String(length=120), nullable=False),
+        sa.Column("uvl_filename", sa.String(length=120), nullable=False),
         sa.Column("title", sa.String(length=120), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column(
@@ -141,7 +144,7 @@ def upgrade():
         ),
         sa.Column("publication_doi", sa.String(length=120), nullable=True),
         sa.Column("tags", sa.String(length=120), nullable=True),
-        sa.Column("version", sa.String(length=120), nullable=True),
+        sa.Column("uvl_version", sa.String(length=120), nullable=True),
         sa.Column("fm_metrics_id", sa.Integer(), nullable=True),
         sa.ForeignKeyConstraint(
             ["fm_metrics_id"],
@@ -188,8 +191,6 @@ def upgrade():
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("ds_meta_data_id", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("dataset_type", sa.String(length=120), nullable=True),
-        sa.Column("storage_path", sa.String(length=255), nullable=True),
         sa.ForeignKeyConstraint(
             ["ds_meta_data_id"],
             ["ds_meta_data.id"],
@@ -200,7 +201,6 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-
     op.create_table(
         "ds_download_record",
         sa.Column("id", sa.Integer(), nullable=False),

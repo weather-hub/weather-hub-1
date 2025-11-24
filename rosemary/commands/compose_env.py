@@ -11,7 +11,6 @@ from flask.cli import with_appcontext
 )
 @with_appcontext
 def compose_env():
-
     base_path = os.path.join(os.getenv("WORKING_DIR", ""), "app/modules")
     root_env_path = os.path.join(os.getenv("WORKING_DIR", ""), ".env")
 

@@ -6,10 +6,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description"
-          content="Repository of feature models in UVL format integrated with Zenodo and FlamaPy">
+           content="Repository of CSV datasets integrated with Zenodo and FlamaPy">
     <meta name="author" content="University of Seville">
     <meta name="keywords"
-          content="diversolab, uvl, feature models, software product line, university of seville,
+           content="diversolab, csv, datasets, weather data, software product line, university of seville,
            university of malaga, university of ulm, david romero, david benavides, jose a galindo, jose miguel horcas,
 chico sundermann">
 
@@ -18,8 +18,10 @@ chico sundermann">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
 
     <link rel="canonical" href="https://www.uvlhub.io"/>
+        <link rel="canonical" href="https://www.weatherhub.io"/>
 
     <title>{{ FLASK_APP_NAME }} - Repository of feature models in UVL </title>
+        <title>{{ FLASK_APP_NAME }} - Repository of CSV datasets </title>
 
     <link rel="stylesheet" href="{{ url_for("static", filename="css/app.css") }}">
 
@@ -149,7 +151,7 @@ chico sundermann">
             <div class="sidebar-cta text-center">
                 <div class="sidebar-cta-content">
                     <div class="text">
-                        Compilation build <a href="https://github.com/diverso-lab/uvlhub/releases/tag/{{ APP_VERSION }}" target="_blank">{{ APP_VERSION }}</a>
+                        Compilation build <a href="https://github.com/diverso-lab/weather-hub-2/releases/tag/{{ APP_VERSION }}" target="_blank">{{ APP_VERSION }}</a>
                     </div>
                 </div>
             </div>
@@ -231,7 +233,7 @@ chico sundermann">
                     <div class="col-6 text-end">
                         <ul class="list-inline">
                             <li class="list-inline-item">
-                                <a class="text-muted" href="https://github.com/diverso-lab/uvlhub"
+                                          <a class="text-muted" href="https://github.com/diverso-lab/weather-hub-2"
                                    target="_blank">
                                     <i class="align-middle" data-feather="github"></i>
                                     Repository on GitHub</a>
@@ -245,8 +247,8 @@ chico sundermann">
 </div>
 
 <pre id="bibtex_cite" style="display: none">
-@article{romero2024_uvlhub_open_science,
-    title = {UVLHub: A feature model data repository using UVL and open science principles},
+@article{romero2024_weatherhub_open_science,
+    title = {WeatherHub: A CSV dataset repository using open science principles},
     journal = {Journal of Systems and Software},
     pages = {112150},
     year = {2024},
@@ -254,7 +256,7 @@ chico sundermann">
     doi = {https://doi.org/10.1016/j.jss.2024.112150},
     url = {https://www.sciencedirect.com/science/article/pii/S016412122400195X},
     author = {David Romero-Organvidez and José A. Galindo and Chico Sundermann and Jose-Miguel Horcas and David Benavides},
-    keywords = {Feature models, Software product line, Variability, Dataset, Uvl},
+    keywords = {CSV, Datasets, Weather data, Dataset, CSV},
     abstract = {Feature models are the de facto standard for modelling variabilities and commonalities in features and relationships in software product lines. They are the base artefacts in many engineering activities, such as product configuration, derivation, or testing. Concrete models in different domains exist; however, many are in private or sparse repositories or belong to discontinued projects. The dispersion of knowledge of feature models hinders the study and reuse of these artefacts in different studies. The Universal Variability Language (UVL) is a community effort textual feature model language that promotes a common way of serialising feature models independently of concrete tools. Open science principles promote transparency, accessibility, and collaboration in scientific research. Although some attempts exist to promote feature model sharing, the existing solutions lack open science principles by design. In addition, existing and public feature models are described using formats not always supported by current tools. This paper presents , a repository of feature models in UVL format. provides a front end that facilitates the search, upload, storage, and management of feature model datasets, improving the capabilities of discontinued proposals. Furthermore, the tool communicates with Zenodo –one of the most well-known open science repositories– providing a permanent save of datasets and following open science principles. includes existing datasets and is readily available to include new data and functionalities in the future. It is maintained by three active universities in variability modelling.}
 }
 </pre>
@@ -285,7 +287,7 @@ ER  -
 
 <pre id="text_cite" style="display: none;">
 David Romero-Organvidez, José A. Galindo, Chico Sundermann, Jose-Miguel Horcas, David Benavides,
-UVLHub: A feature model data repository using UVL and open science principles,
+WeatherHub: A CSV dataset repository using open science principles,
 Journal of Systems and Software,
 2024,
 112150,
@@ -297,7 +299,7 @@ Keywords: Feature models; Software product line; Variability; Dataset; Uvl
 </pre>
 
 <pre id="apa_cite" style="display: none;">
-Romero-Organvidez, D., Galindo, J. A., Sundermann, C., Horcas, J.-M., & Benavides, D. (2024). UVLHub: A feature model data repository using UVL and open science principles. Journal of Systems and Software, 2024, 112150. https://doi.org/10.1016/j.jss.2024.112150
+Romero-Organvidez, D., Galindo, J. A., Sundermann, C., Horcas, J.-M., & Benavides, D. (2024). WeatherHub: A CSV dataset repository using open science principles. Journal of Systems and Software, 2024, 112150. https://doi.org/10.1016/j.jss.2024.112150
 </pre>
 
 <script src="{{ url_for("static", filename="js/app.js") }}"></script>
@@ -321,6 +323,30 @@ Romero-Organvidez, D., Galindo, J. A., Sundermann, C., Horcas, J.-M., & Benavide
         let textToCopy = document.getElementById(div_identifier).textContent;
         textToCopy = textToCopy.trim();
         navigator.clipboard.writeText(textToCopy);
+    }
+
+    function setRepository(service) {
+        fetch('/repository/select', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({service: service})
+        }).then(function (resp) {
+            if (resp.ok) {
+                // Optionally reload to update server-side behavior
+                window.location.reload();
+            } else {
+                resp.json().then(function (data) {
+                    alert('Failed to set repository: ' + (data.message || resp.status));
+                }).catch(function () {
+                    alert('Failed to set repository');
+                });
+            }
+        }).catch(function () {
+            alert('Network error while setting repository');
+        });
     }
 
 </script>

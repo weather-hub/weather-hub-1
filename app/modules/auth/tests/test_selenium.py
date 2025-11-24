@@ -3,29 +3,27 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 
-class Test2faa():
-  
-  
-  def setup_method(self, method):
-    self.driver = webdriver.Firefox()
-    self.vars = {}
-  
-  def teardown_method(self, method):
-    self.driver.quit()
-  
-  # USER2 MUST HAVE ENABLED THE 2FA
-  def test_2faa(self):
-    self.driver.get("http://127.0.0.1:5000/")
-    self.driver.set_window_size(1440, 900)
-    self.driver.find_element(By.LINK_TEXT, "Login").click()
-    self.driver.find_element(By.ID, "email").click()
-    self.driver.find_element(By.ID, "email").send_keys("user2@example.com")
-    self.driver.find_element(By.CSS_SELECTOR, ".row:nth-child(4) > .col-md-6").click()
-    self.driver.find_element(By.ID, "password").click()
-    self.driver.find_element(By.ID, "password").send_keys("1234")
-    self.driver.find_element(By.ID, "submit").click()
-    self.driver.find_element(By.ID, "otp_code").click()
-    # comprobamos que falla el codigo otp, porque no podemos comprobar que funcione(no podemos generarlo desde selenium)
-    self.driver.find_element(By.ID, "otp_code").send_keys("026605")
-    self.driver.find_element(By.CSS_SELECTOR, ".btn-primary").click()
-  
+class Test2faa:
+
+    def setup_method(self, method):
+        self.driver = webdriver.Firefox()
+        self.vars = {}
+
+    def teardown_method(self, method):
+        self.driver.quit()
+
+    # USER2 MUST HAVE ENABLED THE 2FA
+    def test_2faa(self):
+        self.driver.get("http://127.0.0.1:5000/")
+        self.driver.set_window_size(1440, 900)
+        self.driver.find_element(By.LINK_TEXT, "Login").click()
+        self.driver.find_element(By.ID, "email").click()
+        self.driver.find_element(By.ID, "email").send_keys("user2@example.com")
+        self.driver.find_element(By.CSS_SELECTOR, ".row:nth-child(4) > .col-md-6").click()
+        self.driver.find_element(By.ID, "password").click()
+        self.driver.find_element(By.ID, "password").send_keys("1234")
+        self.driver.find_element(By.ID, "submit").click()
+        self.driver.find_element(By.ID, "otp_code").click()
+        # comprobamos que falla el codigo otp, porque no podemos comprobar que funcione(no podemos generarlo desde selenium)
+        self.driver.find_element(By.ID, "otp_code").send_keys("026605")
+        self.driver.find_element(By.CSS_SELECTOR, ".btn-primary").click()

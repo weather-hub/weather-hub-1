@@ -61,7 +61,24 @@ class DataSetService(BaseService):
 
         for feature_model in dataset.feature_models:
             filename = feature_model.fm_meta_data.filename
-            shutil.move(os.path.join(source_dir, filename), dest_dir)
+            src_path = os.path.join(source_dir, filename)
+            dst_path = os.path.join(dest_dir, filename)
+
+            if not os.path.exists(src_path):
+                # If the file isn't in the user's temp folder, warn and continue.
+                logger.warning(f"Source file not found, skipping move: {src_path}")
+                continue
+            try:
+                # If destination file already exists, remove it (overwrite behaviour).
+                if os.path.exists(dst_path):
+                    logger.info(f"Destination file {dst_path} exists — removing before move.")
+                    os.remove(dst_path)
+
+                shutil.move(src_path, dst_path)
+            except Exception as exc:
+                # Log and raise so upstream code can handle rollback if needed.
+                logger.exception(f"Failed moving file {src_path} to {dst_path}: {exc}")
+                raise
 
     def get_synchronized(self, current_user_id: int) -> DataSet:
         return self.repository.get_synchronized(current_user_id)
@@ -110,7 +127,6 @@ class DataSetService(BaseService):
             # llenalo con los nombres de los ficheros que componen el paquete
             uploaded_filenames = []
             for feature_model in form.feature_models:
-
                 filename = feature_model.filename.data
                 fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
                 for author_data in feature_model.get_authors():
@@ -138,7 +154,6 @@ class DataSetService(BaseService):
                 raise
 
             for e in range(0, len(uploaded_filenames)):
-
                 filename = uploaded_filenames[e]
 
                 file_path = file_paths[e]
@@ -199,7 +214,6 @@ class DSViewRecordService(BaseService):
         return self.repository.create_new_record(dataset, user_cookie)
 
     def create_cookie(self, dataset: DataSet) -> str:
-
         user_cookie = request.cookies.get("view_cookie")
         if not user_cookie:
             user_cookie = str(uuid.uuid4())
@@ -225,7 +239,6 @@ class DOIMappingService(BaseService):
 
 
 class SizeService:
-
     def __init__(self):
         pass
 

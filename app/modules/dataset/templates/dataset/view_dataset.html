@@ -113,7 +113,7 @@
 
                 {% if dataset.ds_meta_data.dataset_doi %}
                 <div class="row mb-2">
-                    
+
                         <div class="col-md-4 col-12">
                             <span class=" text-secondary">
                                 Zenodo record
@@ -157,18 +157,18 @@
 
                 </div>
 
-                
+
 
             </div>
 
             {% if dataset.ds_meta_data.dataset_doi %}
             <div class="card-body" style="padding-top: 0px">
 
-                <div id="dataset_doi_uvlhub" style="display: none">
+                <div id="dataset_doi" style="display: none">
                     {{ dataset.get_uvlhub_doi() }}
                 </div>
 
-                <button type="button" class="btn doi_button btn-sm" onclick="copyText('dataset_doi_uvlhub')">
+                <button type="button" class="btn doi_button btn-sm" onclick="copyText('dataset_doi')">
                     <span class="button_doi_id">
                         <i data-feather="clipboard" class="center-button-icon" style="cursor: pointer"></i>
                         <b>DOI</b>
@@ -177,11 +177,11 @@
                         {{ dataset.get_uvlhub_doi() }}
                     </span>
                 </button>
-                
-                <div id="dataset_doi_uvlhub" style="display: none">
+
+                <div id="dataset_doi" style="display: none">
                     {{ dataset.get_uvlhub_doi() }}
                 </div>
-                
+
             </div>
             {% endif %}
 
@@ -192,7 +192,7 @@
             <div class="card-body">
 
                 <h3> Related publication </h3>
-                
+
                 David Romero-Organvidez, José A. Galindo, Chico Sundermann, Jose-Miguel Horcas, David Benavides,
                 <i>WeatherHub: A feature model data repository using CSV Files and open science principles</i>,
                 Journal of Systems and Software,
@@ -244,15 +244,15 @@
                         <h4 style="margin-bottom: 0px;"><span class="badge bg-dark">{{ dataset.get_files_count() }}</span></h4>
                     </div>
                 </div>
-                
+
 
             </div>
-            
+
 
             {% for feature_model in dataset.feature_models %}
                 {% for file in feature_model.files %}
                     <div class="list-group-item">
-                        
+
                         <div class="row">
                             <div class="col-12">
 
@@ -268,7 +268,7 @@
                                     </div>
                                 </div>
 
-                                
+
                             </div>
                             <div class="col-12 text-end" >
 
@@ -282,7 +282,7 @@
                                     </button>
                                     <ul class="dropdown-menu" aria-labelledby="btnGroupDrop{{ file.id }}">
                                         <li>
-                                            <a class="dropdown-item" href="javascript:void(0);" onclick="checkUVL('{{ file.id }}')">Syntax check</a>
+                                            <a class="dropdown-item disabled" href="javascript:void(0);">No syntax check for CSV</a>
                                         </li>
                                         <!--
                                         <li>
@@ -291,7 +291,7 @@
                                         -->
                                     </ul>
                                 </div>
-                                
+
                                 <div class="btn-group" role="group">
                                     <button id="btnGroupDropExport{{ file.id }}" type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style=" border-radius: 5px;">
                                         <i data-feather="download"></i> Export
@@ -317,8 +317,8 @@
                                         </li>
                                     </ul>
                                 </div>
-                                
-                                
+
+
 
                             </div>
                         </div>
@@ -326,15 +326,15 @@
                 {% endfor %}
             {% endfor %}
         </div>
-        
-        
-    
+
+
+
         <a href="/dataset/download/{{ dataset.id }}" class="btn btn-primary mt-3" style="border-radius: 5px;">
             <i data-feather="download" class="center-button-icon"></i>
             Download all ({{ dataset.get_file_total_size_for_human() }})
         </a>
     </div>
-    
+
 </div>
 
 <!-- Modal-->
@@ -342,7 +342,7 @@
     <div class="modal-dialog modal-lg" style="height: 80vh; display: flex; align-items: center;">
         <div class="modal-content" style="height: 80vh;">
             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h5 class="modal-title" id="fileViewerModalLabel">Feature model view</h5>
+                <h5 class="modal-title" id="fileViewerModalLabel">File view</h5>
                 <div>
                     <a href="#" class="btn btn-outline-primary btn-sm" id="downloadButton"
                         style="margin-right: 5px; margin-bottom: 5px; border-radius: 5px;">
@@ -395,45 +395,7 @@
         document.getElementById("loading").style.display = "none";
     }
 
-    function checkUVL(file_id) {
-    const outputDiv = document.getElementById('check_' + file_id);
-    outputDiv.innerHTML = ''; // Clear previous output
-
-    fetch(`/flamapy/check_uvl/${file_id}`)
-        .then(response => {
-            return response.json().then(data => ({
-                status: response.status,
-                data
-            }));
-        })
-        .then(({ status, data }) => {
-            if (status === 400) {
-                // Display errors
-                if (data.errors) {
-                    outputDiv.innerHTML = '<span class="badge badge-danger">Errors:</span>';
-                    data.errors.forEach(error => {
-                        const errorElement = document.createElement('span');
-                        errorElement.className = 'badge badge-danger';
-                        errorElement.textContent = error;
-                        outputDiv.appendChild(errorElement);
-                        outputDiv.appendChild(document.createElement('br')); // Line break for better readability
-                    });
-                } else {
-                    outputDiv.innerHTML = `<span class="badge badge-danger">Error: ${data.error}</span>`;
-                }
-            } else if (status === 200) {
-                // Display success message
-                outputDiv.innerHTML = '<span class="badge badge-success">Valid Model</span>';
-            } else {
-                // Handle unexpected status
-                outputDiv.innerHTML = `<span class="badge badge-warning">Unexpected response status: ${status}</span>`;
-            }
-        })
-        .catch(error => {
-            // Handle fetch errors
-            outputDiv.innerHTML = `<span class="badge badge-danger">An unexpected error occurred: ${error.message}</span>`;
-        });
-}
+    // UVL syntax checking removed for CSV files.
 
 
     /*
@@ -463,7 +425,7 @@
             `
             import js
 
-            file_content = js.document.getElementById('fileContent').textContent 
+            file_content = js.document.getElementById('fileContent').textContent
             div = js.document.createElement("result")
 
             with open("uvlfile.uvl", "w") as text_file:

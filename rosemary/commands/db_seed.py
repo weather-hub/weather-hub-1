@@ -45,7 +45,6 @@ def get_module_seeders(module_path, specific_module=None):
 @click.argument("module", required=False)
 @with_appcontext
 def db_seed(reset, yes, module):
-
     if reset:
         if yes or click.confirm(
             click.style("This will reset the database, do you want " "to continue?", fg="red"),
