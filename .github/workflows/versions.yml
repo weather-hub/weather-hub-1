@@ -35,4 +35,5 @@ jobs:
           git add pyproject.toml
           git commit -m "Versión automática [skip ci]" || echo "No hay cambios"
           git tag v$(python -c "import toml; print(toml.load(open('pyproject.toml'))['project']['version'])") || echo "Tag ya existe"
+          git pull --rebase
           git push --follow-tags
