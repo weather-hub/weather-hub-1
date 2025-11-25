@@ -12,6 +12,7 @@ from zipfile import ZipFile
 from flask import abort, jsonify, make_response, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user, login_required
 
+from app.modules.community.repositories import CommunityRepository
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
 from app.modules.dataset.models import DSDownloadRecord
@@ -189,10 +190,18 @@ def create_dataset():
 @dataset_bp.route("/dataset/list", methods=["GET", "POST"])
 @login_required
 def list_dataset():
+    # load communities to allow proposing datasets to a community from the list view
+    try:
+        community_repo = CommunityRepository()
+        communities = community_repo.session.query(community_repo.model).all()
+    except Exception:
+        communities = []
+
     return render_template(
         "dataset/list_datasets.html",
         datasets=dataset_service.get_synchronized(current_user.id),
         local_datasets=dataset_service.get_unsynchronized(current_user.id),
+        communities=communities,
     )
 
 

@@ -1,0 +1,254 @@
+{% extends 'base_template.html' %}
+
+{% block content %}
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+
+    <h1 class="h3 mb-0">Communities</h1>
+
+    {% if not current_user.is_anonymous %}
+      <button id="createCommunityBtn" class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#createCommunityForm" aria-expanded="false" aria-controls="createCommunityForm">Create community</button>
+    {% endif %}
+
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-3">
+        {% for category, message in messages %}
+          {% set alert_class = 'danger' if category == 'error' else category %}
+          <div class="alert alert-{{ alert_class }}" role="alert">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {# Collapsible create form at the top. Toggled by the button above. #}
+  <div class="collapse mb-4" id="createCommunityForm">
+    <div class="card card-body">
+      <form method="post" action="{{ url_for('community.create') }}">
+        <div class="row gx-3">
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Name</label>
+              <input class="form-control" type="text" name="name" required />
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Visual identity (url)</label>
+              <input id="visual_identity_input" class="form-control" type="text" name="visual_identity" />
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <div class="mb-3">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description"></textarea>
+            </div>
+          </div>
+
+        </div>
+
+        <div id="visual_identity_preview_container" class="mt-2" style="display:none;">
+          <label class="form-label small mb-1">Preview</label>
+          <div style="width:160px; height:100px; border:1px solid #ddd; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+            <img id="visual_identity_preview" src="" alt="preview" style="width:100%; height:100%; object-fit:cover;" />
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <button type="submit" class="btn btn-primary">Create community</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <div class="row g-4">
+    {% for c in communities %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+          {% if c.visual_identity %}
+            <img src="{{ c.visual_identity }}" class="card-img-top" alt="{{ c.name }}" style="max-height:160px; object-fit:cover;"/>
+          {% endif %}
+
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ c.name }}
+              {% set pending = c.proposals | selectattr('status','equalto','pending') | list %}
+              {% if pending and pending|length > 0 %}
+                <span class="badge bg-warning text-dark ms-2">Pending: {{ pending|length }}</span>
+              {% endif %}
+            </h5>
+            <p class="card-text text-truncate">{{ c.description or 'No description provided' }}</p>
+
+            <div class="mt-auto">
+              <p class="mb-1"><small class="text-muted">Curators:</small></p>
+              <div class="mb-2">
+                {% if c.curators and c.curators|length > 0 %}
+                  {% for u in c.curators[:5] %}
+                    <span class="badge bg-secondary me-1">{{ u.profile.name }} {{ u.profile.surname }}</span>
+                  {% endfor %}
+                  {% if c.curators|length > 5 %}
+                    <span class="text-muted">+{{ c.curators|length - 5 }} more</span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted">No curators yet</span>
+                {% endif %}
+              </div>
+              <p class="mb-1"><small class="text-muted">Datasets in community:</small></p>
+              <ul class="list-unstyled small mb-2">
+                {% set accepted = c.proposals | selectattr('status', 'equalto', 'accepted') | list %}
+                {% if accepted and accepted|length > 0 %}
+                  {% for p in accepted %}
+                    <li>
+                      {% if p.dataset_url and p.dataset_url != '#' %}
+                        <a href="{{ p.dataset_url }}">{{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}</a>
+                      {% else %}
+                        {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                {% else %}
+                  <li class="text-muted">No datasets yet</li>
+                {% endif %}
+              </ul>
+              <div class="d-flex gap-2">
+                {% if not current_user.is_anonymous %}
+                  {% set is_curator = c.curators | selectattr('id', 'equalto', current_user.id) | list | length > 0 %}
+                  {% if is_curator %}
+                    <form method="post" action="{{ url_for('community.leave', community_id=c.id) }}">
+                      <button type="submit" class="btn btn-outline-danger btn-sm">Leave</button>
+                    </form>
+
+                  {% else %}
+                    <form method="post" action="{{ url_for('community.join', community_id=c.id) }}">
+                      <button type="submit" class="btn btn-success btn-sm">Join as curator</button>
+                    </form>
+                  {% endif %}
+                {% else %}
+                  <a class="btn btn-primary btn-sm" href="{{ url_for('auth.login') }}">Login to join</a>
+                {% endif %}
+
+                <a class="btn btn-outline-secondary btn-sm" href="#" data-bs-toggle="modal" data-bs-target="#communityDetail{{ c.id }}">Details</a>
+                {% if pending and pending|length > 0 %}
+                  <a class="btn btn-outline-warning btn-sm" href="#" data-bs-toggle="modal" data-bs-target="#communityRequests{{ c.id }}">Requests</a>
+                {% else %}
+                  <a class="btn btn-outline-secondary btn-sm" href="#" data-bs-toggle="modal" data-bs-target="#communityRequests{{ c.id }}">Requests</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="communityDetail{{ c.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">{{ c.name }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p>{{ c.description or 'No description provided' }}</p>
+              <hr/>
+              <h6>Curators</h6>
+              <ul>
+                {% for u in c.curators %}
+                  <li>{{ u.profile.name }} {{ u.profile.surname }} ({{ u.email }})</li>
+                {% else %}
+                  <li class="text-muted">No curators</li>
+                {% endfor %}
+              </ul>
+              <h6>Datasets</h6>
+              <ul>
+                {% set accepted = c.proposals | selectattr('status','equalto','accepted') | list %}
+                {% if accepted and accepted|length > 0 %}
+                  {% set is_curator = c.curators | selectattr('id','equalto', current_user.id) | list | length > 0 %}
+                  {% for p in accepted %}
+                    <li>
+                      {% if p.dataset_url and p.dataset_url != '#' %}
+                        <a href="{{ p.dataset_url }}">{{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}</a>
+                      {% else %}
+                        {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}
+                      {% endif %}
+
+                      {% if is_curator %}
+                        <form method="post" action="{{ url_for('community.remove_proposal', community_id=c.id, proposal_id=p.id) }}" style="display:inline-block; margin-left:8px;">
+                          <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                        </form>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                {% else %}
+                  <li class="text-muted">No datasets in this community</li>
+                {% endif %}
+              </ul>
+              <h6 class="mt-3">Pending proposals</h6>
+              <ul>
+                {% if pending and pending|length > 0 %}
+                  {% for p in pending %}
+                    <li>Dataset #{{ p.dataset_id }} (proposed by user #{{ p.proposed_by }})</li>
+                  {% endfor %}
+                {% else %}
+                  <li class="text-muted">No pending proposals</li>
+                {% endif %}
+              </ul>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="communityRequests{{ c.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Pending proposals for {{ c.name }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              {% set pending_list = c.proposals | selectattr('status', 'equalto', 'pending') | list %}
+              {% if pending_list and pending_list|length > 0 %}
+                <div class="list-group">
+                  {% for p in pending_list %}
+                    <div class="list-group-item d-flex justify-content-between align-items-start">
+                      <div>
+                        <strong>Dataset #{{ p.dataset_id }}</strong>
+                        <div class="small text-muted">Proposed by user #{{ p.proposed_by }} on {{ p.created_at }}</div>
+                      </div>
+                      <div class="btn-group">
+                        <form method="post" action="{{ url_for('community.accept_proposal', community_id=c.id, proposal_id=p.id) }}">
+                          <button type="submit" class="btn btn-sm btn-success">Accept</button>
+                        </form>
+                        <form method="post" action="{{ url_for('community.reject_proposal', community_id=c.id, proposal_id=p.id) }}">
+                          <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                        </form>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="alert alert-info">No pending proposals</div>
+              {% endif %}
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-info">No communities yet. Be the first to create one!</div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/community.js') }}"></script>
+{% endblock %}
