@@ -48,8 +48,13 @@ def create():
     visual_identity = request.form.get("visual_identity")
 
     svc = CommunityService()
-    svc.create_community(name=name, description=description, visual_identity=visual_identity)
-    flash("Community created or already exists", "success")
+    try:
+        svc.create_community(name=name, description=description, visual_identity=visual_identity)
+        flash("Community created", "success")
+    except ValueError as e:
+        # Ya existe ese nombre
+        flash(str(e), "error")
+
     return redirect(url_for("community.index"))
 
 

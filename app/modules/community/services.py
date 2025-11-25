@@ -13,7 +13,8 @@ class CommunityService(BaseService):
     def create_community(self, name: str, description: str = None, visual_identity: str = None) -> Community:
         existing = self.repository.get_by_name(name)
         if existing:
-            return existing
+            raise ValueError("Community name already exists")
+
         return self.repository.create(name=name, description=description, visual_identity=visual_identity)
 
     def add_curator(self, community: Community, user: User):
