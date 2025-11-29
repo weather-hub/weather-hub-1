@@ -1,3 +1,10 @@
+# Changelog - Version 1.1.1 (2025-11-29)
+
+
+## Fixes
+
+- fix: improve main deploy worflow error handling
+
 # Changelog - Version 1.1.0 (2025-11-25)
 
 
