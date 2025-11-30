@@ -37,6 +37,7 @@
 
 ## Fixes
 
+- fix: skip commit validation for bot users
 - fix: add retry logic and concurrency to changelog and version workflows
 - fix: update automatic commit messages to follow conventional commits
 - fix: improve main deploy worflow error handling
@@ -57,7 +58,6 @@
 
 ## Others
 
-- 🚀 Deploy: email verification, workflow improvements, pytest-mock
 - chore: bump version [skip ci]
 - chore: update changelog [skip ci]
 - Versión automática [skip ci]
