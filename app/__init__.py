@@ -41,6 +41,11 @@ def create_app(config_name="development"):
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
 
+    # Initialize Flask-Mail
+    from app.modules.notifications.service import init_mail
+
+    init_mail(app)
+
     @login_manager.user_loader
     def load_user(user_id):
         from app.modules.auth.models import User

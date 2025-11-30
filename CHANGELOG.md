@@ -1,3 +1,10 @@
+# Changelog - Version 1.1.2 (2025-11-29)
+
+
+## Others
+
+- 🚀 Deploy: Communities y mejoras de CI/CD
+
 # Changelog - Version 1.1.1 (2025-11-29)
 
 
