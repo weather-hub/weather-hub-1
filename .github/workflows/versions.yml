@@ -9,11 +9,17 @@ on:
 jobs:
   version:
     runs-on: ubuntu-latest
+    concurrency:
+      group: version-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
 
       - name: Configurar Python
         uses: actions/setup-python@v4
@@ -33,7 +39,23 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add pyproject.toml
-          git commit -m "chore: bump version [skip ci]" || echo "No hay cambios"
-          git tag v$(python -c "import toml; print(toml.load(open('pyproject.toml'))['project']['version'])") || echo "Tag ya existe"
-          git pull --rebase
-          git push --follow-tags
+          
+          if git diff --staged --quiet; then
+            echo "No hay cambios en la versión"
+            exit 0
+          fi
+          
+          git commit -m "chore: bump version [skip ci]"
+          
+          VERSION=$(python -c "import toml; print(toml.load(open('pyproject.toml'))['project']['version'])")
+          git tag "v$VERSION" 2>/dev/null || echo "Tag v$VERSION ya existe"
+          
+          for i in 1 2 3; do
+            git pull --rebase origin ${{ github.ref_name }} && \
+            git push origin ${{ github.ref_name }} --follow-tags && exit 0
+            echo "Intento $i falló, reintentando en 3s..."
+            sleep 3
+          done
+          
+          echo "Push falló después de 3 intentos"
+          exit 1
