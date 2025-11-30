@@ -101,10 +101,24 @@ class DataSetRepository(BaseRepository):
         )
 
     def count_synchronized_datasets(self):
-        return self.model.query.join(DSMetaData).filter(DSMetaData.dataset_doi.isnot(None)).count()
+        # Use an aggregate count to avoid SQLAlchemy selecting all model columns
+        # (which fails if the DB schema is missing a column like `dataset_type`).
+        return (
+            self.model.query.join(DSMetaData)
+            .filter(DSMetaData.dataset_doi.isnot(None))
+            .with_entities(func.count())
+            .scalar()
+        )
 
     def count_unsynchronized_datasets(self):
-        return self.model.query.join(DSMetaData).filter(DSMetaData.dataset_doi.is_(None)).count()
+        # Use an aggregate count to avoid SQLAlchemy selecting all model columns
+        # (which fails if the DB schema is missing a column like `dataset_type`).
+        return (
+            self.model.query.join(DSMetaData)
+            .filter(DSMetaData.dataset_doi.is_(None))
+            .with_entities(func.count())
+            .scalar()
+        )
 
     def latest_synchronized(self):
         return (
@@ -114,6 +128,36 @@ class DataSetRepository(BaseRepository):
             .limit(5)
             .all()
         )
+
+    def search(
+        self,
+        author=None,
+        affiliation=None,
+        tags=None,
+        start_date=None,
+        end_date=None,
+        title=None,
+        publication_type=None,
+    ):
+
+        query = self.model.query.join(DSMetaData, isouter=True)
+        if author:
+            query = query.filter(DSMetaData.authors.ilike(f"%{author}%"))
+        if affiliation:
+            query = query.filter(DSMetaData.affiliation.ilike(f"%{affiliation}%"))
+        if tags:
+            for tag in tags:
+                query = query.filter(DSMetaData.tags.ilike(f"%{tag.strip()}%"))
+        if start_date:
+            query = query.filter(DataSet.created_at >= start_date)
+        if end_date:
+            query = query.filter(DataSet.created_at <= end_date)
+        if title:
+            query = query.filter(DSMetaData.title.ilike(f"%{title}%"))
+        if publication_type:
+            query = query.filter(DSMetaData.publication_type == publication_type)
+
+        return query.order_by(DataSet.created_at.desc()).all()
 
 
 class DOIMappingRepository(BaseRepository):

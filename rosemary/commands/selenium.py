@@ -51,7 +51,6 @@ def selenium(module):
         validate_module(module)
 
     if working_dir == "/app/":
-
         click.echo(
             click.style(
                 "Currently it is not possible to run this "
@@ -64,7 +63,6 @@ def selenium(module):
         run_selenium_tests_in_local(module)
 
     elif working_dir == "/vagrant/":
-
         click.echo(
             click.style(
                 "Currently it is not possible to run this "

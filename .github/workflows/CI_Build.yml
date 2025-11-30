@@ -1,0 +1,30 @@
+name: Advanced Docker Build Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - trunk
+      - feature/*
+      - task/*
+  pull_request:
+    branches:
+      - main
+      - trunk
+
+jobs:
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Clonar repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2️⃣ Build de la imagen Docker
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f docker/images/Dockerfile.render \
+            -t mi-app-ci:${{ github.sha }} .

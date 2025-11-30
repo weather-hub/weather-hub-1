@@ -1,5 +1,7 @@
 from typing import Generic, List, NoReturn, Optional, TypeVar, Union
 
+from sqlalchemy import func
+
 import app
 
 T = TypeVar("T")
@@ -58,4 +60,7 @@ class BaseRepository(Generic[T]):
         return True
 
     def count(self) -> int:
-        return self.model.query.count()
+        # Use an aggregate count to avoid SQLAlchemy generating a subquery
+        # that selects all model columns (which can fail if DB schema is
+        # missing fields defined in the model).
+        return int(self.session.query(func.count()).select_from(self.model).scalar() or 0)

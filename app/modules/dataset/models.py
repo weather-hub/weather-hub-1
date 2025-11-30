@@ -9,23 +9,9 @@ from app import db
 
 class PublicationType(Enum):
     NONE = "none"
-    ANNOTATION_COLLECTION = "annotationcollection"
-    BOOK = "book"
-    BOOK_SECTION = "section"
-    CONFERENCE_PAPER = "conferencepaper"
-    DATA_MANAGEMENT_PLAN = "datamanagementplan"
-    JOURNAL_ARTICLE = "article"
-    PATENT = "patent"
-    PREPRINT = "preprint"
-    PROJECT_DELIVERABLE = "deliverable"
-    PROJECT_MILESTONE = "milestone"
-    PROPOSAL = "proposal"
-    REPORT = "report"
-    SOFTWARE_DOCUMENTATION = "softwaredocumentation"
-    TAXONOMIC_TREATMENT = "taxonomictreatment"
-    TECHNICAL_NOTE = "technicalnote"
-    THESIS = "thesis"
-    WORKING_PAPER = "workingpaper"
+    REGIONAL = "regional"
+    NATIONAL = "national"
+    CONTINENTAL = "continental"
     OTHER = "other"
 
 
@@ -87,9 +73,9 @@ class DataSet(db.Model):
 
     # NUEVOS CAMPOS
     # 'uvl' | 'weather' | 'other'
-    dataset_type = db.Column(db.String(50), nullable=False, default="uvl")
+    # dataset_type = db.Column(db.String(50), nullable=False, default="uvl")
     # ruta relativa o url en uploads/
-    storage_path = db.Column(db.String(1024), nullable=True)
+    # storage_path = db.Column(db.String(1024), nullable=True)
     # id de concepto para versionado múltiple
     ds_concept_id = db.Column(db.Integer, db.ForeignKey("dataset_concept.id"), nullable=True)
     # flags de version
@@ -161,8 +147,8 @@ class DataSet(db.Model):
             "total_size_in_bytes": self.get_file_total_size(),
             "total_size_in_human_format": self.get_file_total_size_for_human(),
             # CAMPOS NUEVOS para compatibilidad con WeatherHub
-            "dataset_type": self.dataset_type,
-            "storage_path": self.storage_path,
+            # "dataset_type": self.dataset_type,
+            # "storage_path": self.storage_path,
         }
 
     def __repr__(self):

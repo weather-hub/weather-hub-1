@@ -205,7 +205,7 @@ class DataSetSeeder(BaseSeeder):
                 filename=f"file{i+1}.csv",
                 title=f"Feature Model {i+1}",
                 description=f"Description for feature model {i+1}",
-                publication_type=PublicationType.SOFTWARE_DOCUMENTATION,
+                publication_type=PublicationType.OTHER,
                 publication_doi=f"10.1234/fm{i+1}",
                 tags="tag1, tag2",
                 version="1.0",
@@ -230,7 +230,9 @@ class DataSetSeeder(BaseSeeder):
         # ESTA LÓGICA (i // 2) SIGUE FUNCIONANDO PERFECTAMENTE
         feature_models = [
             FeatureModel(
-                data_set_id=seeded_datasets[i // 2].id, fm_meta_data_id=seeded_fm_meta_data[i].id  # 2 FMs por dataset
+                # 2 FMs por dataset
+                data_set_id=seeded_datasets[i // 2].id,
+                fm_meta_data_id=seeded_fm_meta_data[i].id,
             )
             for i in range(12)
         ]

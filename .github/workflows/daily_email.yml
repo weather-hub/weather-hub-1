@@ -1,0 +1,23 @@
+name: Resumen Diario al Equipo
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # todos los días a las 9:00 UTC
+
+jobs:
+  daily_email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install yagmail
+
+      - name: Enviar resumen diario
+        run: python .github/scripts/daily_email_team.py
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}

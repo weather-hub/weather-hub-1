@@ -114,8 +114,6 @@ def validate_dataset_package(
         if not headers:
             errors.append(f"CSV sin cabecera detectada: {os.path.basename(csvp)}")
             continue
-        {h.strip() for h in headers if h.strip()}
-
         missing = []
         matched_map = {}  # required -> list of matching headers
         for req in required_columns:

@@ -55,17 +55,27 @@ def upgrade():
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("email", sa.String(length=256), nullable=False),
         sa.Column("password", sa.String(length=256), nullable=False),
-        sa.Column("otp_secret", sa.String(length=16), nullable=True),  # Modificado (era 32)
-        sa.Column("twofa_enabled", sa.Boolean(), nullable=True, server_default=sa.false()),
+        sa.Column("otp_secret", sa.String(length=32), nullable=True),
+        sa.Column(
+            "twofa_enabled",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+        ),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email"),
     )
-
-    # La tabla 'webhook' ha sido eliminada (no se crea)
-
-    op.create_table("zenodo", sa.Column("id", sa.Integer(), nullable=False), sa.PrimaryKeyConstraint("id"))
-
+    op.create_table(
+        "webhook",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "zenodo",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
     op.create_table(
         "ds_meta_data",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -76,23 +86,9 @@ def upgrade():
             "publication_type",
             sa.Enum(
                 "NONE",
-                "ANNOTATION_COLLECTION",
-                "BOOK",
-                "BOOK_SECTION",
-                "CONFERENCE_PAPER",
-                "DATA_MANAGEMENT_PLAN",
-                "JOURNAL_ARTICLE",
-                "PATENT",
-                "PREPRINT",
-                "PROJECT_DELIVERABLE",
-                "PROJECT_MILESTONE",
-                "PROPOSAL",
-                "REPORT",
-                "SOFTWARE_DOCUMENTATION",
-                "TAXONOMIC_TREATMENT",
-                "TECHNICAL_NOTE",
-                "THESIS",
-                "WORKING_PAPER",
+                "REGIONAL",
+                "NATIONAL",
+                "CONTINENTAL",
                 "OTHER",
                 name="publicationtype",
             ),
@@ -118,23 +114,9 @@ def upgrade():
             "publication_type",
             sa.Enum(
                 "NONE",
-                "ANNOTATION_COLLECTION",
-                "BOOK",
-                "BOOK_SECTION",
-                "CONFERENCE_PAPER",
-                "DATA_MANAGEMENT_PLAN",
-                "JOURNAL_ARTICLE",
-                "PATENT",
-                "PREPRINT",
-                "PROJECT_DELIVERABLE",
-                "PROJECT_MILESTONE",
-                "PROPOSAL",
-                "REPORT",
-                "SOFTWARE_DOCUMENTATION",
-                "TAXONOMIC_TREATMENT",
-                "TECHNICAL_NOTE",
-                "THESIS",
-                "WORKING_PAPER",
+                "REGIONAL",
+                "NATIONAL",
+                "CONTINENTAL",
                 "OTHER",
                 name="publicationtype",
             ),
@@ -191,14 +173,6 @@ def upgrade():
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("ds_meta_data_id", sa.Integer(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("dataset_type", sa.String(length=50), nullable=False),
-        sa.Column("storage_path", sa.String(length=1024), nullable=True),
-        # Columnas añadidas de la segunda migración
-        sa.Column("ds_concept_id", sa.Integer(), nullable=True),
-        sa.Column("version_number", sa.String(length=64), nullable=True),
-        sa.Column("is_latest", sa.Boolean(), nullable=True),
-        sa.Column("is_major_edition", sa.Boolean(), nullable=True),
-        # FKs
         sa.ForeignKeyConstraint(
             ["ds_meta_data_id"],
             ["ds_meta_data.id"],
@@ -214,7 +188,6 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-
     op.create_table(
         "ds_download_record",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -333,14 +306,35 @@ def upgrade():
         ),
         sa.PrimaryKeyConstraint("user_id", "role_id"),
     )
+    op.create_table(
+        "comment",
+        sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("dataset_id", sa.Integer, nullable=False),
+        sa.Column("author_id", sa.Integer, nullable=False),
+        sa.Column("content", sa.Text, nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime,
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "approved",
+            sa.Boolean,
+            nullable=True,
+            server_default=sa.false(),
+        ),
+        sa.ForeignKeyConstraint(["dataset_id"], ["data_set.id"]),
+        sa.ForeignKeyConstraint(["author_id"], ["user.id"]),
+    )
+
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    # Downgrade unificado para borrar todo lo creado en el upgrade
-    op.execute("DROP TABLE IF EXISTS `user_roles`")
-    op.execute("DROP TABLE IF EXISTS `role`")
+    # use IF EXISTS so downgrade is tolerant if some tables are already missing
+    op.execute("DROP TABLE IF EXISTS `comment`")
     op.execute("DROP TABLE IF EXISTS `file_view_record`")
     op.execute("DROP TABLE IF EXISTS `file_download_record`")
     op.execute("DROP TABLE IF EXISTS `file`")
@@ -357,6 +351,8 @@ def downgrade():
     op.execute("DROP TABLE IF EXISTS `fm_metrics`")
     op.execute("DROP TABLE IF EXISTS `ds_metrics`")
     op.execute("DROP TABLE IF EXISTS `doi_mapping`")
+    op.execute("DROP TABLE IF EXISTS `user_roles`")
+    op.execute("DROP TABLE IF EXISTS `role`")
     op.execute("DROP TABLE IF EXISTS `user`")
     op.execute("DROP TABLE IF EXISTS `dataset_concept`")
     # ### end Alembic commands ###

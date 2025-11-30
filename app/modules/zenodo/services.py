@@ -20,18 +20,13 @@ load_dotenv()
 class ZenodoService(BaseService):
 
     def get_zenodo_url(self):
-
         FLASK_ENV = os.getenv("FLASK_ENV", "development")
-        ZENODO_API_URL = ""
-
         if FLASK_ENV == "development":
-            ZENODO_API_URL = os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
+            return os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
         elif FLASK_ENV == "production":
-            ZENODO_API_URL = os.getenv("ZENODO_API_URL", "https://zenodo.org/api/deposit/depositions")
+            return os.getenv("ZENODO_API_URL", "https://zenodo.org/api/deposit/depositions")
         else:
-            ZENODO_API_URL = os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
-
-        return ZENODO_API_URL
+            return os.getenv("ZENODO_API_URL", "https://sandbox.zenodo.org/api/deposit/depositions")
 
     def get_zenodo_access_token(self):
         return os.getenv("ZENODO_ACCESS_TOKEN")
@@ -144,16 +139,17 @@ class ZenodoService(BaseService):
         """
 
         logger.info("Dataset sending to Zenodo...")
-        logger.info(f"Publication type...{dataset.ds_meta_data.publication_type.value}")
+        # publication_type is stored in the DB as an Enum whose .name maps to the
+        # tokens defined in the DB migration (e.g. 'NONE', 'OTHER'). For Zenodo we
+        # need the lowercase token (e.g. 'none', 'other'), so use `.name.lower()`
+        # which is stable regardless of whether seeders use .name or .value.
+        pub_type_normalized = dataset.ds_meta_data.publication_type.name.lower()
+        logger.info(f"Publication type...{pub_type_normalized}")
 
         metadata = {
             "title": dataset.ds_meta_data.title,
-            "upload_type": "dataset" if dataset.ds_meta_data.publication_type.value == "none" else "publication",
-            "publication_type": (
-                dataset.ds_meta_data.publication_type.value
-                if dataset.ds_meta_data.publication_type.value != "none"
-                else None
-            ),
+            "upload_type": "dataset" if pub_type_normalized == "none" else "publication",
+            "publication_type": (pub_type_normalized if pub_type_normalized != "none" else None),
             "description": dataset.ds_meta_data.description,
             "creators": [
                 {
@@ -190,10 +186,11 @@ class ZenodoService(BaseService):
         Returns:
             dict: The response in JSON format with the details of the uploaded file.
         """
-        uvl_filename = feature_model.fm_meta_data.uvl_filename
-        data = {"name": uvl_filename}
+        # feature model metadata stores the filename in `filename` field
+        filename = feature_model.fm_meta_data.filename
+        data = {"name": filename}
         user_id = current_user.id if user is None else user.id
-        file_path = os.path.join(uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", uvl_filename)
+        file_path = os.path.join(uploads_folder_name(), f"user_{str(user_id)}", f"dataset_{dataset.id}/", filename)
         files = {"file": open(file_path, "rb")}
 
         publish_url = f"{self.ZENODO_API_URL}/{deposition_id}/files"

@@ -2,7 +2,7 @@ FROM locustio/locust
 
 WORKDIR /app
 
-RUN pip install python-dotenv faker bs4
+RUN pip install python-dotenv faker bs4 pyotp
 
 ENV PYTHONPATH=/app
 

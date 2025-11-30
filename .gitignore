@@ -25,7 +25,6 @@ __pycache__/
 *.log
 app.log
 app.log.*
-
 deployments.log
 .coverage
 htmlcov/
@@ -45,6 +44,7 @@ entrypoint.sh
 # ==========================
 uploads/
 test_file.txt
+fakenodo_db.json
 
 # ==========================
 # Vagrant

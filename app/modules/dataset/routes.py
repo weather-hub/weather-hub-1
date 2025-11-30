@@ -5,21 +5,15 @@ import shutil
 import tempfile
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 from zipfile import ZipFile
 
 # from valid_files import valid_files
-from flask import (
-    abort,
-    jsonify,
-    make_response,
-    redirect,
-    render_template,
-    request,
-    send_from_directory,
-    url_for,
-)
+from flask import abort, jsonify, make_response, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user, login_required
 
+from app.modules.comments.forms import CommentForm
+from app.modules.comments.models import Comment
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm
 from app.modules.dataset.models import DSDownloadRecord
@@ -32,6 +26,7 @@ from app.modules.dataset.services import (
     DSMetaDataService,
     DSViewRecordService,
 )
+from app.modules.fakenodo.services import FakenodoService
 from app.modules.zenodo.services import ZenodoService
 
 logger = logging.getLogger(__name__)
@@ -41,7 +36,87 @@ dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
 dataset_concept_service = DataSetConceptService()
-zenodo_service = ZenodoService()
+
+
+class FakenodoAdapter:
+    """Adapter that exposes create_new_deposition, upload_file, publish_deposition
+    and get_doi so the rest of the code doesn't need to change.
+    """
+
+    def __init__(self, working_dir: str | None = None):
+        self.service = FakenodoService(working_dir=working_dir)
+
+    def create_new_deposition(self, dataset) -> dict:
+        metadata = {
+            "title": getattr(dataset, "title", f"dataset-{getattr(dataset, 'id', '')}"),
+        }
+        rec = self.service.create_deposition(metadata=metadata)
+        return {"id": rec["id"], "conceptrecid": True, "metadata": rec.get("metadata", {})}
+
+    def upload_file(self, dataset, deposition_id, feature_model) -> Optional[dict]:
+
+        name = getattr(feature_model, "filename", None) or getattr(feature_model, "name", None)
+        path = getattr(feature_model, "file_path", None) or getattr(feature_model, "path", None)
+        content = None
+        try:
+            if path and os.path.exists(path):
+                with open(path, "rb") as fh:
+                    content = fh.read()
+        except Exception:
+            content = None
+
+        if not name:
+            name = f"feature_model_{getattr(feature_model, 'id', uuid.uuid4())}.bin"
+
+        return self.service.upload_file(deposition_id, name, content)
+
+    def publish_deposition(self, deposition_id):
+        return self.service.publish_deposition(deposition_id)
+
+    def get_doi(self, deposition_id):
+        rec = self.service.get_deposition(deposition_id)
+        if not rec:
+            return None
+        doi = rec.get("doi")
+        if doi:
+            return doi
+        versions = rec.get("versions") or []
+        if versions:
+            return versions[-1].get("doi")
+        return None
+
+
+def get_zenodo_client(working_dir: str | None = None):
+    """Return a zenodo-like client depending on environment configuration.
+
+    If the environment variable `FAKENODO_URL` or `USE_FAKE_ZENODO` is set the
+    function returns a `FakenodoAdapter`, otherwise it returns the real
+    `ZenodoService`.
+    """
+    # Prefer explicit environment opt-in for the fake service
+    if os.getenv("FAKENODO_URL") or os.getenv("USE_FAKE_ZENODO"):
+        return FakenodoAdapter(working_dir=working_dir)
+
+    # Otherwise try real Zenodo and fall back to the fake service if the
+    # connection fails (e.g. SSL verification issues in some environments).
+    try:
+        zs = ZenodoService()
+        try:
+            if zs.test_connection():
+                return zs
+        except Exception:
+            # test_connection failed (network/ssl); fall through to fake
+            logger = logging.getLogger(__name__)
+            logger.warning("ZenodoService test_connection failed, falling back to FakenodoAdapter")
+            return FakenodoAdapter(working_dir=working_dir)
+    except Exception:
+        # constructing ZenodoService failed for any reason -> fallback
+        logger = logging.getLogger(__name__)
+        logger.warning("Unable to initialize ZenodoService, using FakenodoAdapter")
+        return FakenodoAdapter(working_dir=working_dir)
+
+
+zenodo_service = get_zenodo_client()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
 
@@ -54,14 +129,13 @@ def create_dataset():
         dataset = None
 
         if not form.validate_on_submit():
-
             return jsonify({"message": form.errors}), 400
 
         try:
-
             logger.info("Creating dataset...")
-            dataset = dataset_service.create_from_form(form=form, current_user=current_user)
-            logger.info(f"Created dataset: {dataset}")
+            create_args = {"form": form, "current_user": current_user}
+            dataset = dataset_service.create_from_form(**create_args)
+            logger.info("Created dataset: %s", dataset)
             dataset_service.move_feature_models(dataset)
         except ValueError as e:
             # Business / validation error (e.g. our validate_dataset_package raised ValueError)
@@ -72,26 +146,26 @@ def create_dataset():
             # Unexpected error: log full trace, return generic message to client
             logger.exception("Exception while creating dataset")
             # For security do not leak internal trace to client; return generic message.
-            return jsonify({"message": "Internal server error while creating dataset"}), 500
+            error_msg = {"message": "Internal server error while creating dataset"}
+            return jsonify(error_msg), 500
 
         # send dataset as deposition to Zenodo
         data = {}
         try:
-
             zenodo_response_json = zenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(zenodo_response_json)
             data = json.loads(response_data)
-        except Exception as exc:
+        except Exception:
             data = {}
             zenodo_response_json = {}
-            logger.exception(f"Exception while create dataset data in Zenodo {exc}")
+            logger.exception("Exception while creating dataset data in Zenodo")
 
         if data.get("conceptrecid"):
-
             deposition_id = data.get("id")
 
             # update dataset with deposition id in Zenodo
-            dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
+            ds_meta_id = dataset.ds_meta_data_id
+            dataset_service.update_dsmetadata(ds_meta_id, deposition_id=deposition_id)
 
             try:
                 # iterate for each feature model (one feature model = one request to Zenodo)
@@ -103,9 +177,9 @@ def create_dataset():
 
                 # update DOI
                 deposition_doi = zenodo_service.get_doi(deposition_id)
-                dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
+                dataset_service.update_dsmetadata(ds_meta_id, dataset_doi=deposition_doi)
             except Exception as e:
-                msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
+                msg = "it has not been possible upload feature models in Zenodo " + f"and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
 
         # Delete temp folder
@@ -146,9 +220,14 @@ def upload():
         # Generate unique filename (by recursion)
         base_name, extension = os.path.splitext(file.filename)
         i = 1
-        while os.path.exists(os.path.join(temp_folder, f"{base_name} ({i}){extension}")):
-            i += 1
-        new_filename = f"{base_name} ({i}){extension}"
+        while True:
+            candidate_name = f"{base_name} ({i}){extension}"
+            candidate = os.path.join(temp_folder, candidate_name)
+            if os.path.exists(candidate):
+                i += 1
+                continue
+            new_filename = candidate_name
+            break
         file_path = os.path.join(temp_folder, new_filename)
     else:
         new_filename = file.filename
@@ -199,10 +278,9 @@ def download_dataset(dataset_id):
 
                 relative_path = os.path.relpath(full_path, file_path)
 
-                zipf.write(
-                    full_path,
-                    arcname=os.path.join(os.path.basename(zip_path[:-4]), relative_path),
-                )
+                arc_base = os.path.basename(zip_path[:-4])
+                arcname = os.path.join(arc_base, relative_path)
+                zipf.write(full_path, arcname=arcname)
 
     user_cookie = request.cookies.get("download_cookie")
     if not user_cookie:
@@ -247,12 +325,12 @@ def download_dataset(dataset_id):
 
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])
 def subdomain_index(doi):
-
     # Check if the DOI is an old DOI
     new_doi = doi_mapping_service.get_new_doi(doi)
     if new_doi:
         # Redirect to the same path with the new DOI
-        return redirect(url_for("dataset.subdomain_index", doi=new_doi), code=302)
+        new_url = url_for("dataset.subdomain_index", doi=new_doi)
+        return redirect(new_url, code=302)
 
     current_dataset = None
     # si es una conceptual DOI devuelve el latest dataset
@@ -276,17 +354,25 @@ def subdomain_index(doi):
     if not current_dataset or not concept:
         abort(404)
 
-    all_versions = concept.versions.all()
-    latest_version = all_versions[0]
+    # Get dataset
+    dataset = ds_meta_data.data_set
 
-    user_cookie = ds_view_record_service.create_cookie(dataset=current_dataset)
+    if current_user.is_authenticated and current_user.id == dataset.user_id:
+        comments = Comment.query.filter_by(dataset_id=dataset.id).order_by(Comment.created_at.desc()).all()
+    else:
+        comments = (
+            Comment.query.filter_by(dataset_id=dataset.id, approved=True).order_by(Comment.created_at.desc()).all()
+        )
+
+    comment_form = CommentForm()
+    # Save the cookie to the user's browser
+    user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
     resp = make_response(
         render_template(
             "dataset/view_dataset.html",
-            dataset=current_dataset,
-            all_versions=all_versions,
-            latest_version=latest_version,
-            conceptual_doi=concept.conceptual_doi,
+            dataset=dataset,
+            comment_form=comment_form,
+            comments=comments,
         )
     )
     resp.set_cookie("view_cookie", user_cookie)
@@ -297,11 +383,38 @@ def subdomain_index(doi):
 @dataset_bp.route("/dataset/unsynchronized/<int:dataset_id>/", methods=["GET"])
 @login_required
 def get_unsynchronized_dataset(dataset_id):
-
     # Get dataset
     dataset = dataset_service.get_unsynchronized_dataset(current_user.id, dataset_id)
 
     if not dataset:
         abort(404)
 
-    return render_template("dataset/view_dataset.html", dataset=dataset)
+    if current_user.is_authenticated and current_user.id == dataset.user_id:
+        comments = Comment.query.filter_by(dataset_id=dataset.id).order_by(Comment.created_at.desc()).all()
+    else:
+        comments = (
+            Comment.query.filter_by(dataset_id=dataset.id, approved=True).order_by(Comment.created_at.desc()).all()
+        )
+    comment_form = CommentForm()
+    return render_template(
+        "dataset/view_dataset.html",
+        dataset=dataset,
+        comment_form=comment_form,
+        comments=comments,
+    )
+
+
+@dataset_bp.route("/dataset/search", methods=["GET", "POST"])
+@login_required
+def search_dataset():
+    filters = {
+        "author": request.args.get("author"),
+        "affiliation": request.args.get("affiliation"),
+        "tags": request.args.get("tags", "").split(","),
+        "start_date": request.args.get("start_date"),
+        "end_date": request.args.get("end_date"),
+        "title": request.args.get("title"),
+        "publication_type": request.args.get("publication_type"),
+    }
+    results = dataset_service.search(**filters)
+    return render_template("dataset/search_results.html", datasets=results, filters=filters)

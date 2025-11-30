@@ -1,10 +1,10 @@
 import re
+from datetime import datetime, timedelta
 
 import unidecode
-from sqlalchemy import any_, or_
+from sqlalchemy import and_, or_
 
 from app.modules.dataset.models import Author, DataSet, DSMetaData, PublicationType
-from app.modules.featuremodel.models import FeatureModel, FMMetaData
 from core.repositories.BaseRepository import BaseRepository
 
 
@@ -12,52 +12,77 @@ class ExploreRepository(BaseRepository):
     def __init__(self):
         super().__init__(DataSet)
 
-    def filter(self, query="", sorting="newest", publication_type="any", tags=[], **kwargs):
-        # Normalize and remove unwanted characters
-        normalized_query = unidecode.unidecode(query).lower()
-        cleaned_query = re.sub(r'[,.":\'()\[\]^;!¡¿?]', "", normalized_query)
+    def _parse_date(self, s):
+        if not s:
+            return None
+        try:
+            return datetime.strptime(s, "%Y-%m-%d")
+        except ValueError:
+            return None
 
-        filters = []
-        for word in cleaned_query.split():
-            filters.append(DSMetaData.title.ilike(f"%{word}%"))
-            filters.append(DSMetaData.description.ilike(f"%{word}%"))
-            filters.append(Author.name.ilike(f"%{word}%"))
-            filters.append(Author.affiliation.ilike(f"%{word}%"))
-            filters.append(Author.orcid.ilike(f"%{word}%"))
-            filters.append(FMMetaData.filename.ilike(f"%{word}%"))
-            filters.append(FMMetaData.title.ilike(f"%{word}%"))
-            filters.append(FMMetaData.description.ilike(f"%{word}%"))
-            filters.append(FMMetaData.publication_doi.ilike(f"%{word}%"))
-            filters.append(FMMetaData.tags.ilike(f"%{word}%"))
-            filters.append(DSMetaData.tags.ilike(f"%{word}%"))
+    def _tokens(self, text: str):
+        if not text:
+            return []
+        t = unidecode.unidecode(text).lower().strip()
+        t = re.sub(r'[,.":\'()\[\]^;!¡¿?]', "", t)
+        return [w for w in t.split() if w]
 
-        datasets = (
-            self.model.query.join(DataSet.ds_meta_data)
-            .join(DSMetaData.authors)
-            .join(DataSet.feature_models)
-            .join(FeatureModel.fm_meta_data)
-            .filter(or_(*filters))
-            # Exclude datasets with empty dataset_doi
-            .filter(DSMetaData.dataset_doi.isnot(None))
-        )
+    # Main filter method
+    def filter(
+        self, query="", sorting="newest", publication_type="any", tags=None, start_date=None, end_date=None, **kwargs
+    ):
 
-        if publication_type != "any":
-            matching_type = None
-            for member in PublicationType:
-                if member.value.lower() == publication_type:
-                    matching_type = member
-                    break
+        q = self.model.query.join(DataSet.ds_meta_data).outerjoin(DSMetaData.authors).distinct()
 
-            if matching_type is not None:
-                datasets = datasets.filter(DSMetaData.publication_type == matching_type.name)
+        words = self._tokens(query)
+        has_query = bool(words)
+        has_pub_type = bool(publication_type and publication_type != "any")
+        has_tags = any(t.strip() for t in tags)
 
-        if tags:
-            datasets = datasets.filter(DSMetaData.tags.ilike(any_(f"%{tag}%" for tag in tags)))
+        sd = self._parse_date(start_date)
+        ed = self._parse_date(end_date)
 
-        # Order by created_at
+        # No filters
+        if not (has_query or has_pub_type or has_tags or sd or ed):
+            return q.order_by(DataSet.created_at.desc(), DSMetaData.title.asc()).all()
+
+        # Dates
+        if sd:
+            q = q.filter(DataSet.created_at >= sd)
+        if ed:
+            q = q.filter(DataSet.created_at < (ed + timedelta(days=1)))  # día completo
+
+        # Publication type
+        if has_pub_type:
+            member = next((m for m in PublicationType if m.value.lower() == publication_type.lower()), None)
+            if member is not None:
+                q = q.filter(DSMetaData.publication_type == member)
+
+        # Tags
+        if has_tags:
+            clauses = [DSMetaData.tags.ilike(f"%{t.strip()}%") for t in tags if t.strip()]
+            if clauses:
+                q = q.filter(and_(*clauses))
+
+        # General search
+        if has_query:
+            per_word_groups = []
+            for w in words:
+                like = f"%{w}%"
+                per_word_groups.append(
+                    or_(
+                        DSMetaData.title.ilike(like),
+                        DSMetaData.description.ilike(like),
+                        Author.name.ilike(like),
+                        Author.affiliation.ilike(like),
+                    )
+                )
+            q = q.filter(and_(*per_word_groups))
+
+        # Ordering
         if sorting == "oldest":
-            datasets = datasets.order_by(self.model.created_at.asc())
+            q = q.order_by(DataSet.created_at.asc(), DSMetaData.title.asc())
         else:
-            datasets = datasets.order_by(self.model.created_at.desc())
+            q = q.order_by(DataSet.created_at.desc(), DSMetaData.title.asc())
 
-        return datasets.all()
+        return q.all()

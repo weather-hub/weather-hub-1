@@ -1,5 +1,7 @@
 import os
 
+from app.modules.auth.models import User
+from app.modules.profile.models import UserProfile
 from core.seeders.BaseSeeder import BaseSeeder
 
 
@@ -12,6 +14,44 @@ class AuthSeeder(BaseSeeder):
     """
 
     priority = 1
+
+    def run(self):
+        # Seeding users
+        users = [
+            User(email="user1@example.com", password="1234"),
+            User(email="user2@example.com", password="1234"),
+        ]
+
+        # Inserted users with their assigned IDs are returned by `self.seed`.
+        seeded_users = self.seed(users)
+
+        # Create profiles for each user inserted.
+        user_profiles = []
+        names = [("John", "Doe"), ("Jane", "Doe")]
+
+        for user, name in zip(seeded_users, names):
+            profile_data = {
+                "user_id": user.id,
+                "orcid": "",
+                "affiliation": "Some University",
+                "name": name[0],
+                "surname": name[1],
+            }
+            user_profile = UserProfile(**profile_data)
+            user_profiles.append(user_profile)
+
+        # Seeding user profiles
+        self.seed(user_profiles)
+
+
+class RolesSeeder(BaseSeeder):
+    """Seeder that creates the fixed roles and some example users (idempotent).
+    - Creates roles: admin, curator, standard, guest
+    - Creates example users only if they don't already exist
+    - Optionally creates an admin user from ENV vars
+    """
+
+    priority = 5
 
     def run(self):
         from app.modules.auth.models import Role
@@ -60,7 +100,13 @@ class AuthSeeder(BaseSeeder):
             {"email": "guest@example.com", "password": "1234", "name": "Guest", "surname": "User", "role": "guest"},
             # Keep original example users for backwards compatibility
             {"email": "user1@example.com", "password": "1234", "name": "John", "surname": "Doe", "role": "admin"},
-            {"email": "user2@example.com", "password": "1234", "name": "Jane", "surname": "Doe", "role": "standard"},
+            {
+                "email": "user2@example.com",
+                "password": "1234",
+                "name": "Jane",
+                "surname": "Doe",
+                "role": "standard",
+            },
         ]
 
         for u in example_users:
