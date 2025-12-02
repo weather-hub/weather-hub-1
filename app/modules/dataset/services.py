@@ -25,6 +25,7 @@ from app.modules.hubfile.repositories import (
     HubfileRepository,
     HubfileViewRecordRepository,
 )
+from app.modules.zenodo.services import ZenodoService
 from core.services.BaseService import BaseService
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,8 @@ class DataSetService(BaseService):
         self.hubfilerepository = HubfileRepository()
         self.dsviewrecord_repostory = DSViewRecordRepository()
         self.hubfileviewrecord_repository = HubfileViewRecordRepository()
+        self.dsmetadata_service = DSMetaDataService()
+        self.zenodo_service = ZenodoService()
 
     def move_feature_models(self, dataset: DataSet):
         current_user = AuthenticationService().get_authenticated_user()
@@ -125,12 +128,15 @@ class DataSetService(BaseService):
         }
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
+            form_vnumber = form.get_version_number()
             dsmetadata = self.dsmetadata_repository.create(**form.get_dsmetadata())
             for author_data in [main_author] + form.get_authors():
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
 
-            dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
+            dataset = self.create(
+                commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id, version_number=form_vnumber
+            )
             # llenalo con los nombres de los ficheros que componen el paquete
             uploaded_filenames = []
             for feature_model in form.feature_models:

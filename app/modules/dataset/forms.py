@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import FieldList, FormField, SelectField, StringField, SubmitField, TextAreaField
+from wtforms import BooleanField, FieldList, FormField, SelectField, StringField, SubmitField, TextAreaField
 from wtforms.validators import URL, DataRequired, Optional
 
 from app.modules.dataset.models import PublicationType
@@ -63,12 +63,14 @@ class DataSetForm(FlaskForm):
         validators=[DataRequired()],
     )
     publication_doi = StringField("Publication DOI", validators=[Optional(), URL()])
-    dataset_doi = StringField("Dataset DOI", validators=[Optional(), URL()])
+    version_number = StringField("Version Number", validators=[DataRequired()], default="v1.0.0")
     tags = StringField("Tags (separated by commas)")
     authors = FieldList(FormField(AuthorForm))
     feature_models = FieldList(FormField(FeatureModelForm), min_entries=1)
-
     submit = SubmitField("Submit")
+
+    def get_version_number(self):
+        return self.version_number
 
     def get_dsmetadata(self):
         publication_type_converted = self.convert_publication_type(self.publication_type.data)
@@ -78,7 +80,6 @@ class DataSetForm(FlaskForm):
             "description": self.desc.data,
             "publication_type": publication_type_converted,
             "publication_doi": self.publication_doi.data,
-            "dataset_doi": self.dataset_doi.data,
             "tags": self.tags.data,
         }
 
@@ -93,3 +94,18 @@ class DataSetForm(FlaskForm):
 
     def get_feature_models(self):
         return [fm.get_feature_model() for fm in self.feature_models]
+
+
+class DataSetVersionForm(DataSetForm):
+    """
+    Un formulario para crear una *nueva versión* de un dataset existente.
+    Hereda todo de DataSetForm y solo añade el checkbox de "major version".
+    """
+
+    is_major_version = BooleanField(
+        "This is a Major Version (e.g., file changes, new experiments)",
+        default=False,
+        description="Check this if you have changed data files. This will generate a new, citable DOI for this version.",
+    )
+
+    submit = SubmitField("Publish New Version")

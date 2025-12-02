@@ -15,7 +15,7 @@ from flask_login import current_user, login_required
 from app.modules.comments.forms import CommentForm
 from app.modules.comments.models import Comment
 from app.modules.dataset import dataset_bp
-from app.modules.dataset.forms import DataSetForm
+from app.modules.dataset.forms import DataSetForm, DataSetVersionForm
 from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
@@ -321,6 +321,43 @@ def download_dataset(dataset_id):
         )
 
     return resp
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/new-version", methods=["GET", "POST"])
+@login_required
+def create_new_ds_version(dataset_id):
+    original_dataset = dataset_service.get_or_404(dataset_id)
+
+    if current_user.id != original_dataset.user_id:
+        abort(403, "No eres el autor del dataset por tanto no puedes versionarlo.")
+
+    # 2. Usa el NUEVO formulario
+    #    (obj=... sigue funcionando porque hereda los campos)
+    form = DataSetVersionForm(obj=original_dataset.ds_meta_data)
+
+    if form.validate_on_submit():
+        try:
+            new_dataset = zenodo_service.publish_new_version(
+                form=form,
+                original_dataset=original_dataset,
+                current_user=current_user,
+                is_major=form.is_major_version.data,
+            )
+            if new_dataset.ds_meta_data.dataset_doi:
+                return redirect(url_for("dataset.subdomain_index", doi=new_dataset.ds_meta_data.dataset_doi))
+            else:
+
+                return redirect(url_for("dataset.get_unsynchronized_dataset", dataset_id=new_dataset.id))
+
+        except Exception:
+            logger.exception("Error al crear la nueva versión")
+            form.errors["general"] = ["Hubo un error interno al publicar la versión."]
+
+    form.version_number.data = original_dataset.version_number + "-copy"
+    temp_folder = current_user.temp_folder()
+    if os.path.exists(temp_folder):
+        shutil.rmtree(temp_folder)
+    return render_template("dataset/new_version.html", form=form, dataset=original_dataset)
 
 
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])

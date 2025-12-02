@@ -27,6 +27,14 @@
         </a>
     </div>
 
+    {% if current_user.is_authenticated and current_user.id == dataset.user_id and dataset.ds_meta_data.dataset_doi %}
+    <div class="col-6 text-end">
+        <a href="{{ url_for('dataset.create_new_ds_version', dataset_id=dataset.id) }}" class="btn btn-success btn-sm" style="border-radius: 5px;">
+            <i data-feather="plus-circle" class="center-button-icon"></i>
+            Create New Version
+        </a>
+    </div>
+    {% endif %}
 </div>
 
 <div class="row">
