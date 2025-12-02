@@ -2,6 +2,7 @@ from app import db
 from app.modules.auth.models import User
 from app.modules.community.models import Community, CommunityDatasetProposal
 from app.modules.community.repositories import CommunityDatasetProposalRepository, CommunityRepository
+from app.modules.notifications.service import send_dataset_accepted_email
 from core.services.BaseService import BaseService
 
 
@@ -39,9 +40,15 @@ class CommunityService(BaseService):
             community_id=community.id, dataset_id=dataset_id, proposed_by=proposed_by_user_id
         )
 
-    def accept_proposal(self, proposal: CommunityDatasetProposal):
+    def accept_proposal(self, proposal):
         proposal.accept()
         db.session.commit()
+
+        try:
+            send_dataset_accepted_email(proposal)
+        except Exception:
+            pass
+
         return proposal
 
     def reject_proposal(self, proposal: CommunityDatasetProposal):
