@@ -62,7 +62,7 @@ class DataSetSeeder(BaseSeeder):
                 deposition_id=1001,
                 title="Weather Data (V1)",
                 description="Description for dataset 1, version 1",
-                publication_type=PublicationType.DATA_MANAGEMENT_PLAN,
+                publication_type=PublicationType.NATIONAL,
                 publication_doi="10.1234/paper.1",
                 dataset_doi="10.seed/v1.1",  # <-- DOI Específico V1
                 tags="tag1, tag2",
@@ -73,7 +73,7 @@ class DataSetSeeder(BaseSeeder):
                 deposition_id=1002,
                 title="Weather Data (V2)",
                 description="Description for dataset 1, version 2",
-                publication_type=PublicationType.DATA_MANAGEMENT_PLAN,
+                publication_type=PublicationType.NATIONAL,
                 publication_doi="10.1234/paper.1",
                 dataset_doi="10.seed/v1.2",  # <-- DOI Específico V2
                 tags="tag1, tag2, updated",
@@ -106,7 +106,7 @@ class DataSetSeeder(BaseSeeder):
                 deposition_id=1005,
                 title="Empty Dataset (V1)",
                 description="Description for dataset 3, version 1",
-                publication_type=PublicationType.REPORT,
+                publication_type=PublicationType.CONTINENTAL,
                 publication_doi="10.1234/paper.3",
                 dataset_doi="10.seed/v3.1",  # <-- DOI Específico
                 tags="empty",
@@ -117,7 +117,7 @@ class DataSetSeeder(BaseSeeder):
                 deposition_id=1006,
                 title="Empty Dataset (V2 - metadata edit)",
                 description="Description for dataset 3, version 2",
-                publication_type=PublicationType.REPORT,
+                publication_type=PublicationType.REGIONAL,
                 publication_doi="10.1234/paper.3",
                 dataset_doi="10.seed/v3.2",  # <-- DOI Específico
                 tags="empty, metadata",

@@ -391,23 +391,28 @@ def subdomain_index(doi):
     if not current_dataset or not concept:
         abort(404)
 
-    # Get dataset
-    dataset = ds_meta_data.data_set
+    all_versions = concept.versions.all()
+    latest_version = all_versions[0] if all_versions else None
 
-    if current_user.is_authenticated and current_user.id == dataset.user_id:
-        comments = Comment.query.filter_by(dataset_id=dataset.id).order_by(Comment.created_at.desc()).all()
+    if current_user.is_authenticated and current_user.id == current_dataset.user_id:
+        comments = Comment.query.filter_by(dataset_id=current_dataset.id).order_by(Comment.created_at.desc()).all()
     else:
         comments = (
-            Comment.query.filter_by(dataset_id=dataset.id, approved=True).order_by(Comment.created_at.desc()).all()
+            Comment.query.filter_by(dataset_id=current_dataset.id, approved=True)
+            .order_by(Comment.created_at.desc())
+            .all()
         )
 
     comment_form = CommentForm()
     # Save the cookie to the user's browser
-    user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
+    user_cookie = ds_view_record_service.create_cookie(dataset=current_dataset)
     resp = make_response(
         render_template(
             "dataset/view_dataset.html",
-            dataset=dataset,
+            dataset=current_dataset,
+            all_versions=all_versions,
+            latest_version=latest_version,
+            conceptual_doi=concept.conceptual_doi,
             comment_form=comment_form,
             comments=comments,
         )
