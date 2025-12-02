@@ -1,8 +1,8 @@
 from flask import current_app
 from flask_mail import Mail, Message
-from flask import url_for
-from app.modules.dataset.models import DataSet
+
 from app.modules.auth.models import User
+from app.modules.dataset.models import DataSet
 
 mail = Mail()
 
@@ -28,7 +28,6 @@ def send_dataset_accepted_email(proposal):
     if not dataset:
         return
 
-    
     owner = User.query.get(dataset.user_id)
     proposer = User.query.get(proposal.proposed_by)
 
@@ -43,7 +42,6 @@ def send_dataset_accepted_email(proposal):
     if not recipients:
         return
 
-    
     community = proposal.community
     community_name = community.name
     dataset_title = dataset.ds_meta_data.title
@@ -52,8 +50,8 @@ def send_dataset_accepted_email(proposal):
 
     body = (
         f"Hola,\n\n"
-        f"Tu dataset con ID {dataset.id} y título \"{dataset_title}\" "
-        f"ha sido aceptado en la comunidad \"{community_name}\".\n\n"
+        f'Tu dataset con ID {dataset.id} y título "{dataset_title}" '
+        f'ha sido aceptado en la comunidad "{community_name}".\n\n'
         f"¡Enhorabuena!\n\n"
         f"— WeatherHub Team"
     )
