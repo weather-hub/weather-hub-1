@@ -191,6 +191,10 @@ class DataSetService(BaseService):
         domain = os.getenv("DOMAIN", "localhost")
         return f"http://{domain}/doi/{dataset.ds_meta_data.dataset_doi}"
 
+    def get_conceptual_doi(self, dataset: DataSet) -> str:
+        domain = os.getenv("DOMAIN", "localhost")
+        return f"http://{domain}/doi/{dataset.concept.conceptual_doi}" if dataset.concept else None
+
     def search(self, **filters):
         return self.repository.search(**filters)
 

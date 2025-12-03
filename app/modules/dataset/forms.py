@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, FieldList, FormField, SelectField, StringField, SubmitField, TextAreaField
-from wtforms.validators import URL, DataRequired, Optional
+from wtforms.validators import URL, DataRequired, Optional, Regexp
 
 from app.modules.dataset.models import PublicationType
 
@@ -33,7 +33,15 @@ class FeatureModelForm(FlaskForm):
     )
     publication_doi = StringField("Publication DOI", validators=[Optional(), URL()])
     tags = StringField("Tags (separated by commas)")
-    version = StringField("Version")
+    version = StringField(
+        "Version",
+        validators=[
+            DataRequired(),
+            Regexp(r"^v\d+\.\d+\.\d+$", message="El formato debe ser vX.Y.Z (ejemplo: v1.0.0)"),
+        ],
+        render_kw={"placeholder": "v1.0.0"},
+        default="v1.0.0",
+    )
     authors = FieldList(FormField(AuthorForm))
 
     class Meta:
@@ -63,14 +71,22 @@ class DataSetForm(FlaskForm):
         validators=[DataRequired()],
     )
     publication_doi = StringField("Publication DOI", validators=[Optional(), URL()])
-    version_number = StringField("Version Number", validators=[DataRequired()], default="v1.0.0")
+    version_number = StringField(
+        "Version Number",
+        validators=[
+            DataRequired(),
+            Regexp(r"^v\d+\.\d+\.\d+$", message="El formato debe ser vX.Y.Z (ejemplo: v1.0.0)"),
+        ],
+        render_kw={"placeholder": "v1.0.0"},
+        default="v1.0.0",
+    )
     tags = StringField("Tags (separated by commas)")
     authors = FieldList(FormField(AuthorForm))
     feature_models = FieldList(FormField(FeatureModelForm), min_entries=1)
     submit = SubmitField("Submit")
 
     def get_version_number(self):
-        return self.version_number
+        return self.version_number.data
 
     def get_dsmetadata(self):
         publication_type_converted = self.convert_publication_type(self.publication_type.data)
@@ -105,7 +121,8 @@ class DataSetVersionForm(DataSetForm):
     is_major_version = BooleanField(
         "This is a Major Version (e.g., file changes, new experiments)",
         default=False,
-        description="Check this if you have changed data files. This will generate a new, citable DOI for this version.",
+        description="Check this if you have changed data files. This will"
+        + " generate a new, citable DOI for this version.",
     )
 
     submit = SubmitField("Publish New Version")

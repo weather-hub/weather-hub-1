@@ -124,7 +124,9 @@ class DataSet(db.Model):
         return DataSetService().get_uvlhub_doi(self)
 
     def get_conceptual_doi(self):
-        return self.concept.conceptual_doi if self.concept else None
+        from app.modules.dataset.services import DataSetService
+
+        return DataSetService().get_conceptual_doi(self)
 
     def to_dict(self):
         return {

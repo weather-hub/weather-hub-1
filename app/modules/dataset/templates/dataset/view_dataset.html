@@ -167,68 +167,76 @@
 
                 <hr>
                 <h4 class="mt-4">How to Cite</h4>
+                {# CONCEPTUAL DOI SECTION #}
+                <div class="mb-3"> {% if dataset.get_conceptual_doi() %}
 
-                <div class="row mb-2">
-                    <div class="col-md-4 col-12">
-                        <span class="text-secondary">
-                            Conceptual DOI
-                            <small class="d-block">(Cite the concept - always resolves to latest version)</small>
-                        </span>
-                    </div>
-                    <div class="col-md-8 col-12">
-                        <a href="{{ url_for('dataset.subdomain_index', doi=conceptual_doi) }}" target="_blank">
-                            {{ conceptual_doi }}
-                        </a>
-                    </div>
+                        <div class="d-flex align-items-center">
+                            <span class="d-inline-flex align-items-center bg-dark text-white px-2 py-1 rounded-start" style="height: 31px; white-space: nowrap;">
+                                <i data-feather="tag" class="me-1" style="width: 14px; height: 14px;"></i>
+                                <small><b>Conceptual DOI</b></small>
+                            </span>
+
+                            <a href="{{ url_for('dataset.subdomain_index', doi=conceptual_doi) }}" target="_blank"
+                               class="d-inline-flex align-items-center bg-primary text-white px-2 py-1 rounded-end text-decoration-none text-truncate"
+                               style="height: 31px; max-width: 350px;">
+                                <small>{{ dataset.get_conceptual_doi() }}</small>
+                            </a>
+
+                            <button onclick="copyText('dataset_conceptual_doi')" class="btn btn-sm btn-light border ms-2" title="Copy to clipboard">
+                                <i data-feather="clipboard" style="width: 16px; height: 16px;"></i>
+                            </button>
+                        </div>
+
+                        <div class="mt-1">
+                            <small class="text-secondary">(Cite the concept - always resolves to latest version)</small>
+                        </div>
+
+                        <div id="dataset_conceptual_doi" style="display: none">{{ dataset.get_conceptual_doi() }}</div>
+
+                    {% else %}
+                        <span class="text-muted" style="display: none">Conceptual DOI: Not assigned yet (Unsynchronized)</span>
+                    {% endif %}
                 </div>
 
-                <div class="row mb-2">
-                    <div class="col-md-4 col-12">
+
+                {# ALERT IF DOI NOT ASSIGNED #}
+                {% if not dataset.ds_meta_data.dataset_doi %}
+                    <div class="alert alert-warning mt-3" role="alert">
+                        <i data-feather="alert-triangle" class="center-button-icon"></i>
+                        This dataset version has not been synchronized with Zenodo yet. Therefore, it does not have a DOI assigned.
+                    </div>
+                {% else %}
+
+                {# SPECIFIC DOI SECTION #}
+                <div class="mb-3"> <div class="d-flex align-items-center">
+                        <span class="d-inline-flex align-items-center bg-dark text-white px-2 py-1 rounded-start" style="height: 31px; white-space: nowrap;">
+                            <i data-feather="hash" class="me-1" style="width: 14px; height: 14px;"></i>
+                            <small><b>Specific DOI</b></small>
+                        </span>
+
+                        <a href="{{ dataset.get_uvlhub_doi() }}" target="_blank"
+                           class="d-inline-flex align-items-center bg-primary text-white px-2 py-1 rounded-end text-decoration-none text-truncate"
+                           style="height: 31px; max-width: 350px;">
+                            <small>{{ dataset.get_uvlhub_doi() }}</small>
+                        </a>
+
+                        <button onclick="copyText('dataset_doi')" class="btn btn-sm btn-light border ms-2" title="Copy to clipboard">
+                            <i data-feather="clipboard" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-1">
                         <span class="text-secondary">
-                            Specific DOI
-                            <small class="d-block">(Cite this specific version: <b>{{ dataset.version_number }}</b>)</small>
+                            <small>(Cite this specific version: <b>{{ dataset.version_number }}</b>)</small>
                         </span>
                     </div>
-                    <div class="col-md-8 col-12">
-                        <a href="{{ url_for('dataset.subdomain_index', doi=dataset.ds_meta_data.dataset_doi) }}" target="_blank">
-                            {{ dataset.ds_meta_data.dataset_doi }}
-                        </a>
-                    </div>
-                </div>
 
-                <button type="button" class="btn doi_button btn-sm" onclick="copyText('dataset_doi')">
-                    <span class="button_doi_id">
-                        <i data-feather="clipboard" class="center-button-icon" style="cursor: pointer"></i>
-                        <b>DOI</b>
-                    </span>
-                    <span class="doi_text">
-                        {{ dataset.get_uvlhub_doi() }}
-                    </span>
-                </button>
+                    <div id="dataset_doi" style="display: none">{{ dataset.get_uvlhub_doi() }}</div>
 
-                <div id="dataset_doi" style="display: none">
-                    {{ dataset.get_uvlhub_doi() }}
-                {% if dataset.ds_meta_data.publication_doi %}
-                <div class="row mb-2">
-                    <div class="col-md-4 col-12">
-                        <span class="text-secondary">
-                            Related Publication
-                            <small class="d-block">(The paper this dataset belongs to)</small>
-                        </span>
-                    </div>
-                    <div class="col-md-8 col-12">
-                        <a href="{{ dataset.ds_meta_data.publication_doi }}" target="_blank">
-                            {{ dataset.ds_meta_data.publication_doi }}
-                        </a>
-                    </div>
                 </div>
                 {% endif %}
-                </div>
-
             </div>
-
         </div>
-
         <div class="card">
 
             <div class="card-body">
