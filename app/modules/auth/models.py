@@ -64,6 +64,7 @@ class User(db.Model, UserMixin):
 
 class UserSession(db.Model):
     """Model to track active user sessions for security management"""
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     session_id = db.Column(db.String(256), unique=True, nullable=False, index=True)
@@ -74,7 +75,6 @@ class UserSession(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     last_activity = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-
 
     def __repr__(self):
         return f"<UserSession {self.session_id} - User {self.user_id}>"
@@ -92,7 +92,6 @@ class UserSession(db.Model):
             return "Unknown OS"
         ua = parse_user_agent(self.user_agent)
         return ua.os.family or "Unknown OS"
-
 
     def is_current_session(self, current_session_id: str) -> bool:
         """Check if this is the current session"""

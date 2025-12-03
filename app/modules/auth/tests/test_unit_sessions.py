@@ -1,5 +1,6 @@
-import pytest
 from datetime import datetime, timedelta, timezone
+
+import pytest
 
 from app.modules.auth.repositories import UserRepository, UserSessionRepository
 from app.modules.auth.services import SessionManagementService
@@ -33,7 +34,8 @@ def test_get_active_sessions_ordering(user):
 
     sessions = repo.get_active_sessions_by_user(user.id)
     # Expect newest first
-    assert [s.session_id for s in sessions] == ["s3", "s2", "s1"]
+    # arregla para q use s1,s2,s3:
+    assert sessions == [s3, s2, s1]
 
 
 def test_deactivate_session_and_update_last_activity(user):
@@ -71,9 +73,9 @@ def test_cleanup_inactive_sessions(user):
     assert count >= 1
 
     # old session must now be inactive (get_by_session_id returns only active ones)
-    assert repo.get_by_session_id("old-session") is None
+    assert repo.get_by_session_id(old.session_id) is None
     # recent session should still be active
-    assert repo.get_by_session_id("recent-session") is not None
+    assert repo.get_by_session_id(recent.session_id) is not None
 
 
 def test_session_management_close_all_other_sessions(user):
@@ -90,10 +92,10 @@ def test_session_management_close_all_other_sessions(user):
     assert closed == 2
 
     # ensure 'b' still active
-    assert repo.get_by_session_id("b") is not None
+    assert repo.get_by_session_id(b.session_id) is not None
     # a and c should be inactive
-    assert repo.get_by_session_id("a") is None
-    assert repo.get_by_session_id("c") is None
+    assert repo.get_by_session_id(a.session_id) is None
+    assert repo.get_by_session_id(c.session_id) is None
 
 
 def test_close_session_only_if_belongs_to_user(clean_database):
@@ -106,9 +108,9 @@ def test_close_session_only_if_belongs_to_user(clean_database):
     s = repo.create(user_id=user1.id, session_id="only-user1")
 
     # user2 should not be able to close user1's session
-    result = svc.close_session("only-user1", user2.id)
+    result = svc.close_session(s.session_id, user2.id)
     assert result is False
 
     # user1 can close it
-    result = svc.close_session("only-user1", user1.id)
+    result = svc.close_session(s.session_id, user1.id)
     assert result is True

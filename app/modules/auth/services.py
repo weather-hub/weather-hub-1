@@ -1,8 +1,8 @@
 import os
 import secrets
 from datetime import datetime, timezone
-from flask import request, session
 
+from flask import request, session
 from flask_login import current_user
 
 from app.modules.auth.models import User
@@ -30,7 +30,7 @@ class AuthenticationService(BaseService):
                 pass
             return user
         return None
-    
+
     def _create_session_record(self, user):
         """Create a session record for tracking"""
         # Generate or get session ID
@@ -84,7 +84,6 @@ class AuthenticationService(BaseService):
             except Exception:
                 return None
 
-
     def _extract_device_info(self, user_agent: str) -> str:
         """Extract simplified device info from user agent"""
         if not user_agent:
@@ -96,7 +95,6 @@ class AuthenticationService(BaseService):
             return "Tablet"
         else:
             return "Desktop"
-
 
     def is_email_available(self, email: str) -> bool:
         return self.repository.get_by_email(email) is None
@@ -157,8 +155,10 @@ class AuthenticationService(BaseService):
 def get_user_by_id(self, user_id: int) -> User | None:
     return self.repository.get_by_id(user_id)
 
+
 class SessionManagementService(BaseService):
     """Service for managing user sessions"""
+
     def __init__(self):
         super().__init__(UserSessionRepository())
 
