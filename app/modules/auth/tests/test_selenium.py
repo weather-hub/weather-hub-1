@@ -45,5 +45,39 @@ def test_login_and_check_element():
         close_driver(driver)
 
 
+def _login_driver(driver, host, email, password):
+    driver.get(f"{host}/login")
+    time.sleep(2)
+    email_field = driver.find_element(By.NAME, "email")
+    password_field = driver.find_element(By.NAME, "password")
+    email_field.clear()
+    password_field.clear()
+    email_field.send_keys(email)
+    password_field.send_keys(password)
+    password_field.send_keys(Keys.RETURN)
+    # give server time to process and redirect
+    time.sleep(3)
+
+
+def test_login_creates_user_session():
+    driver = initialize_driver()
+    try:
+        host = get_host_for_selenium_testing()
+
+        _login_driver(driver, host, "user1@example.com", "1234")
+
+        # After login, open sessions page and check current session is present
+        driver.get(f"{host}/sessions")
+        time.sleep(2)
+
+        assert "Active Sessions" in driver.page_source
+        # Ensure there's a 'Current Device' marker somewhere in the table
+        assert "Current Device" in driver.page_source
+
+    finally:
+        close_driver(driver)
+
+
 # Call the test function
+test_login_creates_user_session()
 test_login_and_check_element()
