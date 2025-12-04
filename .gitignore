@@ -59,3 +59,4 @@ ubuntu-bionic-18.04-cloudimg-console.log
 
 
 .ruff_cache/
+.ruff_cache/*
