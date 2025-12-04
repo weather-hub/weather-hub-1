@@ -118,8 +118,11 @@ class DataSetVersionForm(DataSetForm):
     Hereda todo de DataSetForm y solo añade el checkbox de "major version".
     """
 
+    feature_models = FieldList(FormField(FeatureModelForm), validators=[Optional()], min_entries=0)
+
     is_major_version = BooleanField(
         "This is a Major Version (e.g., file changes, new experiments)",
+        render_kw={"disabled": True},
         default=False,
         description="Check this if you have changed data files. This will"
         + " generate a new, citable DOI for this version.",

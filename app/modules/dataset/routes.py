@@ -65,7 +65,7 @@ class FakenodoAdapter:
 
         # 2. Crear el dataset localmente usando el servicio existente
         # Esto guarda el título, descripción, autores y ficheros en la BD
-        new_dataset = _dataset_service.create_from_form(form=form, current_user=current_user)
+        new_dataset = _dataset_service.create_from_form(form=form, current_user=current_user, allow_empty_package=True)
 
         # Vincular al mismo concepto que el original
         new_dataset.ds_concept_id = original_dataset.ds_concept_id
@@ -105,9 +105,12 @@ class FakenodoAdapter:
         # 7. Obtener DOI y guardar en BD local
         new_doi = self.get_doi(deposition_id)
 
+        # solo cambia el DOI para major versions:
+        doi_to_store = new_doi if is_major else original_dataset.ds_meta_data.dataset_doi
+
         # Actualizamos la metadata local con la info de "Zenodo"
         _dataset_service.update_dsmetadata(
-            new_dataset.ds_meta_data_id, deposition_id=deposition_id, dataset_doi=new_doi
+            new_dataset.ds_meta_data_id, deposition_id=deposition_id, dataset_doi=doi_to_store
         )
 
         return new_dataset
@@ -228,7 +231,7 @@ def create_dataset():
         try:
             logger.info("Creating dataset...")
             create_args = {"form": form, "current_user": current_user}
-            dataset = dataset_service.create_from_form(**create_args)
+            dataset = dataset_service.create_from_form(**create_args, allow_empty_package=False)
             logger.info("Created dataset: %s", dataset)
             dataset_service.move_feature_models(dataset)
         except ValueError as e:
@@ -505,7 +508,7 @@ def subdomain_index(doi):
             abort(404)
     else:
 
-        ds_meta_data = dsmetadata_service.filter_by_doi(doi)
+        ds_meta_data = dsmetadata_service.filter_latest_by_doi(doi)
         if ds_meta_data:
             # Es especifico
             current_dataset = ds_meta_data.data_set

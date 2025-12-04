@@ -456,7 +456,7 @@
 
     </div>
 
-    <div class="row" id="upload_dataset" style="display: none">
+    <div class="row" id="upload_dataset">
         <div class="col-12">
             <hr>
             <h1 class="h3 mb-3 mt-2">Publish Version</h1>
@@ -494,14 +494,15 @@
                 </div>
                 <span class="text-danger mt-2" id="upload_error_text_span" style="display: none"></span>
 
-
                 <script>
-                    const checkbox = document.getElementById('agreeCheckbox');
-                    const upload_button = document.getElementById('upload_button');
-
-                    checkbox.addEventListener('change', function () {
-                        upload_button.disabled = !checkbox.checked;
-                    });
+                  // Habilitar/deshabilitar el botón según el agreeCheckbox
+                  document.addEventListener('DOMContentLoaded', function () {
+                    const agree = document.getElementById('agreeCheckbox');
+                    const btn = document.getElementById('upload_button');
+                    const sync = () => { btn.disabled = !agree.checked; };
+                    sync();
+                    agree.addEventListener('change', sync);
+                  });
                 </script>
 
             </div>
@@ -514,4 +515,20 @@
 {% block scripts %}
     <script src="{{ url_for('zenodo.scripts') }}"></script>
     <script src="{{ url_for('dataset.scripts') }}"></script>
+    <script>
+      // Marcar/desmarcar "Major" según haya archivos en Dropzone
+      document.addEventListener('DOMContentLoaded', function () {
+        const majorCheckbox = document.querySelector('input[name="is_major_version"]');
+        // Si el checkbox existe, sincroniza su estado con la cantidad de archivos en Dropzone
+        if (majorCheckbox && Dropzone && Dropzone.instances && Dropzone.instances.length) {
+          const dz = Dropzone.instances.find(d => d.element && d.element.id === 'myDropzone');
+          if (dz) {
+            const syncMajor = () => { majorCheckbox.checked = dz.files.length > 0; };
+            syncMajor();
+            dz.on('addedfile', syncMajor);
+            dz.on('removedfile', syncMajor);
+          }
+        }
+      });
+    </script>
 {% endblock %}

@@ -119,7 +119,7 @@ class DataSetService(BaseService):
     def total_dataset_views(self) -> int:
         return self.dsviewrecord_repostory.total_dataset_views()
 
-    def create_from_form(self, form, current_user) -> DataSet:
+    def create_from_form(self, form, current_user, allow_empty_package: bool = False) -> DataSet:
         main_author = {
             "name": f"{current_user.profile.surname}, {current_user.profile.name}",
             "affiliation": current_user.profile.affiliation,
@@ -157,9 +157,9 @@ class DataSetService(BaseService):
                 validate_dataset_package(
                     # o la lista completa de archivos del paquete
                     # o True si quieres forzar EXACTAMENTE esas columnas
-                    file_paths=file_paths
+                    file_paths=file_paths,
+                    allow_empty=allow_empty_package,
                 )
-
             except Exception:
                 # rollback y propaga error (tu código ya maneja rollback en el except general)
                 self.repository.session.rollback()
@@ -206,7 +206,7 @@ class DataSetService(BaseService):
             return False
 
     @staticmethod
-    def check_introduced_version(current_version: str, is_major: bool, form_version: str) -> (bool, str):
+    def check_introduced_version(current_version: str, is_major: bool, form_version: str) -> tuple[bool, str]:
         """Calcula la siguiente versión basada en la versión actual y si es una versión mayor."""
         clean_current = current_version.lstrip("v")
         clean_form_version = form_version.lstrip("v")
@@ -270,6 +270,9 @@ class DSMetaDataService(BaseService):
 
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.repository.filter_by_doi(doi)
+
+    def filter_latest_by_doi(self, doi: str) -> Optional[DSMetaData]:
+        return self.repository.filter_latest_by_doi(doi)
 
 
 class DSViewRecordService(BaseService):

@@ -48,6 +48,14 @@ class DSMetaDataRepository(BaseRepository):
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.model.query.filter_by(dataset_doi=doi).first()
 
+    def filter_latest_by_doi(self, doi: str) -> Optional[DSMetaData]:
+        return (
+            DSMetaData.query.filter(DSMetaData.dataset_doi == doi)
+            .join(DataSet, DataSet.ds_meta_data_id == DSMetaData.id)
+            .order_by(DataSet.created_at.desc())
+            .first()
+        )
+
 
 class DSViewRecordRepository(BaseRepository):
     def __init__(self):

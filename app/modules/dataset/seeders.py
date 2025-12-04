@@ -1,6 +1,6 @@
 import csv
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 
@@ -47,7 +47,6 @@ class DataSetSeeder(BaseSeeder):
         # === START OF CHANGES ===
 
         # 1. Crear DataSetConcept (Padres)
-        # Crearemos 3 conceptos para agrupar los 6 datasets
         concepts_to_seed = [
             DataSetConcept(conceptual_doi="10.seed/concept.1"),
             DataSetConcept(conceptual_doi="10.seed/concept.2"),
@@ -55,158 +54,118 @@ class DataSetSeeder(BaseSeeder):
         ]
         seeded_concepts = self.seed(concepts_to_seed)
 
-        # 2. Crear DSMetaData instances (6 total, 2 versiones por concepto)
-        ds_meta_data_list = [
-            # Concepto 1, Versión 1
-            DSMetaData(
-                deposition_id=1001,
-                title="Weather Data (V1)",
-                description="Description for dataset 1, version 1",
-                publication_type=PublicationType.NATIONAL,
-                publication_doi="10.1234/paper.1",
-                dataset_doi="10.seed/v1.1",  # <-- DOI Específico V1
-                tags="tag1, tag2",
-                ds_metrics_id=seeded_ds_metrics.id,
+        # 2. Definir estructura con versiones por concepto
+        datasets_structure = [
+            (
+                "10.seed/concept.1",
+                user1,
+                [
+                    ("v1.0.0", "Weather Data (V1)", "Description for dataset 1, version 1", "tag1, tag2", 0),
+                    ("v1.1.0", "Weather Data (V1.1)", "Minor fixes", "tag1, tag2, fixes", 1),
+                    ("v2.0.0", "Weather Data (V2)", "Major update", "tag1, tag2, major", 2),
+                ],
             ),
-            # Concepto 1, Versión 2
-            DSMetaData(
-                deposition_id=1002,
-                title="Weather Data (V2)",
-                description="Description for dataset 1, version 2",
-                publication_type=PublicationType.NATIONAL,
-                publication_doi="10.1234/paper.1",
-                dataset_doi="10.seed/v1.2",  # <-- DOI Específico V2
-                tags="tag1, tag2, updated",
-                ds_metrics_id=seeded_ds_metrics.id,
+            (
+                "10.seed/concept.2",
+                user2,
+                [
+                    ("v1.0.0", "UVL Models (V1)", "Initial release", "uvl, models", 31),
+                    ("v2.0.0", "UVL Models (V2 - expanded)", "Major expansion", "uvl, models, expanded", 32),
+                ],
             ),
-            # Concepto 2, Versión 1
-            DSMetaData(
-                deposition_id=1003,
-                title="UVL Models (V1)",
-                description="Description for dataset 2, version 1",
-                publication_type=PublicationType.OTHER,
-                publication_doi="10.1234/paper.2",
-                dataset_doi="10.seed/v2.1",  # <-- DOI Específico
-                tags="uvl, models",
-                ds_metrics_id=seeded_ds_metrics.id,
-            ),
-            # Concepto 2, Versión 2
-            DSMetaData(
-                deposition_id=1004,
-                title="UVL Models (V2 - expanded)",
-                description="Description for dataset 2, version 2",
-                publication_type=PublicationType.OTHER,
-                publication_doi="10.1234/paper.2",
-                dataset_doi="10.seed/v2.2",  # <-- DOI Específico
-                tags="uvl, models, expanded",
-                ds_metrics_id=seeded_ds_metrics.id,
-            ),
-            # Concepto 3, Versión 1
-            DSMetaData(
-                deposition_id=1005,
-                title="Empty Dataset (V1)",
-                description="Description for dataset 3, version 1",
-                publication_type=PublicationType.CONTINENTAL,
-                publication_doi="10.1234/paper.3",
-                dataset_doi="10.seed/v3.1",  # <-- DOI Específico
-                tags="empty",
-                ds_metrics_id=seeded_ds_metrics.id,
-            ),
-            # Concepto 3, Versión 2
-            DSMetaData(
-                deposition_id=1006,
-                title="Empty Dataset (V2 - metadata edit)",
-                description="Description for dataset 3, version 2",
-                publication_type=PublicationType.REGIONAL,
-                publication_doi="10.1234/paper.3",
-                dataset_doi="10.seed/v3.2",  # <-- DOI Específico
-                tags="empty, metadata",
-                ds_metrics_id=seeded_ds_metrics.id,
+            (
+                "10.seed/concept.3",
+                user1,
+                [
+                    ("v1.0.0", "Empty Dataset (V1)", "Description for dataset 3, version 1", "empty", 60),
+                    ("v1.1.0", "Empty Dataset (V1.1 - metadata edit)", "Minor metadata edit", "empty, metadata", 61),
+                ],
             ),
         ]
+
+        ds_meta_data_list = []
+        datasets = []
+        authors = []
+
+        # Mapa: para cada concepto, un DOI específico por major (minor/patch comparten)
+        specific_doi_by_concept_and_major = {}
+
+        base_date = datetime(2023, 1, 1, tzinfo=timezone.utc)
+
+        for concept_doi, owner_user, versions in datasets_structure:
+            for idx, (version, title, description, tags, days_offset) in enumerate(versions):
+                # extraer major
+                major = str(version).lstrip("v").split(".")[0]
+                key = (concept_doi, major)
+                if key not in specific_doi_by_concept_and_major:
+                    # nuevo DOI específico para este major
+                    specific_doi_by_concept_and_major[key] = f"{concept_doi}.v{major}"
+
+                dataset_doi = specific_doi_by_concept_and_major[key]
+
+                ds_meta = DSMetaData(
+                    deposition_id=1000 + len(ds_meta_data_list) + 1,
+                    title=title,
+                    description=description,
+                    publication_type=PublicationType.NATIONAL,
+                    publication_doi=f"https://doi.org/10.1234/paper.{len(ds_meta_data_list)+1}",
+                    dataset_doi=dataset_doi,
+                    tags=tags,
+                    ds_metrics_id=seeded_ds_metrics.id,
+                )
+                ds_meta_data_list.append(ds_meta)
+
+                # autor simple para cada metadato
+                authors.append(
+                    Author(
+                        name=f"Author {len(ds_meta_data_list)}",
+                        affiliation=f"Affiliation {len(ds_meta_data_list)}",
+                        orcid=f"0000-0000-0000-{str(len(ds_meta_data_list)).zfill(4)}",
+                        # fm_meta_data_id se asigna después para FMs, aquí usamos ds_meta
+                        ds_meta_data_id=None,  # se rellenará tras seed de metadatos
+                    )
+                )
+
+                datasets.append(
+                    DataSet(
+                        user_id=owner_user.id,
+                        ds_meta_data_id=None,  # se rellena tras seed
+                        created_at=base_date.replace(tzinfo=timezone.utc) + timedelta(days=days_offset),
+                        ds_concept_id=None,  # se rellena tras seed
+                        version_number=version,
+                        is_latest=(idx == len(versions) - 1),
+                    )
+                )
+
         seeded_ds_meta_data = self.seed(ds_meta_data_list)
 
-        # 3. Crear Author instances (esta lógica es correcta, 1 autor por metadato)
-        authors = [
-            Author(
-                name=f"Author {i+1}",
-                affiliation=f"Affiliation {i+1}",
-                orcid=f"0000-0000-0000-000{i}",
-                ds_meta_data_id=seeded_ds_meta_data[i].id,
-            )
-            for i in range(6)
-        ]
+        # asignar ds_meta_data_id a autores
+        for i, author in enumerate(authors):
+            author.ds_meta_data_id = seeded_ds_meta_data[i].id
         self.seed(authors)
 
-        # 4. Crear DataSet instances (enlazados a los padres/conceptos)
-        datasets = [
-            # Concepto 1, V1 (user1)
-            DataSet(
-                user_id=user1.id,
-                ds_meta_data_id=seeded_ds_meta_data[0].id,
-                created_at=datetime(2023, 1, 1, tzinfo=timezone.utc),  # Fecha antigua
-                ds_concept_id=seeded_concepts[0].id,  # <-- Enlace al Padre 1
-                version_number="v1.0.0",
-                is_latest=False,  # No es la última
-            ),
-            # Concepto 1, V2 (user1)
-            DataSet(
-                user_id=user1.id,
-                ds_meta_data_id=seeded_ds_meta_data[1].id,
-                created_at=datetime(2023, 1, 2, tzinfo=timezone.utc),  # Fecha nueva
-                ds_concept_id=seeded_concepts[0].id,  # <-- Enlace al Padre 1
-                version_number="v2.0.0",
-                is_latest=True,  # Es la última
-            ),
-            # Concepto 2, V1 (user2)
-            DataSet(
-                user_id=user2.id,
-                ds_meta_data_id=seeded_ds_meta_data[2].id,
-                created_at=datetime(2023, 2, 1, tzinfo=timezone.utc),
-                ds_concept_id=seeded_concepts[1].id,  # <-- Enlace al Padre 2
-                version_number="v1.0.0",
-                is_latest=False,
-            ),
-            # Concepto 2, V2 (user2)
-            DataSet(
-                user_id=user2.id,
-                ds_meta_data_id=seeded_ds_meta_data[3].id,
-                created_at=datetime(2023, 2, 2, tzinfo=timezone.utc),
-                ds_concept_id=seeded_concepts[1].id,  # <-- Enlace al Padre 2
-                version_number="v2.0.0",
-                is_latest=True,
-            ),
-            # Concepto 3, V1 (user1)
-            DataSet(
-                user_id=user1.id,
-                ds_meta_data_id=seeded_ds_meta_data[4].id,
-                created_at=datetime(2023, 3, 1, tzinfo=timezone.utc),
-                ds_concept_id=seeded_concepts[2].id,  # <-- Enlace al Padre 3
-                version_number="v1.0.0",
-                is_latest=False,
-            ),
-            # Concepto 3, V2 (user1)
-            DataSet(
-                user_id=user1.id,
-                ds_meta_data_id=seeded_ds_meta_data[5].id,
-                created_at=datetime(2023, 3, 2, tzinfo=timezone.utc),
-                ds_concept_id=seeded_concepts[2].id,  # <-- Enlace al Padre 3
-                version_number="v1.1.0",  # Ejemplo de versión menor
-                is_latest=True,
-            ),
-        ]
-        seeded_datasets = self.seed(datasets)
-
+        # asociar datasets con conceptos y metadatos en el mismo orden
+        seeded_datasets = []
+        meta_idx = 0
+        concept_idx = 0
+        for concept_idx, (_, _, versions) in enumerate(datasets_structure):
+            for _ in versions:
+                ds = datasets[meta_idx]
+                ds.ds_meta_data_id = seeded_ds_meta_data[meta_idx].id
+                ds.ds_concept_id = seeded_concepts[concept_idx].id
+                seeded_datasets.append(ds)
+                meta_idx += 1
+        seeded_datasets = self.seed(seeded_datasets)
         # === END OF CHANGES ===
 
-        # Create 12 FMMetaData instances
+        # Create FMMetaData, Authors y FeatureModels (DOI válido)
         fm_meta_data_list = [
             FMMetaData(
                 filename=f"file{i+1}.csv",
                 title=f"Feature Model {i+1}",
                 description=f"Description for feature model {i+1}",
                 publication_type=PublicationType.OTHER,
-                publication_doi=f"10.1234/fm{i+1}",
+                publication_doi=f"https://doi.org/10.1234/fm.{i+1}",
                 tags="tag1, tag2",
                 version="1.0",
             )
