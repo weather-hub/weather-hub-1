@@ -79,6 +79,12 @@ chico sundermann">
                     </a>
                 </li>
 
+                  <li class="sidebar-item {{ 'active' if request.endpoint == 'follow.following_index' else '' }}">
+                    <a class="sidebar-link" href="{{ url_for('follow.following_index') }}">
+                        <i class="align-middle" data-feather="heart"></i> <span class="align-middle">Following</span>
+                    </a>
+                </li>
+
                 {% if current_user.is_anonymous %}
 
                     <li class="sidebar-header">
