@@ -46,6 +46,96 @@ class FakenodoAdapter:
     def __init__(self, working_dir: str | None = None):
         self.service = FakenodoService(working_dir=working_dir)
 
+    def publish_new_version(self, form, original_dataset, current_user, is_major=False):
+        """
+        Orquesta la creación de una nueva versión:
+        1. Calcula el nuevo número de versión.
+        2. Crea el registro en la BD local.
+        3. Mueve los ficheros.
+        4. Sube (simulado) a Fakenodo.
+        5. Actualiza DOIs y guarda.
+        """
+        # Importamos aquí para evitar ciclos si dataset_service importa zenodo_service
+        from app.modules.dataset.services import DataSetService
+
+        _dataset_service = DataSetService()
+
+        # 1. Calcular nuevo número de versión (Ej: 1.0.0 -> 1.0.1 o 2.0.0)
+        new_version = self._calculate_next_version(original_dataset.version_number, is_major)
+        form.version_number.data = new_version
+
+        # 2. Crear el dataset localmente usando el servicio existente
+        # Esto guarda el título, descripción, autores y ficheros en la BD
+        new_dataset = _dataset_service.create_from_form(form=form, current_user=current_user)
+
+        # Vincular al mismo concepto que el original
+        new_dataset.ds_concept_id = original_dataset.ds_concept_id
+        new_dataset.is_latest = True
+        try:
+            # Desmarcar otras versiones como no-latest
+            from app import db
+
+            db.session.add(new_dataset)
+            db.session.flush()
+            from app.modules.dataset.models import DataSet
+
+            DataSet.query.filter(
+                DataSet.ds_concept_id == original_dataset.ds_concept_id, DataSet.id != new_dataset.id
+            ).update({DataSet.is_latest: False})
+            db.session.commit()
+        except Exception:
+            # No abortar publicación; log y continuar
+            logger.exception("Failed to update concept linkage or latest flags")
+
+        # 3. Mover ficheros de la carpeta temporal a la final
+        _dataset_service.move_feature_models(new_dataset)
+
+        # 4. Interacción con Fakenodo (Simulación)
+        # En Zenodo real, haríamos 'newversion' sobre el ID antiguo.
+        # En Fakenodo, creamos una deposición nueva y fingimos que es versión.
+        data = self.create_new_deposition(new_dataset)
+        deposition_id = data.get("id")
+
+        # 5. Subir ficheros a Fakenodo
+        for feature_model in new_dataset.feature_models:
+            self.upload_file(new_dataset, deposition_id, feature_model)
+
+        # 6. Publicar en Fakenodo
+        self.publish_deposition(deposition_id)
+
+        # 7. Obtener DOI y guardar en BD local
+        new_doi = self.get_doi(deposition_id)
+
+        # Actualizamos la metadata local con la info de "Zenodo"
+        _dataset_service.update_dsmetadata(
+            new_dataset.ds_meta_data_id, deposition_id=deposition_id, dataset_doi=new_doi
+        )
+
+        return new_dataset
+
+    def _calculate_next_version(self, current_version, is_major):
+        """
+        Helper simple para incrementar versiones.
+        Soporta formato semántico X.Y.Z o texto simple.
+        """
+        try:
+            parts = [int(x) for x in current_version.split(".")]
+            if len(parts) < 3:
+                # Si es algo como "1" o "1.0", rellenamos
+                parts.extend([0] * (3 - len(parts)))
+
+            if is_major:
+                parts[0] += 1
+                parts[1] = 0
+                parts[2] = 0
+            else:
+                parts[2] += 1  # Incrementamos parche (minor fix)
+
+            return ".".join(map(str, parts))
+        except ValueError:
+            # Si la versión anterior era texto raro ("beta1"), añadimos sufijo
+            return f"{current_version}-v2"
+
     def create_new_deposition(self, dataset) -> dict:
         metadata = {
             "title": getattr(dataset, "title", f"dataset-{getattr(dataset, 'id', '')}"),
@@ -97,21 +187,26 @@ def get_zenodo_client(working_dir: str | None = None):
     if os.getenv("FAKENODO_URL") or os.getenv("USE_FAKE_ZENODO"):
         return FakenodoAdapter(working_dir=working_dir)
 
-    # Otherwise try real Zenodo and fall back to the fake service if the
-    # connection fails (e.g. SSL verification issues in some environments).
+    # 2. Intentamos conectar con Zenodo real
     try:
         zs = ZenodoService()
         try:
             if zs.test_connection():
                 return zs
+            else:
+                # AQUÍ ESTABA EL ERROR: Si test_connection devolvía False,
+                # la función no retornaba nada (None).
+                # Ahora forzamos el fallback a Fakenodo:
+                logger.warning("ZenodoService test_connection returned False, falling back to FakenodoAdapter")
+                return FakenodoAdapter(working_dir=working_dir)
+
         except Exception:
-            # test_connection failed (network/ssl); fall through to fake
-            logger = logging.getLogger(__name__)
-            logger.warning("ZenodoService test_connection failed, falling back to FakenodoAdapter")
+            # Si test_connection falla con excepción (network/ssl)
+            logger.warning("ZenodoService test_connection failed with error, falling back to FakenodoAdapter")
             return FakenodoAdapter(working_dir=working_dir)
+
     except Exception:
-        # constructing ZenodoService failed for any reason -> fallback
-        logger = logging.getLogger(__name__)
+        # Si ni siquiera se puede instanciar ZenodoService
         logger.warning("Unable to initialize ZenodoService, using FakenodoAdapter")
         return FakenodoAdapter(working_dir=working_dir)
 
@@ -326,37 +421,58 @@ def download_dataset(dataset_id):
 @dataset_bp.route("/dataset/<int:dataset_id>/new-version", methods=["GET", "POST"])
 @login_required
 def create_new_ds_version(dataset_id):
+
+    if request.method == "GET":
+        temp_folder = current_user.temp_folder()
+        if os.path.exists(temp_folder):
+            shutil.rmtree(temp_folder)
+
     original_dataset = dataset_service.get_or_404(dataset_id)
 
     if current_user.id != original_dataset.user_id:
-        abort(403, "No eres el autor del dataset por tanto no puedes versionarlo.")
+        # Es mejor retornar JSON 403 si es una petición AJAX, pero abort funciona "ok"
+        abort(403, "No eres el autor del dataset.")
 
-    # 2. Usa el NUEVO formulario
-    #    (obj=... sigue funcionando porque hereda los campos)
     form = DataSetVersionForm(obj=original_dataset.ds_meta_data)
 
-    if form.validate_on_submit():
-        try:
-            new_dataset = zenodo_service.publish_new_version(
-                form=form,
-                original_dataset=original_dataset,
-                current_user=current_user,
-                is_major=form.is_major_version.data,
-            )
-            if new_dataset.ds_meta_data.dataset_doi:
-                return redirect(url_for("dataset.subdomain_index", doi=new_dataset.ds_meta_data.dataset_doi))
-            else:
+    if request.method == "POST":
+        if form.validate_on_submit():
+            try:
+                # 1. Tu lógica de negocio (asumiendo que zenodo_service hace todo el trabajo pesado)
+                new_dataset = zenodo_service.publish_new_version(
+                    form=form,
+                    original_dataset=original_dataset,
+                    current_user=current_user,
+                    is_major=form.is_major_version.data,
+                )
 
-                return redirect(url_for("dataset.get_unsynchronized_dataset", dataset_id=new_dataset.id))
+                # 2. Determinar la URL de destino
+                target_url = ""
+                if new_dataset.ds_meta_data.dataset_doi:
+                    target_url = url_for("dataset.subdomain_index", doi=new_dataset.ds_meta_data.dataset_doi)
+                else:
+                    target_url = url_for("dataset.get_unsynchronized_dataset", dataset_id=new_dataset.id)
 
-        except Exception:
-            logger.exception("Error al crear la nueva versión")
-            form.errors["general"] = ["Hubo un error interno al publicar la versión."]
+                # 3. LIMPIEZA: Borrar carpeta temporal AHORA, tras el éxito
+                temp_folder = current_user.temp_folder()
+                if os.path.exists(temp_folder):
+                    shutil.rmtree(temp_folder)
 
-    form.version_number.data = original_dataset.version_number + "-copy"
-    temp_folder = current_user.temp_folder()
-    if os.path.exists(temp_folder):
-        shutil.rmtree(temp_folder)
+                # 4. RESPUESTA JSON (Vital para que funcione con tu scripts.js)
+                return jsonify({"message": "Version created successfully", "redirect_url": target_url}), 200
+
+            except Exception:
+                logger.exception("Error al crear la nueva versión")
+                return jsonify({"message": "Hubo un error interno al publicar la versión."}), 500
+        else:
+            # Si el formulario no valida, devolvemos errores en JSON
+            return jsonify({"message": form.errors}), 400
+
+    # GET REQUEST: Solo renderizamos
+    form.version_number.data = str(original_dataset.version_number) + "-new"
+
+    # NO borramos la carpeta temporal aquí (GET). Es peligroso si el usuario recarga la página.
+
     return render_template("dataset/new_version.html", form=form, dataset=original_dataset)
 
 

@@ -466,7 +466,7 @@
                             </span>
                 </label>
 
-                <button id="upload_button" class="btn btn-primary mt-2" disabled>
+                <button id="upload_button" data-upload-url="{{ url_for('dataset.create_dataset') }}" class="btn btn-primary mt-2" disabled>
                     <i data-feather="upload" class="center-button-icon"></i>
                     Upload dataset</button>
 
