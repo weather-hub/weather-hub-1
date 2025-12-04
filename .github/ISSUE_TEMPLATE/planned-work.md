@@ -15,29 +15,29 @@ labels: ["planned"]
 assignees: ""
 ---
 
-## 🎯 Technical Objective  
+## 🎯 Technical Objective
 Describe the main technical purpose of this task. What are we trying to achieve?
 
 ---
 
-## 📌 Acceptance Criteria (Definition of Done)  
+## 📌 Acceptance Criteria (Definition of Done)
 List all conditions required for this work item to be considered complete.
 
--  
--  
--  
+-
+-
+-
 
 ---
 
-## 🧩 Implementation Notes / Architecture  
+## 🧩 Implementation Notes / Architecture
 Add relevant technical details, architectural considerations, decisions, or constraints.
 
 ---
 
-## ⏱ Effort Estimation  
+## ⏱ Effort Estimation
 Provide an estimated amount of work (story points, hours, or preferred unit).
 
 ---
 
-## 🏷 Labels  
+## 🏷 Labels
 This template automatically assigns: **plannned**

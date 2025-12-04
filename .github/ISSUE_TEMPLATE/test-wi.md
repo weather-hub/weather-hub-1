@@ -13,26 +13,26 @@ Briefly explain why this Working Item needs to be tested and what should be vali
 ---
 
 ## 🔗 Related Working Item
-- **Working Item ID or link:**  
-- **Short description:**  
+- **Working Item ID or link:**
+- **Short description:**
 
 ---
 
 ## 📝 Test Scenarios
 List all scenarios that must be verified.
 
-1.  
-2.  
-3.  
+1.
+2.
+3.
 
 ---
 
 ## ✅ Validation Criteria
 Specify the conditions that must be met for the test to be considered successful.
 
--  
--  
--  
+-
+-
+-
 
 ---
 
