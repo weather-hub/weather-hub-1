@@ -64,7 +64,6 @@ class DataSetService(BaseService):
             "uploads",
             f"user_{current_user.id}",
             f"dataset_{dataset.id}",
-            f"_{dataset.get_version_number()}",
         )
 
         os.makedirs(dest_dir, exist_ok=True)
@@ -197,6 +196,48 @@ class DataSetService(BaseService):
 
     def search(self, **filters):
         return self.repository.search(**filters)
+
+    @staticmethod
+    def infer_is_major_from_form(form) -> bool:
+        """Devuelve True si el formulario contiene al menos un feature model (archivos subidos)."""
+        try:
+            return bool(getattr(form, "feature_models", [])) and len(form.feature_models) > 0
+        except Exception:
+            return False
+
+    @staticmethod
+    def check_introduced_version(current_version: str, is_major: bool, form_version: str) -> (bool, str):
+        """Calcula la siguiente versión basada en la versión actual y si es una versión mayor."""
+        clean_current = current_version.lstrip("v")
+        clean_form_version = form_version.lstrip("v")
+        current_parts = clean_current.split(".")
+        form_parts = clean_form_version.split(".")
+        is_valid = True
+        error_message = ""
+
+        if len(current_parts) != 3 or len(form_parts) != 3:
+            is_valid = False
+            error_message = "Version format must be X.Y.Z where X, Y, and Z are integers."
+            return is_valid, error_message
+
+        major_current, minor_current, patch_current = map(int, current_parts)
+        major_form, minor_form, patch_form = map(int, form_parts)
+        if is_major:
+            if major_form <= major_current:
+                is_valid = False
+                error_message = "For a major version, the major version must be increased.(Ej: 1.0.0 to 2.0.0)"
+            if minor_form != 0 or patch_form != 0:
+                is_valid = False
+                error_message = "For a major version, minor and patch versions must be zero.(Ej: 1.0.0 to 2.0.0)"
+        else:
+            if major_form > major_current:
+                is_valid = False
+                error_message = "For a non-major version, the major version cannot be increased."
+            if minor_form <= minor_current and patch_form <= patch_current:
+                is_valid = False
+                error_message = "For a non-major version, minor or patch version must be increased."
+
+        return is_valid, error_message
 
 
 class AuthorService(BaseService):

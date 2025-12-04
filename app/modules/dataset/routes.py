@@ -60,9 +60,8 @@ class FakenodoAdapter:
 
         _dataset_service = DataSetService()
 
-        # 1. Calcular nuevo número de versión (Ej: 1.0.0 -> 1.0.1 o 2.0.0)
-        new_version = self._calculate_next_version(original_dataset.version_number, is_major)
-        form.version_number.data = new_version
+        # 1. Si quiero hacer algo para la version que sea forzar que en caso de que sea la misma no permita hacer la
+        # creacion y en caso de que sea major que tenga que cambiar el primer digito
 
         # 2. Crear el dataset localmente usando el servicio existente
         # Esto guarda el título, descripción, autores y ficheros en la BD
@@ -436,14 +435,26 @@ def create_new_ds_version(dataset_id):
     form = DataSetVersionForm(obj=original_dataset.ds_meta_data)
 
     if request.method == "POST":
+
         if form.validate_on_submit():
             try:
+                if form.version_number.data == str(original_dataset.version_number):
+                    return jsonify({"message": "The new version number must be different from the original."}), 400
                 # 1. Tu lógica de negocio (asumiendo que zenodo_service hace todo el trabajo pesado)
+                is_major_from_form = DataSetService.infer_is_major_from_form(form)
+                is_valid_version, error_version_msg = DataSetService.check_introduced_version(
+                    current_version=str(original_dataset.version_number),
+                    form_version=form.version_number.data,
+                    is_major=is_major_from_form,
+                )
+                if not is_valid_version:
+                    return jsonify({"message": error_version_msg}), 400
+
                 new_dataset = zenodo_service.publish_new_version(
                     form=form,
                     original_dataset=original_dataset,
                     current_user=current_user,
-                    is_major=form.is_major_version.data,
+                    is_major=is_major_from_form,
                 )
 
                 # 2. Determinar la URL de destino
@@ -469,9 +480,7 @@ def create_new_ds_version(dataset_id):
             return jsonify({"message": form.errors}), 400
 
     # GET REQUEST: Solo renderizamos
-    form.version_number.data = str(original_dataset.version_number) + "-new"
-
-    # NO borramos la carpeta temporal aquí (GET). Es peligroso si el usuario recarga la página.
+    form.version_number.data = str(original_dataset.version_number)
 
     return render_template("dataset/new_version.html", form=form, dataset=original_dataset)
 
