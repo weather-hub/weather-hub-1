@@ -46,16 +46,8 @@ RUN echo "webhook" > /app/.moduleignore
 
 RUN pip install --no-cache-dir --upgrade pip
 
-# 1. ELIMINAR LA REFERENCIA A GITHUB para usar tu copia local y evitar el error
-RUN sed -i '/weather-hub-1.git/d' requirements.txt
-
-# 2. Instalar dependencias normales
-RUN pip install --no-cache-dir --upgrade pip
-
-# 3. Instalar tu copia local de rosemary (que ya copiaste antes)
-RUN pip install -e ./rosemary
-
-# 4. Instalar el proyecto principalll
+# Install any needed packages specified in requirements.txt
+RUN pip install -r requirements.txt
 RUN pip install -e ./
 
 EXPOSE 80
