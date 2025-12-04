@@ -55,7 +55,7 @@ RUN pip install --no-cache-dir --upgrade pip
 # 3. Instalar tu copia local de rosemary (que ya copiaste antes)
 RUN pip install -e ./rosemary
 
-# 4. Instalar el proyecto principal
+# 4. Instalar el proyecto principalll
 RUN pip install -e ./
 
 EXPOSE 80
