@@ -74,7 +74,4 @@ jobs:
           pip install pytest-cov
           pytest app/modules/ --ignore-glob='*selenium*' --cov=app --cov-report=xml --cov-report=term
 
-      # Este paso es redundante porque el paso anterior ya corrió los tests.
-      # Lo puedes borrar si quieres ahorrar tiempo.
-      # - name: Run Tests
-      #   run: pytest app/modules/ --ignore-glob='*selenium*'
+      #
