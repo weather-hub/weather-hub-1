@@ -1,9 +1,15 @@
+import time
+
 from app import db
 from app.modules.auth.models import User
 from app.modules.community.models import Community, CommunityDatasetProposal
 from app.modules.community.repositories import CommunityDatasetProposalRepository, CommunityRepository
+from app.modules.dataset.models import DataSet
+from app.modules.follow.services import FollowService
 from app.modules.notifications.service import send_dataset_accepted_email
 from core.services.BaseService import BaseService
+
+follow_service = FollowService()
 
 
 class CommunityService(BaseService):
@@ -46,6 +52,14 @@ class CommunityService(BaseService):
 
         try:
             send_dataset_accepted_email(proposal)
+            time.sleep(10)  # Un poco de espera por el limite de envios en mailtrap
+        except Exception:
+            pass
+
+        try:
+            dataset = DataSet.query.get(proposal.dataset_id)
+            if dataset:
+                follow_service.notify_dataset_added_to_community(proposal.community, dataset)
         except Exception:
             pass
 

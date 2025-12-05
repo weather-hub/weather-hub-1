@@ -12,6 +12,35 @@ from . import follow_bp
 follow_service = FollowService()
 
 
+def _attach_dataset_info_to_communities(communities):
+    for c in communities:
+        for p in getattr(c, "proposals", []):
+            try:
+                ds = DataSet.query.get(p.dataset_id)
+                if ds:
+                    try:
+                        p.dataset_title = ds.ds_meta_data.title
+                    except Exception:
+                        p.dataset_title = f"Dataset #{p.dataset_id}"
+
+                    try:
+                        doi = getattr(ds.ds_meta_data, "dataset_doi", None)
+                        if doi:
+                            # solo hay link si hay DOI
+                            p.dataset_url = url_for("dataset.subdomain_index", doi=doi)
+                        else:
+                            # sin DOI → sin link
+                            p.dataset_url = None
+                    except Exception:
+                        p.dataset_url = None
+                else:
+                    p.dataset_title = f"Dataset #{p.dataset_id}"
+                    p.dataset_url = None
+            except Exception:
+                p.dataset_title = f"Dataset #{p.dataset_id}"
+                p.dataset_url = None
+
+
 def _attach_dataset_info(communities):
     """
     Para cada comunidad, rellena p.dataset_title y p.dataset_url
@@ -52,51 +81,44 @@ def _attach_user_datasets(users):
 @follow_bp.route("/following", methods=["GET"])
 @login_required
 def following_index():
-    """
-    Pantalla principal de 'Following':
-    - buscador de usuarios y comunidades
-    - listas de comunidades seguidas y autores seguidos
-    """
     q = request.args.get("q", "").strip()
 
     # Lo que ya sigues
     followed_communities = follow_service.get_followed_communities(current_user.id)
     followed_authors = follow_service.get_followed_authors(current_user.id)
 
-    # Sets de ids para filtrar búsquedas
-    followed_community_ids = {c.id for c in followed_communities}
-    followed_author_ids = {u.id for u in followed_authors}
+    # IDs para excluir en búsqueda
+    followed_community_ids = [c.id for c in followed_communities]
+    followed_author_ids = [u.id for u in followed_authors]
 
     search_communities = []
     search_users = []
 
     if q:
-        # Comunidades por nombre
-        raw_search_communities = Community.query.filter(Community.name.ilike(f"%{q}%")).all()
+        # --------- Comunidades ----------
+        communities_query = Community.query.filter(Community.name.ilike(f"%{q}%"))
+        # Excluir las que ya sigues
+        if followed_community_ids:
+            communities_query = communities_query.filter(~Community.id.in_(followed_community_ids))
+        search_communities = communities_query.all()
 
-        # Usuarios por nombre, apellido o email (ya excluimos al propio user)
-        raw_search_users = (
-            User.query.join(UserProfile)
-            .filter(
-                (UserProfile.name.ilike(f"%{q}%"))
-                | (UserProfile.surname.ilike(f"%{q}%"))
-                | (User.email.ilike(f"%{q}%"))
-            )
-            .filter(User.id != current_user.id)
-            .all()
+        # --------- Usuarios ----------
+        users_query = User.query.join(UserProfile).filter(
+            (UserProfile.name.ilike(f"%{q}%")) | (UserProfile.surname.ilike(f"%{q}%")) | (User.email.ilike(f"%{q}%"))
         )
 
-        # ⬇️ FILTRO: quitar los que ya sigo
-        search_communities = [c for c in raw_search_communities if c.id not in followed_community_ids]
+        # Excluirte a ti mismo
+        users_query = users_query.filter(User.id != current_user.id)
 
-        search_users = [u for u in raw_search_users if u.id not in followed_author_ids]
-        # ⬆️ FILTRO
+        # Excluir autores que ya sigues
+        if followed_author_ids:
+            users_query = users_query.filter(~User.id.in_(followed_author_ids))
 
-    # Completar info de comunidades (dataset_title/dataset_url)
-    _attach_dataset_info(followed_communities)
-    _attach_dataset_info(search_communities)
+        search_users = users_query.all()
 
-    # Completar datasets de usuarios
+    # Si sigues usando los helpers locales, déjalos:
+    _attach_dataset_info_to_communities(followed_communities)
+    _attach_dataset_info_to_communities(search_communities)
     _attach_user_datasets(followed_authors)
     _attach_user_datasets(search_users)
 

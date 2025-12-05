@@ -5,6 +5,7 @@ from app.modules.auth.models import User
 from app.modules.community.models import Community
 from app.modules.dataset.models import DataSet
 from app.modules.follow.models import UserAuthorFollow, UserCommunityFollow
+from app.modules.notifications.service import send_email
 from app.modules.profile.models import UserProfile
 
 
@@ -112,6 +113,100 @@ class FollowService:
         if not ids:
             return []
         return User.query.filter(User.id.in_(ids)).all()
+
+    # ---------- NOTIFICATIONS ----------
+
+    def get_followers_of_author(self, author_id: int) -> list[User]:
+        """
+        Devuelve los usuarios que siguen a un autor concreto.
+        """
+        return (
+            User.query.join(UserAuthorFollow, UserAuthorFollow.follower_id == User.id)
+            .filter(UserAuthorFollow.author_id == author_id)
+            .all()
+        )
+
+    def get_followers_of_community(self, community_id: int) -> list[User]:
+        """
+        Devuelve los usuarios que siguen una comunidad concreta.
+        """
+        return (
+            User.query.join(UserCommunityFollow, UserCommunityFollow.user_id == User.id)
+            .filter(UserCommunityFollow.community_id == community_id)
+            .all()
+        )
+
+    # ---------------------------
+    # NUEVO: notificación por email
+    # ---------------------------
+
+    def notify_dataset_added_to_community(self, community, dataset):
+        """
+        Llamar cuando un dataset se acepta en una comunidad.
+        Envía email a los usuarios que siguen esa comunidad.
+        """
+        if community is None or dataset is None:
+            return
+
+        followers = self.get_followers_of_community(community.id)
+        recipients = {u.email for u in followers if u.email}
+
+        if not recipients:
+            return
+
+        title = getattr(dataset.ds_meta_data, "title", f"Dataset #{dataset.id}")
+
+        subject = f"New dataset in community '{community.name}'"
+
+        body_lines = [
+            f"A new dataset has been added to a community you follow: {community.name}",
+            "",
+            f"Title: {title}",
+            f"ID: {dataset.id}",
+        ]
+
+        body = "\n".join(body_lines)
+
+        send_email(subject, list(recipients), body)
+
+    def notify_dataset_published(self, dataset):
+        """
+        Llamar cuando un autor publica un nuevo dataset.
+        Envía email a los usuarios que siguen a ese autor.
+        """
+        if dataset is None:
+            return
+
+        # Autor del dataset
+        author = User.query.get(dataset.user_id)
+        author_name = "an author"
+        if author and getattr(author, "profile", None):
+            author_name = f"{author.profile.name} {author.profile.surname}"
+        elif author and author.email:
+            author_name = author.email
+
+        # Seguidores del autor
+        followers = self.get_followers_of_author(dataset.user_id)
+        recipients = {u.email for u in followers if u.email}
+
+        if not recipients:
+            return
+
+        title = getattr(dataset.ds_meta_data, "title", f"Dataset #{dataset.id}")
+
+        subject = f"New dataset from {author_name}"
+
+        body_lines = [
+            "A new dataset has been published by an author you follow.",
+            "",
+            f"Author: {author_name}",
+            f"Title: {title}",
+            f"ID: {dataset.id}",
+        ]
+
+        body = "\n".join(body_lines)
+
+        send_email(subject, list(recipients), body)
 
     # ---------- HELPERS ----------
 

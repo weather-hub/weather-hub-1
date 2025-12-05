@@ -107,9 +107,13 @@
                   {% if accepted and accepted|length > 0 %}
                     {% for p in accepted %}
                       <li>
-                        <a href="{{ p.dataset_url }}">
-                          {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}
-                        </a>
+                        {% if p.dataset_url %}
+                          <a href="{{ p.dataset_url }}">
+                            {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}
+                          </a>
+                        {% else %}
+                          {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }} (Unsynchronized)
+                        {% endif %}
                       </li>
                     {% endfor %}
                   {% else %}
@@ -181,25 +185,25 @@
 
                 <hr/>
                 <h6>Datasets</h6>
-            <ul>
-              {% set user_datasets = u.following_datasets or [] %}
-              {% if user_datasets %}
-                {% for d in user_datasets %}
-                  <li>
-                    {% set detail_url = d.get_uvlhub_doi() %}
-                    {% if detail_url %}
-                      <a href="{{ detail_url }}">
-                        {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }}
-                      </a>
-                    {% else %}
-                        {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }}
-                    {% endif %}
-                  </li>
-                {% endfor %}
-              {% else %}
-                <li class="text-muted">This author has no datasets yet.</li>
-              {% endif %}
-            </ul>
+                <ul>
+                  {% set user_datasets = u.following_datasets or [] %}
+                  {% if user_datasets %}
+                    {% for d in user_datasets %}
+                      <li>
+                        {% set doi = d.ds_meta_data.dataset_doi %}
+                        {% if doi %}
+                          <a href="{{ url_for('dataset.subdomain_index', doi=doi) }}">
+                            {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }}
+                          </a>
+                        {% else %}
+                          {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }} (Unsynchronized)
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  {% else %}
+                    <li class="text-muted">This author has no datasets yet.</li>
+                  {% endif %}
+                </ul>
 
               </div>
               <div class="modal-footer">
@@ -285,9 +289,13 @@
                 {% if accepted and accepted|length > 0 %}
                   {% for p in accepted %}
                     <li>
-                      <a href="{{ p.dataset_url }}">
-                        {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}
-                      </a>
+                      {% if p.dataset_url %}
+                        <a href="{{ p.dataset_url }}">
+                          {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}
+                        </a>
+                      {% else %}
+                        {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }} (Unsynchronized)
+                      {% endif %}
                     </li>
                   {% endfor %}
                 {% else %}
@@ -368,27 +376,27 @@
                 {% endfor %}
               </ul>
 
-            <hr/>
-            <h6>Datasets</h6>
-            <ul>
-              {% set user_datasets = u.following_datasets or [] %}
-              {% if user_datasets %}
-                {% for d in user_datasets %}
-                  <li>
-                    {% set detail_url = d.get_uvlhub_doi() %}
-                    {% if detail_url %}
-                      <a href="{{ detail_url }}">
-                        {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }}
-                      </a>
-                    {% else %}
-                        {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }}
-                    {% endif %}
-                  </li>
-                {% endfor %}
-              {% else %}
-                <li class="text-muted">This author has no datasets yet.</li>
-              {% endif %}
-            </ul>
+              <hr/>
+              <h6>Datasets</h6>
+              <ul>
+                {% set user_datasets = u.following_datasets or [] %}
+                {% if user_datasets %}
+                  {% for d in user_datasets %}
+                    <li>
+                      {% set doi = d.ds_meta_data.dataset_doi %}
+                      {% if doi %}
+                        <a href="{{ url_for('dataset.subdomain_index', doi=doi) }}">
+                          {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }}
+                        </a>
+                      {% else %}
+                        {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }} (Unsynchronized)
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                {% else %}
+                  <li class="text-muted">This author has no datasets yet.</li>
+                {% endif %}
+              </ul>
 
             </div>
             <div class="modal-footer">
