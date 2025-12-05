@@ -115,35 +115,12 @@ class FakenodoAdapter:
 
         return new_dataset
 
-    def _calculate_next_version(self, current_version, is_major):
-        """
-        Helper simple para incrementar versiones.
-        Soporta formato semántico X.Y.Z o texto simple.
-        """
-        try:
-            parts = [int(x) for x in current_version.split(".")]
-            if len(parts) < 3:
-                # Si es algo como "1" o "1.0", rellenamos
-                parts.extend([0] * (3 - len(parts)))
-
-            if is_major:
-                parts[0] += 1
-                parts[1] = 0
-                parts[2] = 0
-            else:
-                parts[2] += 1  # Incrementamos parche (minor fix)
-
-            return ".".join(map(str, parts))
-        except ValueError:
-            # Si la versión anterior era texto raro ("beta1"), añadimos sufijo
-            return f"{current_version}-v2"
-
     def create_new_deposition(self, dataset) -> dict:
         metadata = {
             "title": getattr(dataset, "title", f"dataset-{getattr(dataset, 'id', '')}"),
         }
         rec = self.service.create_deposition(metadata=metadata)
-        return {"id": rec["id"], "conceptrecid": True, "metadata": rec.get("metadata", {})}
+        return {"id": rec["id"], "conceptrecid": rec.get("conceptrecid"), "metadata": rec.get("metadata", {})}
 
     def upload_file(self, dataset, deposition_id, feature_model) -> Optional[dict]:
 
@@ -175,6 +152,18 @@ class FakenodoAdapter:
         versions = rec.get("versions") or []
         if versions:
             return versions[-1].get("doi")
+        return None
+
+    def get_concept_doi(self, deposition_id):
+        rec = self.service.get_deposition(deposition_id)
+        if not rec:
+            return None
+        cdoi = rec.get("conceptdoi")
+        if cdoi:
+            return cdoi
+        versions = rec.get("versions") or []
+        if versions:
+            return versions[-1].get("conceptdoi")
         return None
 
 
@@ -272,9 +261,37 @@ def create_dataset():
                 # publish deposition
                 zenodo_service.publish_deposition(deposition_id)
 
-                # update DOI
+                # update DOI (specific DOI)
                 deposition_doi = zenodo_service.get_doi(deposition_id)
                 dataset_service.update_dsmetadata(ds_meta_id, dataset_doi=deposition_doi)
+
+                # NEW: asegurar concepto y enlazarlo al dataset
+                # Intentar obtener concept DOI del adapter; si no, derivarlo del specific DOI
+                concept_doi = None
+                try:
+                    if hasattr(zenodo_service, "get_concept_doi"):
+                        concept_doi = zenodo_service.get_concept_doi(deposition_id)
+                except Exception:
+                    concept_doi = None
+                if not concept_doi and deposition_doi:
+                    # Derivar: parte estable previa a ".v"
+                    concept_doi = deposition_doi.split(".v")[0]
+
+                if concept_doi:
+                    from app import db
+                    from app.modules.dataset.models import DataSetConcept
+
+                    concept = DataSetConcept.query.filter_by(conceptual_doi=concept_doi).first()
+                    if not concept:
+                        concept = DataSetConcept(conceptual_doi=concept_doi)
+                        db.session.add(concept)
+                        db.session.flush()
+
+                    # Enlazar dataset al concepto
+                    dataset.ds_concept_id = concept.id
+                    db.session.add(dataset)
+                    db.session.commit()
+
             except Exception as e:
                 msg = "it has not been possible upload feature models in Zenodo " + f"and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
