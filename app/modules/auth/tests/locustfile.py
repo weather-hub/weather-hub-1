@@ -91,6 +91,36 @@ class LoginBehavior(TaskSet):
             # Flujo sin 2FA; ya estaríamos dentro
             pass
 
+    @task
+    def login_limit_stress(self):
+        """
+        Envía repetidos intentos de login fallidos para disparar el limitador (HTTP 429).
+        """
+        # 1) Obtener formulario de login
+        response = self.client.get("/login", allow_redirects=False)
+        if response.status_code != 200:
+            # Si no es la página de login, no intentes extraer csrf
+            print(f"Unexpected status getting login page for limit test: {response.status_code}")
+            return
+
+        csrf_token = get_csrf_token(response)
+
+        # 2) Intento de login con credenciales malas
+        response = self.client.post(
+            "/login",
+            data={
+                "email": "invalid@example.com",
+                "password": "wrong",
+                "csrf_token": csrf_token,
+            },
+            allow_redirects=False,  # importante para no seguir redirecciones
+        )
+
+        if response.status_code == 429:
+            print("Login limit reached (429 Too Many Requests)")
+        elif response.status_code not in (200, 302):
+            print(f"Unexpected status during login limit test: {response.status_code}")
+
     # <<< IMPORTANTE: sin @task >>>
     def _complete_2fa_flow(self, otp_secret: str):
         """
