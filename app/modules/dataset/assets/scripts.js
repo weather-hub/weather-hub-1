@@ -123,6 +123,12 @@ var currentId = 0;
             let alert = document.createElement('p');
             alert.style.margin = '0';
             alert.style.padding = '0';
+
+            // PEQUEÑA MEJORA: Si el error es un objeto (JSON de validación), convertirlo a texto legible
+            if (typeof error_message === 'object') {
+                error_message = JSON.stringify(error_message);
+            }
+
             alert.textContent = 'Upload error: ' + error_message;
             upload_error.appendChild(alert);
             upload_error.style.display = 'block';
@@ -168,6 +174,12 @@ var currentId = 0;
                         }
                     }
 
+                    // AÑADIR version_number desde el bloque #upload_dataset
+                    const versionInput = document.querySelector('input[name="version_number"]');
+                    if (versionInput) {
+                        formUploadData.set('version_number', versionInput.value);
+                    }
+
                     let checked_orcid = true;
                     if (Array.isArray(formData.author_orcid)) {
                         for (let orcid of formData.author_orcid) {
@@ -180,7 +192,6 @@ var currentId = 0;
                             }
                         }
                     }
-
 
                     let checked_name = true;
                     if (Array.isArray(formData.author_name)) {
@@ -195,9 +206,12 @@ var currentId = 0;
                         }
                     }
 
-
                     if (checked_orcid && checked_name) {
-                        fetch('/dataset/upload', {
+
+                        // CAMBIO 1: Obtener la URL dinámica desde el botón (para soportar upload normal y nuevas versiones)
+                        const uploadUrl = document.getElementById('upload_button').getAttribute('data-upload-url');
+
+                        fetch(uploadUrl, { // CAMBIO 2: Usar la variable uploadUrl en vez del string fijo
                             method: 'POST',
                             body: formUploadData
                         })
@@ -206,7 +220,13 @@ var currentId = 0;
                                     console.log('Dataset sent successfully');
                                     response.json().then(data => {
                                         console.log(data.message);
-                                        window.location.href = "/dataset/list";
+
+                                        // CAMBIO 3: Redirección inteligente basada en la respuesta del servidor
+                                        if(data.redirect_url) {
+                                            window.location.href = data.redirect_url;
+                                        } else {
+                                            window.location.href = "/dataset/list";
+                                        }
                                     });
                                 } else {
                                     response.json().then(data => {
@@ -220,6 +240,8 @@ var currentId = 0;
                             })
                             .catch(error => {
                                 console.error('Error in POST request:', error);
+                                hide_loading(); // Asegurarse de quitar loading si falla la red
+                                write_upload_error("Network or Server Error");
                             });
                     }
 

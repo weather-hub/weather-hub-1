@@ -77,11 +77,16 @@ def validate_dataset_package(
     max_csv: int = 2,
     require_readme: bool = True,
     exact_match: bool = False,
+    allow_empty: bool = False,
 ) -> None:
     """
     Validate a package (list of file paths). Raises ValueError with readable message on failure.
     - Uses pattern-based matching: allowed headers like 'BASEL_temp_mean' satisfy '_temp_mean'
     """
+    # Permitir paquete vacío si así se indica (caso: nueva versión sin ficheros)
+    if allow_empty and (not file_paths or len(file_paths) == 0):
+        return
+    # Si hay ficheros, se aplican las validaciones normales
     csv_paths = []
     readme_paths = []
     others = []
@@ -114,7 +119,6 @@ def validate_dataset_package(
         if not headers:
             errors.append(f"CSV sin cabecera detectada: {os.path.basename(csvp)}")
             continue
-
         missing = []
         matched_map = {}  # required -> list of matching headers
         for req in required_columns:

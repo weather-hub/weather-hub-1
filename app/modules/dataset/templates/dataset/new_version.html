@@ -1,10 +1,10 @@
 {% extends "base_template.html" %}
 
-{% block title %}Upload dataset{% endblock %}
+{% block title %}New Version{% endblock %}
 
 {% block content %}
 
-    <h1 class="h2 mb-3"><b>Upload</b> dataset</h1>
+    <h1 class="h2 mb-3"><b>Create New Version</b> of: {{ dataset.ds_meta_data.title }}</h1>
 
     <div class="row">
         <div class="col-12 mb-3">
@@ -22,7 +22,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 
     {% if messages %}
@@ -42,7 +41,7 @@
 
                 <div class="row">
 
-                                <div class="col-12">
+                    <div class="col-12">
 
                         <h1 class="h3 mb-3">Basic info</h1>
 
@@ -73,7 +72,6 @@
                                     {{ form.publication_type.label(class="form-label") }}
                                     {{ form.publication_type(class="form-control") }}
                                 </div>
-
                             </div>
 
                             <div class="col-lg-6 col-6">
@@ -96,12 +94,23 @@
                                 </div>
                             </div>
 
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    {{ form.version_number.label(class="form-label") }} *
+                                    {{ form.version_number(class="form-control") }}
+                                    {% for error in form.version_number.errors %}
+                                        <span style="color: red;">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
                         </div>
 
                         <h1 class="h3 mb-3 mt-4">
                           Authors
                           <a href="#" data-toggle="modal" data-target="#infoModal">
-                            <i data-feather="info"></i> </a>
+                            <i data-feather="info"></i>
+                          </a>
                         </h1>
 
                         <div class="modal fade" id="infoModal" tabindex="-1" role="dialog" aria-labelledby="infoModalLabel" aria-hidden="true" style="display: none">
@@ -221,7 +230,7 @@
                 </form>
 
                 <span class="text-danger" id="alerts" style="display: none">
-                    </span>
+                </span>
 
                 <ul class="mt-2" id="file-list"></ul>
 
@@ -348,6 +357,7 @@
                                 formContainer.classList.add('uvl_form', "mt-3");
                                 formContainer.style.display = "none";
 
+                                // AQUÍ ESTÁ EL CAMBIO IMPORTANTE: value="${response.filename}"
                                 formContainer.innerHTML = `
                                     <div class="row">
                                         <input type="hidden" value="${response.filename}" name="feature_models-${formUniqueId}-filename">
@@ -356,7 +366,7 @@
                                                 <div class="col-12">
                                                     <div class="mb-3">
                                                         <label class="form-label">Title</label>
-                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-title">
+                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-title" value="${response.filename}">
                                                     </div>
                                                 </div>
                                                 <div class="col-12">
@@ -446,70 +456,53 @@
 
     </div>
 
-    <div class="row" id="upload_dataset" style="display: none">
-        <div class="col-12"> <h1 class="h3 mb-3 mt-2">Upload dataset</h1>
+    <div class="row" id="upload_dataset">
+        <div class="col-12">
+            <hr>
+            <h1 class="h3 mb-3 mt-2">Publish Version</h1>
 
             <div style="padding-left: 2rem">
 
-                <div class="mb-3">
-                    {{ form.version_number.label(class="form-label") }}
-                    {{ form.version_number(class="form-control") }}
-                    {% for error in form.version_number.errors %}
-                        <span style="color: red;">{{ error }}</span>
-                    {% endfor %}
+                <div class="mb-3 form-check">
+                    {{ form.is_major_version(class="form-check-input") }}
+                    {{ form.is_major_version.label(class="form-check-label") }}
+                    <small class="form-text text-muted">{{ form.is_major_version.description }}</small>
                 </div>
+
                 <label class="form-check">
                     <input id="agreeCheckbox" class="form-check-input" type="checkbox" value="">
                     <span class="form-check-label" style="font-size: 15px">
-                                I agree to have my feature models automatically uploaded to Zenodo and made available to the public according to the <a
-                            href="https://en.wikipedia.org/wiki/Open_science" target="_blank">Open Science</a> manifesto
-                            </span>
+                        I agree to have my feature models automatically uploaded to Zenodo and made available to the public according to the <a href="https://en.wikipedia.org/wiki/Open_science" target="_blank">Open Science</a> manifesto
+                    </span>
                 </label>
 
-                <button id="upload_button" data-upload-url="{{ url_for('dataset.create_dataset') }}" class="btn btn-primary mt-2" disabled>
+                <button id="upload_button" data-upload-url="{{ url_for('dataset.create_new_ds_version', dataset_id=dataset.id) }}" class="btn btn-primary mt-2" disabled>
                     <i data-feather="upload" class="center-button-icon"></i>
-                    Upload dataset</button>
+                    Create New Version
+                </button>
 
                 <div id="loading" style="display: none">
                     <img width="40px" src="{{ url_for("static", filename="gifs/loading.svg") }}"/>
                     Uploading dataset, please wait...
                 </div>
 
-                <div class="row">
-                    <div class="col-12 mb-3">
-
-                    </div>
-                </div>
-
-                <div class="alert alert-error" role="alert" id="upload_error"
-                     style="display: none">
+                <div class="alert alert-error" role="alert" id="upload_error" style="display: none">
                     <div class="alert-message">
-
-                        <h4 class="alert-heading"><i class="align-middle" data-feather="alert-triangle"></i> Limited
-                            connection to the Zenodo API</h4>
-                        <p class="p-0 m-0">
-                            There seems to be some kind of problem with the Zenodo API and synchronization of your
-                            dataset
-                            files may not be possible. We will save your files locally to eventually synchronize
-                            them with
-                            Zenodo. Sorry for the inconvenience, Zenodo is an external service and we can't do
-                            anything about it.
-                        </p>
+                         <h4 class="alert-heading"><i class="align-middle" data-feather="alert-triangle"></i> Error</h4>
+                         <p class="p-0 m-0" id="upload_error_text"></p>
                     </div>
                 </div>
-
-
-                <span class="text-danger mt-2" id="upload_error" style="display: none">
-
-                    </span>
+                <span class="text-danger mt-2" id="upload_error_text_span" style="display: none"></span>
 
                 <script>
-                    const checkbox = document.getElementById('agreeCheckbox');
-                    const upload_button = document.getElementById('upload_button');
-
-                    checkbox.addEventListener('change', function () {
-                        upload_button.disabled = !checkbox.checked;
-                    });
+                  // Habilitar/deshabilitar el botón según el agreeCheckbox
+                  document.addEventListener('DOMContentLoaded', function () {
+                    const agree = document.getElementById('agreeCheckbox');
+                    const btn = document.getElementById('upload_button');
+                    const sync = () => { btn.disabled = !agree.checked; };
+                    sync();
+                    agree.addEventListener('change', sync);
+                  });
                 </script>
 
             </div>
@@ -522,4 +515,20 @@
 {% block scripts %}
     <script src="{{ url_for('zenodo.scripts') }}"></script>
     <script src="{{ url_for('dataset.scripts') }}"></script>
+    <script>
+      // Marcar/desmarcar "Major" según haya archivos en Dropzone
+      document.addEventListener('DOMContentLoaded', function () {
+        const majorCheckbox = document.querySelector('input[name="is_major_version"]');
+        // Si el checkbox existe, sincroniza su estado con la cantidad de archivos en Dropzone
+        if (majorCheckbox && Dropzone && Dropzone.instances && Dropzone.instances.length) {
+          const dz = Dropzone.instances.find(d => d.element && d.element.id === 'myDropzone');
+          if (dz) {
+            const syncMajor = () => { majorCheckbox.checked = dz.files.length > 0; };
+            syncMajor();
+            dz.on('addedfile', syncMajor);
+            dz.on('removedfile', syncMajor);
+          }
+        }
+      });
+    </script>
 {% endblock %}

@@ -11,6 +11,7 @@ from app.modules.auth.services import AuthenticationService
 from app.modules.dataset.models import DataSet, DSMetaData, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
+    DataSetConceptRepository,
     DataSetRepository,
     DOIMappingRepository,
     DSDownloadRecordRepository,
@@ -24,6 +25,7 @@ from app.modules.hubfile.repositories import (
     HubfileRepository,
     HubfileViewRecordRepository,
 )
+from app.modules.zenodo.services import ZenodoService
 from core.services.BaseService import BaseService
 
 logger = logging.getLogger(__name__)
@@ -49,13 +51,20 @@ class DataSetService(BaseService):
         self.hubfilerepository = HubfileRepository()
         self.dsviewrecord_repostory = DSViewRecordRepository()
         self.hubfileviewrecord_repository = HubfileViewRecordRepository()
+        self.dsmetadata_service = DSMetaDataService()
+        self.zenodo_service = ZenodoService()
 
     def move_feature_models(self, dataset: DataSet):
         current_user = AuthenticationService().get_authenticated_user()
         source_dir = current_user.temp_folder()
 
         working_dir = os.getenv("WORKING_DIR", "")
-        dest_dir = os.path.join(working_dir, "uploads", f"user_{current_user.id}", f"dataset_{dataset.id}")
+        dest_dir = os.path.join(
+            working_dir,
+            "uploads",
+            f"user_{current_user.id}",
+            f"dataset_{dataset.id}",
+        )
 
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -110,7 +119,7 @@ class DataSetService(BaseService):
     def total_dataset_views(self) -> int:
         return self.dsviewrecord_repostory.total_dataset_views()
 
-    def create_from_form(self, form, current_user) -> DataSet:
+    def create_from_form(self, form, current_user, allow_empty_package: bool = False) -> DataSet:
         main_author = {
             "name": f"{current_user.profile.surname}, {current_user.profile.name}",
             "affiliation": current_user.profile.affiliation,
@@ -118,12 +127,15 @@ class DataSetService(BaseService):
         }
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
+            form_vnumber = form.get_version_number()
             dsmetadata = self.dsmetadata_repository.create(**form.get_dsmetadata())
             for author_data in [main_author] + form.get_authors():
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
 
-            dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
+            dataset = self.create(
+                commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id, version_number=form_vnumber
+            )
             # llenalo con los nombres de los ficheros que componen el paquete
             uploaded_filenames = []
             for feature_model in form.feature_models:
@@ -145,9 +157,9 @@ class DataSetService(BaseService):
                 validate_dataset_package(
                     # o la lista completa de archivos del paquete
                     # o True si quieres forzar EXACTAMENTE esas columnas
-                    file_paths=file_paths
+                    file_paths=file_paths,
+                    allow_empty=allow_empty_package,
                 )
-
             except Exception:
                 # rollback y propaga error (tu código ya maneja rollback en el except general)
                 self.repository.session.rollback()
@@ -178,8 +190,54 @@ class DataSetService(BaseService):
         domain = os.getenv("DOMAIN", "localhost")
         return f"http://{domain}/doi/{dataset.ds_meta_data.dataset_doi}"
 
+    def get_conceptual_doi(self, dataset: DataSet) -> str:
+        domain = os.getenv("DOMAIN", "localhost")
+        return f"http://{domain}/doi/{dataset.concept.conceptual_doi}" if dataset.concept else None
+
     def search(self, **filters):
         return self.repository.search(**filters)
+
+    @staticmethod
+    def infer_is_major_from_form(form) -> bool:
+        """Devuelve True si el formulario contiene al menos un feature model (archivos subidos)."""
+        try:
+            return bool(getattr(form, "feature_models", [])) and len(form.feature_models) > 0
+        except Exception:
+            return False
+
+    @staticmethod
+    def check_introduced_version(current_version: str, is_major: bool, form_version: str) -> tuple[bool, str]:
+        """Calcula la siguiente versión basada en la versión actual y si es una versión mayor."""
+        clean_current = current_version.lstrip("v")
+        clean_form_version = form_version.lstrip("v")
+        current_parts = clean_current.split(".")
+        form_parts = clean_form_version.split(".")
+        is_valid = True
+        error_message = ""
+
+        if len(current_parts) != 3 or len(form_parts) != 3:
+            is_valid = False
+            error_message = "Version format must be X.Y.Z where X, Y, and Z are integers."
+            return is_valid, error_message
+
+        major_current, minor_current, patch_current = map(int, current_parts)
+        major_form, minor_form, patch_form = map(int, form_parts)
+        if is_major:
+            if major_form <= major_current:
+                is_valid = False
+                error_message = "For a major version, the major version must be increased.(Ej: 1.0.0 to 2.0.0)"
+            if minor_form != 0 or patch_form != 0:
+                is_valid = False
+                error_message = "For a major version, minor and patch versions must be zero.(Ej: 1.0.0 to 2.0.0)"
+        else:
+            if major_form > major_current:
+                is_valid = False
+                error_message = "For a non-major version, the major version cannot be increased."
+            if minor_form <= minor_current and patch_form <= patch_current:
+                is_valid = False
+                error_message = "For a non-major version, minor or patch version must be increased."
+
+        return is_valid, error_message
 
 
 class AuthorService(BaseService):
@@ -192,6 +250,17 @@ class DSDownloadRecordService(BaseService):
         super().__init__(DSDownloadRecordRepository())
 
 
+class DataSetConceptService(BaseService):
+    def __init__(self):
+        super().__init__(DataSetConceptRepository())
+
+    def filter_by_doi(self, doi: str):
+        return self.repository.ds_concept_by_conceptual_doi(doi)
+
+    def update(self, id, **kwargs):
+        return self.repository.update(id, **kwargs)
+
+
 class DSMetaDataService(BaseService):
     def __init__(self):
         super().__init__(DSMetaDataRepository())
@@ -201,6 +270,9 @@ class DSMetaDataService(BaseService):
 
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.repository.filter_by_doi(doi)
+
+    def filter_latest_by_doi(self, doi: str) -> Optional[DSMetaData]:
+        return self.repository.filter_latest_by_doi(doi)
 
 
 class DSViewRecordService(BaseService):

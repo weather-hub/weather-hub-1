@@ -15,10 +15,11 @@ from flask_login import current_user, login_required
 from app.modules.comments.forms import CommentForm
 from app.modules.comments.models import Comment
 from app.modules.dataset import dataset_bp
-from app.modules.dataset.forms import DataSetForm
+from app.modules.dataset.forms import DataSetForm, DataSetVersionForm
 from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
+    DataSetConceptService,
     DataSetService,
     DOIMappingService,
     DSDownloadRecordService,
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
+dataset_concept_service = DataSetConceptService()
 
 
 class FakenodoAdapter:
@@ -44,12 +46,81 @@ class FakenodoAdapter:
     def __init__(self, working_dir: str | None = None):
         self.service = FakenodoService(working_dir=working_dir)
 
+    def publish_new_version(self, form, original_dataset, current_user, is_major=False):
+        """
+        Orquesta la creación de una nueva versión:
+        1. Calcula el nuevo número de versión.
+        2. Crea el registro en la BD local.
+        3. Mueve los ficheros.
+        4. Sube (simulado) a Fakenodo.
+        5. Actualiza DOIs y guarda.
+        """
+        # Importamos aquí para evitar ciclos si dataset_service importa zenodo_service
+        from app.modules.dataset.services import DataSetService
+
+        _dataset_service = DataSetService()
+
+        # 1. Si quiero hacer algo para la version que sea forzar que en caso de que sea la misma no permita hacer la
+        # creacion y en caso de que sea major que tenga que cambiar el primer digito
+
+        # 2. Crear el dataset localmente usando el servicio existente
+        # Esto guarda el título, descripción, autores y ficheros en la BD
+        new_dataset = _dataset_service.create_from_form(form=form, current_user=current_user, allow_empty_package=True)
+
+        # Vincular al mismo concepto que el original
+        new_dataset.ds_concept_id = original_dataset.ds_concept_id
+        new_dataset.is_latest = True
+        try:
+            # Desmarcar otras versiones como no-latest
+            from app import db
+
+            db.session.add(new_dataset)
+            db.session.flush()
+            from app.modules.dataset.models import DataSet
+
+            DataSet.query.filter(
+                DataSet.ds_concept_id == original_dataset.ds_concept_id, DataSet.id != new_dataset.id
+            ).update({DataSet.is_latest: False})
+            db.session.commit()
+        except Exception:
+            # No abortar publicación; log y continuar
+            logger.exception("Failed to update concept linkage or latest flags")
+
+        # 3. Mover ficheros de la carpeta temporal a la final
+        _dataset_service.move_feature_models(new_dataset)
+
+        # 4. Interacción con Fakenodo (Simulación)
+        # En Zenodo real, haríamos 'newversion' sobre el ID antiguo.
+        # En Fakenodo, creamos una deposición nueva y fingimos que es versión.
+        data = self.create_new_deposition(new_dataset)
+        deposition_id = data.get("id")
+
+        # 5. Subir ficheros a Fakenodo
+        for feature_model in new_dataset.feature_models:
+            self.upload_file(new_dataset, deposition_id, feature_model)
+
+        # 6. Publicar en Fakenodo
+        self.publish_deposition(deposition_id)
+
+        # 7. Obtener DOI y guardar en BD local
+        new_doi = self.get_doi(deposition_id)
+
+        # solo cambia el DOI para major versions:
+        doi_to_store = new_doi if is_major else original_dataset.ds_meta_data.dataset_doi
+
+        # Actualizamos la metadata local con la info de "Zenodo"
+        _dataset_service.update_dsmetadata(
+            new_dataset.ds_meta_data_id, deposition_id=deposition_id, dataset_doi=doi_to_store
+        )
+
+        return new_dataset
+
     def create_new_deposition(self, dataset) -> dict:
         metadata = {
             "title": getattr(dataset, "title", f"dataset-{getattr(dataset, 'id', '')}"),
         }
         rec = self.service.create_deposition(metadata=metadata)
-        return {"id": rec["id"], "conceptrecid": True, "metadata": rec.get("metadata", {})}
+        return {"id": rec["id"], "conceptrecid": rec.get("conceptrecid"), "metadata": rec.get("metadata", {})}
 
     def upload_file(self, dataset, deposition_id, feature_model) -> Optional[dict]:
 
@@ -83,6 +154,18 @@ class FakenodoAdapter:
             return versions[-1].get("doi")
         return None
 
+    def get_concept_doi(self, deposition_id):
+        rec = self.service.get_deposition(deposition_id)
+        if not rec:
+            return None
+        cdoi = rec.get("conceptdoi")
+        if cdoi:
+            return cdoi
+        versions = rec.get("versions") or []
+        if versions:
+            return versions[-1].get("conceptdoi")
+        return None
+
 
 def get_zenodo_client(working_dir: str | None = None):
     """Return a zenodo-like client depending on environment configuration.
@@ -95,21 +178,26 @@ def get_zenodo_client(working_dir: str | None = None):
     if os.getenv("FAKENODO_URL") or os.getenv("USE_FAKE_ZENODO"):
         return FakenodoAdapter(working_dir=working_dir)
 
-    # Otherwise try real Zenodo and fall back to the fake service if the
-    # connection fails (e.g. SSL verification issues in some environments).
+    # 2. Intentamos conectar con Zenodo real
     try:
         zs = ZenodoService()
         try:
             if zs.test_connection():
                 return zs
+            else:
+                # AQUÍ ESTABA EL ERROR: Si test_connection devolvía False,
+                # la función no retornaba nada (None).
+                # Ahora forzamos el fallback a Fakenodo:
+                logger.warning("ZenodoService test_connection returned False, falling back to FakenodoAdapter")
+                return FakenodoAdapter(working_dir=working_dir)
+
         except Exception:
-            # test_connection failed (network/ssl); fall through to fake
-            logger = logging.getLogger(__name__)
-            logger.warning("ZenodoService test_connection failed, falling back to FakenodoAdapter")
+            # Si test_connection falla con excepción (network/ssl)
+            logger.warning("ZenodoService test_connection failed with error, falling back to FakenodoAdapter")
             return FakenodoAdapter(working_dir=working_dir)
+
     except Exception:
-        # constructing ZenodoService failed for any reason -> fallback
-        logger = logging.getLogger(__name__)
+        # Si ni siquiera se puede instanciar ZenodoService
         logger.warning("Unable to initialize ZenodoService, using FakenodoAdapter")
         return FakenodoAdapter(working_dir=working_dir)
 
@@ -132,7 +220,7 @@ def create_dataset():
         try:
             logger.info("Creating dataset...")
             create_args = {"form": form, "current_user": current_user}
-            dataset = dataset_service.create_from_form(**create_args)
+            dataset = dataset_service.create_from_form(**create_args, allow_empty_package=False)
             logger.info("Created dataset: %s", dataset)
             dataset_service.move_feature_models(dataset)
         except ValueError as e:
@@ -173,9 +261,36 @@ def create_dataset():
                 # publish deposition
                 zenodo_service.publish_deposition(deposition_id)
 
-                # update DOI
+                # update DOI (specific DOI)
                 deposition_doi = zenodo_service.get_doi(deposition_id)
                 dataset_service.update_dsmetadata(ds_meta_id, dataset_doi=deposition_doi)
+
+                # Intentar obtener concept DOI del adapter; si no, derivarlo del specific DOI
+                concept_doi = None
+                try:
+                    if hasattr(zenodo_service, "get_concept_doi"):
+                        concept_doi = zenodo_service.get_concept_doi(deposition_id)
+                except Exception:
+                    concept_doi = None
+                if not concept_doi and deposition_doi:
+                    # Derivar: parte estable previa a ".v"
+                    concept_doi = deposition_doi.split(".v")[0]
+
+                if concept_doi:
+                    from app import db
+                    from app.modules.dataset.models import DataSetConcept
+
+                    concept = DataSetConcept.query.filter_by(conceptual_doi=concept_doi).first()
+                    if not concept:
+                        concept = DataSetConcept(conceptual_doi=concept_doi)
+                        db.session.add(concept)
+                        db.session.flush()
+
+                    # Enlazar dataset al concepto
+                    dataset.ds_concept_id = concept.id
+                    db.session.add(dataset)
+                    db.session.commit()
+
             except Exception as e:
                 msg = "it has not been possible upload feature models in Zenodo " + f"and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
@@ -321,6 +436,74 @@ def download_dataset(dataset_id):
     return resp
 
 
+@dataset_bp.route("/dataset/<int:dataset_id>/new-version", methods=["GET", "POST"])
+@login_required
+def create_new_ds_version(dataset_id):
+
+    if request.method == "GET":
+        temp_folder = current_user.temp_folder()
+        if os.path.exists(temp_folder):
+            shutil.rmtree(temp_folder)
+
+    original_dataset = dataset_service.get_or_404(dataset_id)
+
+    if current_user.id != original_dataset.user_id:
+        # Es mejor retornar JSON 403 si es una petición AJAX, pero abort funciona "ok"
+        abort(403, "No eres el autor del dataset.")
+
+    form = DataSetVersionForm(obj=original_dataset.ds_meta_data)
+
+    if request.method == "POST":
+
+        if form.validate_on_submit():
+            try:
+                if form.version_number.data == str(original_dataset.version_number):
+                    return jsonify({"message": "The new version number must be different from the original."}), 400
+
+                is_major_from_form = DataSetService.infer_is_major_from_form(form)
+                is_valid_version, error_version_msg = DataSetService.check_introduced_version(
+                    current_version=str(original_dataset.version_number),
+                    form_version=form.version_number.data,
+                    is_major=is_major_from_form,
+                )
+                if not is_valid_version:
+                    return jsonify({"message": error_version_msg}), 400
+
+                new_dataset = zenodo_service.publish_new_version(
+                    form=form,
+                    original_dataset=original_dataset,
+                    current_user=current_user,
+                    is_major=is_major_from_form,
+                )
+
+                # Determinar la URL de destino
+                target_url = ""
+                if new_dataset.ds_meta_data.dataset_doi:
+                    target_url = url_for("dataset.subdomain_index", doi=new_dataset.ds_meta_data.dataset_doi)
+                else:
+                    target_url = url_for("dataset.get_unsynchronized_dataset", dataset_id=new_dataset.id)
+
+                # 3. Borrar carpeta temporal tras el éxito
+                temp_folder = current_user.temp_folder()
+                if os.path.exists(temp_folder):
+                    shutil.rmtree(temp_folder)
+
+                # 4. RESPUESTA JSON
+                return jsonify({"message": "Version created successfully", "redirect_url": target_url}), 200
+
+            except Exception:
+                logger.exception("Error al crear la nueva versión")
+                return jsonify({"message": "Hubo un error interno al publicar la versión."}), 500
+        else:
+            # Si el formulario no valida, devolvemos errores en JSON
+            return jsonify({"message": form.errors}), 400
+
+    # GET REQUEST: Solo renderizamos
+    form.version_number.data = str(original_dataset.version_number)
+
+    return render_template("dataset/new_version.html", form=form, dataset=original_dataset)
+
+
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])
 def subdomain_index(doi):
     # Check if the DOI is an old DOI
@@ -330,29 +513,50 @@ def subdomain_index(doi):
         new_url = url_for("dataset.subdomain_index", doi=new_doi)
         return redirect(new_url, code=302)
 
-    # Try to search the dataset by the provided DOI (which should already be the new one)
-    ds_meta_data = dsmetadata_service.filter_by_doi(doi)
+    current_dataset = None
+    # si es una conceptual DOI devuelve el latest dataset
+    concept = dataset_concept_service.filter_by_doi(doi=doi) if dataset_concept_service.filter_by_doi(doi=doi) else None
 
-    if not ds_meta_data:
+    if concept:
+        if concept.versions:
+            current_dataset = concept.versions.first()
+        else:
+            abort(404)
+    else:
+
+        ds_meta_data = dsmetadata_service.filter_latest_by_doi(doi)
+        if ds_meta_data:
+            # Es especifico
+            current_dataset = ds_meta_data.data_set
+            concept = current_dataset.concept
+        else:
+            abort(404)
+
+    if not current_dataset or not concept:
         abort(404)
 
-    # Get dataset
-    dataset = ds_meta_data.data_set
+    all_versions = concept.versions.all()
+    latest_version = all_versions[0] if all_versions else None
 
-    if current_user.is_authenticated and current_user.id == dataset.user_id:
-        comments = Comment.query.filter_by(dataset_id=dataset.id).order_by(Comment.created_at.desc()).all()
+    if current_user.is_authenticated and current_user.id == current_dataset.user_id:
+        comments = Comment.query.filter_by(dataset_id=current_dataset.id).order_by(Comment.created_at.desc()).all()
     else:
         comments = (
-            Comment.query.filter_by(dataset_id=dataset.id, approved=True).order_by(Comment.created_at.desc()).all()
+            Comment.query.filter_by(dataset_id=current_dataset.id, approved=True)
+            .order_by(Comment.created_at.desc())
+            .all()
         )
 
     comment_form = CommentForm()
     # Save the cookie to the user's browser
-    user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
+    user_cookie = ds_view_record_service.create_cookie(dataset=current_dataset)
     resp = make_response(
         render_template(
             "dataset/view_dataset.html",
-            dataset=dataset,
+            dataset=current_dataset,
+            all_versions=all_versions,
+            latest_version=latest_version,
+            conceptual_doi=concept.conceptual_doi,
             comment_form=comment_form,
             comments=comments,
         )

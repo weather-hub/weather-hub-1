@@ -48,15 +48,22 @@ class FakenodoService(BaseService):
     def create_deposition(self, metadata: Optional[Dict] = None) -> Dict:
         with self._lock:
             rid = self._next_id()
+            # Permitir reutilizar concepto si viene en metadata
+            meta = metadata or {}
+            conceptrecid = meta.get("conceptrecid") or str(uuid4())
+            concept_doi = meta.get("conceptdoi") or f"10.1234/fakenodo.concept.{conceptrecid}"
+
             record = {
                 "id": rid,
-                "metadata": metadata or {},
+                "metadata": meta,
                 "files": [],
                 "versions": [],
                 "published": False,
                 "dirty": False,
                 "created_at": _current_iso(),
                 "updated_at": _current_iso(),
+                "conceptrecid": conceptrecid,
+                "conceptdoi": concept_doi,
             }
             self._db.setdefault("records", {})[str(rid)] = record
             self._save()
@@ -111,6 +118,8 @@ class FakenodoService(BaseService):
             version = {
                 "version": new_version,
                 "doi": doi,
+                "conceptrecid": rec.get("conceptrecid"),
+                "conceptdoi": rec.get("conceptdoi"),
                 "metadata": rec.get("metadata"),
                 "files": rec.get("files", []).copy(),
                 "created_at": _current_iso(),

@@ -5,7 +5,15 @@ from typing import Optional
 from flask_login import current_user
 from sqlalchemy import desc, func
 
-from app.modules.dataset.models import Author, DataSet, DOIMapping, DSDownloadRecord, DSMetaData, DSViewRecord
+from app.modules.dataset.models import (
+    Author,
+    DataSet,
+    DataSetConcept,
+    DOIMapping,
+    DSDownloadRecord,
+    DSMetaData,
+    DSViewRecord,
+)
 from core.repositories.BaseRepository import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -25,12 +33,28 @@ class DSDownloadRecordRepository(BaseRepository):
         return max_id if max_id is not None else 0
 
 
+class DataSetConceptRepository(BaseRepository):
+    def __init__(self):
+        super().__init__(DataSetConcept)
+
+    def ds_concept_by_conceptual_doi(self, doi: str):
+        return self.model.query.filter_by(conceptual_doi=doi).first()
+
+
 class DSMetaDataRepository(BaseRepository):
     def __init__(self):
         super().__init__(DSMetaData)
 
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.model.query.filter_by(dataset_doi=doi).first()
+
+    def filter_latest_by_doi(self, doi: str) -> Optional[DSMetaData]:
+        return (
+            DSMetaData.query.filter(DSMetaData.dataset_doi == doi)
+            .join(DataSet, DataSet.ds_meta_data_id == DSMetaData.id)
+            .order_by(DataSet.created_at.desc())
+            .first()
+        )
 
 
 class DSViewRecordRepository(BaseRepository):
