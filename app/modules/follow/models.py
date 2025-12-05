@@ -8,10 +8,8 @@ class UserCommunityFollow(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # Usuario que sigue
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
-    # Comunidad seguida
     community_id = db.Column(db.Integer, db.ForeignKey("community.id"), nullable=False)
 
     created_at = db.Column(
@@ -20,7 +18,6 @@ class UserCommunityFollow(db.Model):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Relaciones cómodas
     user = db.relationship(
         "User",
         backref=db.backref("followed_communities", lazy="dynamic"),
@@ -41,10 +38,8 @@ class UserAuthorFollow(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # Usuario que sigue
     follower_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
-    # Usuario seguido (autor)
     author_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     created_at = db.Column(

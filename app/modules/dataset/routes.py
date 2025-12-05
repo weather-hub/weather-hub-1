@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from typing import Optional
 from zipfile import ZipFile
 
-# from valid_files import valid_files
 from flask import (
     abort,
     current_app,

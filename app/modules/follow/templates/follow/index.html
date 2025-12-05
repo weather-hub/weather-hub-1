@@ -6,7 +6,6 @@
     <h1 class="h3 mb-0">Following</h1>
   </div>
 
-  {# Mensajes flash #}
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="mb-3">
@@ -18,7 +17,6 @@
     {% endif %}
   {% endwith %}
 
-  {# Buscador de usuarios y comunidades #}
   <div class="card mb-4 shadow-sm">
     <div class="card-body">
       <form method="get" action="{{ url_for('follow.following_index') }}">
@@ -41,12 +39,10 @@
     </div>
   </div>
 
-  {# Resultados de búsqueda #}
   {% if q %}
     <h4 class="mb-3">Search results for "<span class="fw-semibold">{{ q }}</span>"</h4>
 
     <div class="row g-4 mb-4">
-      {# Comunidades encontradas #}
       {% for c in search_communities %}
         <div class="col-12 col-md-6 col-lg-4">
           <div class="card h-100 shadow-sm">
@@ -129,7 +125,6 @@
         </div>
       {% endfor %}
 
-      {# Usuarios encontrados #}
       {% for u in search_users %}
         <div class="col-12 col-md-6 col-lg-4">
           <div class="card h-100 shadow-sm">
@@ -226,7 +221,6 @@
     <hr class="my-4">
   {% endif %}
 
-  {# Comunidades que sigo #}
   <h4 class="mb-3">Communities you follow</h4>
   <div class="row g-4 mb-4">
     {% for c in followed_communities %}
@@ -320,7 +314,6 @@
 
   <hr class="my-4">
 
-  {# Autores que sigo #}
   <h4 class="mb-3">Authors you follow</h4>
   <div class="row g-4">
     {% for u in followed_authors %}

@@ -50,13 +50,10 @@ class FollowService:
         return communities
 
     def search(self, term: str, current_user_id: int):
-        # Comunidades que matchean el término
         search_communities = Community.query.filter(Community.name.ilike(f"%{term}%")).all()
 
-        # 🔴 Enriquecer también las de búsqueda
         self._attach_dataset_info_to_communities(search_communities)
 
-        # Usuarios (no hace falta para el tema de datasets)
         search_users = (
             User.query.join(UserProfile)
             .filter(
@@ -78,7 +75,6 @@ class FollowService:
         """Empieza a seguir a un autor (otro usuario)."""
 
         if follower_id == author_id:
-            # opcional: no permitir seguirse a sí mismo
             return None
 
         existing = UserAuthorFollow.query.filter_by(
@@ -136,10 +132,6 @@ class FollowService:
             .all()
         )
 
-    # ---------------------------
-    # NUEVO: notificación por email
-    # ---------------------------
-
     def notify_dataset_added_to_community(self, community, dataset):
         """
         Llamar cuando un dataset se acepta en una comunidad.
@@ -177,7 +169,6 @@ class FollowService:
         if dataset is None:
             return
 
-        # Autor del dataset
         author = User.query.get(dataset.user_id)
         author_name = "an author"
         if author and getattr(author, "profile", None):
@@ -185,7 +176,6 @@ class FollowService:
         elif author and author.email:
             author_name = author.email
 
-        # Seguidores del autor
         followers = self.get_followers_of_author(dataset.user_id)
         recipients = {u.email for u in followers if u.email}
 
@@ -239,19 +229,16 @@ class FollowService:
                 p.dataset_url = "#"
                 continue
 
-            # Título desde la metadata
             title = None
             if ds.ds_meta_data is not None and ds.ds_meta_data.title:
                 title = ds.ds_meta_data.title
 
             p.dataset_title = title or f"Dataset #{ds.id}"
 
-            # URL tipo /doi/10.1234/dataset1/ usando la lógica ya existente
             doi_url = ds.get_uvlhub_doi()
             if doi_url:
                 p.dataset_url = doi_url
             else:
-                # Fallback por si no hay DOI: detalle clásico por id
                 try:
                     p.dataset_url = url_for("dataset.view", dataset_id=ds.id)
                 except Exception:
