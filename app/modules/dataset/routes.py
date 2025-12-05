@@ -265,7 +265,6 @@ def create_dataset():
                 deposition_doi = zenodo_service.get_doi(deposition_id)
                 dataset_service.update_dsmetadata(ds_meta_id, dataset_doi=deposition_doi)
 
-                # NEW: asegurar concepto y enlazarlo al dataset
                 # Intentar obtener concept DOI del adapter; si no, derivarlo del specific DOI
                 concept_doi = None
                 try:
@@ -460,7 +459,7 @@ def create_new_ds_version(dataset_id):
             try:
                 if form.version_number.data == str(original_dataset.version_number):
                     return jsonify({"message": "The new version number must be different from the original."}), 400
-                # 1. Tu lógica de negocio (asumiendo que zenodo_service hace todo el trabajo pesado)
+
                 is_major_from_form = DataSetService.infer_is_major_from_form(form)
                 is_valid_version, error_version_msg = DataSetService.check_introduced_version(
                     current_version=str(original_dataset.version_number),
@@ -477,19 +476,19 @@ def create_new_ds_version(dataset_id):
                     is_major=is_major_from_form,
                 )
 
-                # 2. Determinar la URL de destino
+                # Determinar la URL de destino
                 target_url = ""
                 if new_dataset.ds_meta_data.dataset_doi:
                     target_url = url_for("dataset.subdomain_index", doi=new_dataset.ds_meta_data.dataset_doi)
                 else:
                     target_url = url_for("dataset.get_unsynchronized_dataset", dataset_id=new_dataset.id)
 
-                # 3. LIMPIEZA: Borrar carpeta temporal AHORA, tras el éxito
+                # 3. Borrar carpeta temporal tras el éxito
                 temp_folder = current_user.temp_folder()
                 if os.path.exists(temp_folder):
                     shutil.rmtree(temp_folder)
 
-                # 4. RESPUESTA JSON (Vital para que funcione con tu scripts.js)
+                # 4. RESPUESTA JSON
                 return jsonify({"message": "Version created successfully", "redirect_url": target_url}), 200
 
             except Exception:

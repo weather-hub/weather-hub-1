@@ -174,6 +174,12 @@ var currentId = 0;
                         }
                     }
 
+                    // AÑADIR version_number desde el bloque #upload_dataset
+                    const versionInput = document.querySelector('input[name="version_number"]');
+                    if (versionInput) {
+                        formUploadData.set('version_number', versionInput.value);
+                    }
+
                     let checked_orcid = true;
                     if (Array.isArray(formData.author_orcid)) {
                         for (let orcid of formData.author_orcid) {
@@ -187,7 +193,6 @@ var currentId = 0;
                         }
                     }
 
-
                     let checked_name = true;
                     if (Array.isArray(formData.author_name)) {
                         for (let name of formData.author_name) {
@@ -200,7 +205,6 @@ var currentId = 0;
                             }
                         }
                     }
-
 
                     if (checked_orcid && checked_name) {
 
