@@ -124,23 +124,9 @@
               <select name="publication_type" class="form-select">
                 <option value="any" {{ 'selected' if request_args.get('publication_type','any')=='any' }}>Any</option>
                 {% set pub_opts = [
-                  ('annotationcollection','Annotation Collection'),
-                  ('book','Book'),
-                  ('section','Book Section'),
-                  ('conferencepaper','Conference Paper'),
-                  ('datamanagementplan','Data Management Plan'),
-                  ('article','Journal Article'),
-                  ('patent','Patent'),
-                  ('preprint','Preprint'),
-                  ('deliverable','Project Deliverable'),
-                  ('milestone','Project Milestone'),
-                  ('proposal','Proposal'),
-                  ('report','Report'),
-                  ('softwaredocumentation','Software Documentation'),
-                  ('taxonomictreatment','Taxonomic Treatment'),
-                  ('technicalnote','Technical Note'),
-                  ('thesis','Thesis'),
-                  ('workingpaper','Working Paper'),
+                  ('continental','Continental'),
+                  ('national','National'),
+                  ('regional','Regional'),
                   ('other','Other'),
                   ('none','None')
                 ] %}

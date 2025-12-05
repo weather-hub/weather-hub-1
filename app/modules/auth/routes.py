@@ -45,7 +45,7 @@ def login():
 
     form = LoginForm()
     if is_blocked():
-        error_m = "Demasiados intentos. Intenta en 3 min."
+        error_m = "Too many attempts. Try again in 3 minutes."
         template = "auth/login_form.html"
         return (
             render_template(template, form=form, error=error_m),
@@ -53,24 +53,27 @@ def login():
         )
 
     if request.method == "POST" and form.validate_on_submit():
-
         email = form.email.data
         pwd = form.password.data
         user = authentication_service.login(email, pwd)
         if user:
             # Login exitoso → reinicia contador
             reset_failed_attempts()
-
             if user.twofa_enabled:
                 session["2fa_user_id"] = user.id
                 return redirect(url_for("auth.verify_2fa"))
-
             login_user(user, remember=True)
             return redirect(url_for("public.index"))
-
         # Login fallido → incrementar contador
         increment_failed_attempts()
-        return redirect(url_for("auth.login"))
+        if is_blocked():
+            error_m = "Too many attempts. Try again in 3 minutes."
+            template = "auth/login_form.html"
+            return (
+                render_template(template, form=form, error=error_m),
+                429,
+            )
+        return render_template("auth/login_form.html", form=form, error="Invalid credentials")
 
     return render_template("auth/login_form.html", form=form)
 
