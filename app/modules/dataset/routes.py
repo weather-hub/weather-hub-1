@@ -8,8 +8,17 @@ from datetime import datetime, timezone
 from typing import Optional
 from zipfile import ZipFile
 
-# from valid_files import valid_files
-from flask import abort, jsonify, make_response, redirect, render_template, request, send_from_directory, url_for
+from flask import (
+    abort,
+    current_app,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 from flask_login import current_user, login_required
 
 from app.modules.community.repositories import CommunityRepository
@@ -25,7 +34,10 @@ from app.modules.dataset.services import (
     DSViewRecordService,
 )
 from app.modules.fakenodo.services import FakenodoService
+from app.modules.follow.services import FollowService
 from app.modules.zenodo.services import ZenodoService
+
+follow_service = FollowService()
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +187,11 @@ def create_dataset():
             except Exception as e:
                 msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
+
+        try:
+            follow_service.notify_dataset_published(dataset)
+        except Exception:
+            current_app.logger.exception("Error sending 'dataset published' notification")
 
         # Delete temp folder
         file_path = current_user.temp_folder()
