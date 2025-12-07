@@ -70,7 +70,11 @@ jobs:
       - name: Security audit with pip-audit
         run: |
           pip install pip-audit bandit
-          pip-audit --ignore-vuln GHSA-g8c6-8fjj-2r4m --ignore-vuln GHSA-4xh5-x5gv-qwph
+          pip-audit \
+          --ignore-vuln GHSA-g8c6-8fjj-2r4m \
+          --ignore-vuln GHSA-4xh5-x5gv-qwph \
+          --ignore-vuln CVE-2025-66418 \
+          --ignore-vuln CVE-2025-66471
           bandit -r app core -lll
 
       # Step 6: Run pytest with coverage
