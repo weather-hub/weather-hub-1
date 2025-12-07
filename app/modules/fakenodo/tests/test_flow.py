@@ -2,7 +2,8 @@ from app.modules.dataset.routes import FakenodoAdapter
 from app.modules.fakenodo.services import FakenodoService
 
 
-def test_metadata_edit_does_not_create_new_doi(tmp_path):
+def test_metadata_edit_does_not_create_new_doi(test_client, tmp_path):
+    """Test that editing metadata alone doesn't create a new DOI"""
     wd = str(tmp_path)
     service = FakenodoService(working_dir=wd)
 
@@ -23,7 +24,8 @@ def test_metadata_edit_does_not_create_new_doi(tmp_path):
     assert ver2["doi"] == doi1
 
 
-def test_upload_creates_new_doi(tmp_path):
+def test_upload_creates_new_doi(test_client, tmp_path):
+    """Test that uploading a file creates a new DOI on next publish"""
     wd = str(tmp_path)
     service = FakenodoService(working_dir=wd)
 
@@ -43,7 +45,8 @@ def test_upload_creates_new_doi(tmp_path):
     assert doi2 != doi1
 
 
-def test_adapter_dataset_flow(tmp_path):
+def test_adapter_dataset_flow(test_client, tmp_path):
+    """Test the FakenodoAdapter workflow with dataset objects"""
     wd = str(tmp_path)
     adapter = FakenodoAdapter(working_dir=wd)
 

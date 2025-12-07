@@ -1,146 +1,191 @@
 from __future__ import annotations
 
 import json
-import os
-import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from uuid import uuid4
 
+from app import db
+from app.modules.fakenodo.models import FakenodoDeposition, FakenodoFile, FakenodoVersion
+from app.modules.fakenodo.repositories import (
+    FakenodoDepositionRepository,
+    FakenodoFileRepository,
+    FakenodoVersionRepository,
+)
 from core.services.BaseService import BaseService
-
-DB_FILENAME = "fakenodo_db.json"
 
 
 def _current_iso() -> str:
-    return datetime.utcnow().isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat() + "Z"
 
 
 class FakenodoService(BaseService):
+    """
+    Servicio que simula Zenodo usando la base de datos SQL en lugar de archivos JSON.
+    Totalmente compatible con despliegues efímeros (Render, Heroku, etc.).
+    """
+
     def __init__(self, working_dir: Optional[str] = None):
-
         super().__init__(None)
-        self.working_dir = working_dir or os.getenv("WORKING_DIR", ".")
-        self.db_path = os.path.join(self.working_dir, DB_FILENAME)
-        self._lock = threading.Lock()
-        self._load()
-
-    def _load(self) -> None:
-        if os.path.exists(self.db_path):
-            try:
-                with open(self.db_path, "r") as fh:
-                    self._db: Dict = json.load(fh)
-            except Exception:
-                self._db = {"records": {}, "next_id": 1}
-        else:
-            self._db = {"records": {}, "next_id": 1}
-
-    def _save(self) -> None:
-        os.makedirs(os.path.dirname(self.db_path) or ".", exist_ok=True)
-        with open(self.db_path, "w") as fh:
-            json.dump(self._db, fh, indent=2, default=str)
-
-    def _next_id(self) -> int:
-        nid = self._db.get("next_id", 1)
-        self._db["next_id"] = nid + 1
-        return nid
+        self.deposition_repo = FakenodoDepositionRepository()
+        self.file_repo = FakenodoFileRepository()
+        self.version_repo = FakenodoVersionRepository()
 
     def create_deposition(self, metadata: Optional[Dict] = None) -> Dict:
-        with self._lock:
-            rid = self._next_id()
-            record = {
-                "id": rid,
-                "metadata": metadata or {},
-                "files": [],
-                "versions": [],
-                "published": False,
-                "dirty": False,
-                "created_at": _current_iso(),
-                "updated_at": _current_iso(),
-            }
-            self._db.setdefault("records", {})[str(rid)] = record
-            self._save()
-            return record
+        """Crea un nuevo deposition en estado draft."""
+        deposition = FakenodoDeposition(
+            conceptrecid=0,  # Se actualizará después
+            state="draft",
+            metadata_json=json.dumps(metadata or {}),
+            published=False,
+            dirty=False,
+        )
+        db.session.add(deposition)
+        db.session.flush()  # Obtener el ID
+
+        # Actualizar conceptrecid con el mismo ID
+        deposition.conceptrecid = deposition.id
+        db.session.commit()
+
+        return self._deposition_to_dict(deposition)
 
     def list_depositions(self) -> List[Dict]:
-        with self._lock:
-            return list(self._db.get("records", {}).values())
+        """Lista todos los depositions."""
+        depositions = self.deposition_repo.get_all()
+        return [self._deposition_to_dict(dep) for dep in depositions]
 
     def get_deposition(self, deposition_id: int) -> Optional[Dict]:
-        with self._lock:
-            return self._db.get("records", {}).get(str(deposition_id))
+        """Obtiene un deposition por ID."""
+        deposition = self.deposition_repo.get_by_id(deposition_id)
+        if not deposition:
+            return None
+        return self._deposition_to_dict(deposition)
 
     def delete_deposition(self, deposition_id: int) -> bool:
-        with self._lock:
-            key = str(deposition_id)
-            if key in self._db.get("records", {}):
-                del self._db["records"][key]
-                self._save()
-                return True
+        """Elimina un deposition y todos sus archivos/versiones."""
+        deposition = self.deposition_repo.get_by_id(deposition_id)
+        if not deposition:
             return False
+        db.session.delete(deposition)
+        db.session.commit()
+        return True
 
     def upload_file(self, deposition_id: int, filename: str, content_bytes: Optional[bytes] = None) -> Optional[Dict]:
-        with self._lock:
-            rec = self._db.get("records", {}).get(str(deposition_id))
-            if not rec:
-                return None
-            file_rec = {
-                "id": str(uuid4()),
-                "name": filename,
-                "size": len(content_bytes) if content_bytes is not None else 0,
-                "created_at": _current_iso(),
-            }
-            rec["files"].append(file_rec)
-            rec["dirty"] = True
-            rec["updated_at"] = _current_iso()
-            self._save()
-            return file_rec
+        """Sube un archivo a un deposition y lo marca como dirty."""
+        deposition = self.deposition_repo.get_by_id(deposition_id)
+        if not deposition:
+            return None
+
+        file = FakenodoFile(
+            file_id=str(uuid4()),
+            deposition_id=deposition_id,
+            name=filename,
+            size=len(content_bytes) if content_bytes is not None else 0,
+        )
+        db.session.add(file)
+
+        deposition.dirty = True
+        deposition.updated_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+        return file.to_dict()
 
     def publish_deposition(self, deposition_id: int) -> Optional[Dict]:
-        with self._lock:
-            rec = self._db.get("records", {}).get(str(deposition_id))
-            if not rec:
-                return None
-            last_version = rec["versions"][-1] if rec["versions"] else None
-            need_new = last_version is None or rec.get("dirty")
-            if not need_new:
-                return last_version
+        """
+        Publica un deposition. Si hay cambios (dirty=True), crea una nueva versión.
+        Si no hay cambios, retorna la última versión existente.
+        """
+        deposition = self.deposition_repo.get_by_id(deposition_id)
+        if not deposition:
+            return None
 
-            new_version = (last_version.get("version", 0) + 1) if last_version else 1
-            doi = f"10.1234/fakenodo.{deposition_id}.v{new_version}"
-            version = {
-                "version": new_version,
-                "doi": doi,
-                "metadata": rec.get("metadata"),
-                "files": rec.get("files", []).copy(),
-                "created_at": _current_iso(),
-            }
-            rec["versions"].append(version)
-            rec["published"] = True
-            rec["dirty"] = False
-            rec["doi"] = doi
-            rec["updated_at"] = _current_iso()
-            self._save()
-            return version
+        # Obtener última versión
+        last_version = (
+            FakenodoVersion.query.filter_by(deposition_id=deposition_id)
+            .order_by(FakenodoVersion.version.desc())
+            .first()
+        )
+
+        need_new = last_version is None or deposition.dirty
+
+        if not need_new:
+            return last_version.to_dict()
+
+        # Crear nueva versión
+        new_version_num = (last_version.version + 1) if last_version else 1
+        doi = f"10.1234/fakenodo.{deposition_id}.v{new_version_num}"
+
+        # Snapshot de archivos actuales
+        files_snapshot = [file.to_dict() for file in deposition.files]
+
+        version = FakenodoVersion(
+            deposition_id=deposition_id,
+            version=new_version_num,
+            doi=doi,
+            metadata_json=deposition.metadata_json,
+            files_json=json.dumps(files_snapshot),
+        )
+        db.session.add(version)
+
+        # Actualizar deposition
+        deposition.published = True
+        deposition.dirty = False
+        deposition.doi = doi
+        deposition.state = "published"
+        deposition.updated_at = datetime.now(timezone.utc)
+
+        db.session.commit()
+
+        return version.to_dict()
 
     def list_versions(self, deposition_id: int) -> Optional[List[Dict]]:
-        with self._lock:
-            rec = self._db.get("records", {}).get(str(deposition_id))
-            if not rec:
-                return None
-            return rec.get("versions", [])
+        """Lista todas las versiones de un deposition."""
+        deposition = self.deposition_repo.get_by_id(deposition_id)
+        if not deposition:
+            return None
+
+        versions = (
+            FakenodoVersion.query.filter_by(deposition_id=deposition_id).order_by(FakenodoVersion.version.asc()).all()
+        )
+
+        return [v.to_dict() for v in versions]
 
     def update_metadata(self, deposition_id: int, metadata: Optional[Dict]) -> Optional[Dict]:
-        """Update the metadata of a deposition without marking it dirty.
-
-        Returns the updated record, or None if not found.
         """
-        with self._lock:
-            rec = self._db.get("records", {}).get(str(deposition_id))
-            if not rec:
-                return None
-            rec["metadata"] = metadata or {}
-            rec["updated_at"] = _current_iso()
-            # Do NOT change `dirty` — editing metadata alone should not create a new DOI
-            self._save()
-            return rec
+        Actualiza los metadatos de un deposition SIN marcarlo como dirty.
+        Editar metadata no genera nueva versión/DOI.
+        """
+        deposition = self.deposition_repo.get_by_id(deposition_id)
+        if not deposition:
+            return None
+
+        deposition.metadata_json = json.dumps(metadata or {})
+        deposition.updated_at = datetime.now(timezone.utc)
+        # NO cambiar dirty flag
+        db.session.commit()
+
+        return self._deposition_to_dict(deposition)
+
+    def _deposition_to_dict(self, deposition: FakenodoDeposition) -> Dict:
+        """Convierte un deposition a formato dict compatible con Zenodo."""
+        metadata = json.loads(deposition.metadata_json) if deposition.metadata_json else {}
+        files = [f.to_dict() for f in deposition.files]
+        versions = [v.to_dict() for v in deposition.versions]
+
+        return {
+            "id": deposition.id,
+            "conceptrecid": deposition.conceptrecid,
+            "state": deposition.state,
+            "metadata": metadata,
+            "files": files,
+            "versions": versions,
+            "published": deposition.published,
+            "dirty": deposition.dirty,
+            "doi": deposition.doi,
+            "links": {
+                "self": f"/api/deposit/depositions/{deposition.id}",
+                "publish": f"/api/deposit/depositions/{deposition.id}/actions/publish",
+            },
+            "created_at": deposition.created_at.isoformat() + "Z",
+            "updated_at": deposition.updated_at.isoformat() + "Z",
+        }

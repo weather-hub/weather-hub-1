@@ -50,14 +50,19 @@ dsmetadata_service = DSMetaDataService()
 class FakenodoAdapter:
     """Adapter that exposes create_new_deposition, upload_file, publish_deposition
     and get_doi so the rest of the code doesn't need to change.
+
+    Uses dataset.id to generate stable DOIs even if fakenodo_db.json is reset.
     """
 
     def __init__(self, working_dir: str | None = None):
         self.service = FakenodoService(working_dir=working_dir)
+        self.dataset_id = None  # Store dataset ID for DOI generation
 
     def create_new_deposition(self, dataset) -> dict:
+        # Store dataset.id to use for stable DOI generation
+        self.dataset_id = getattr(dataset, "id", None)
         metadata = {
-            "title": getattr(dataset, "title", f"dataset-{getattr(dataset, 'id', '')}"),
+            "title": getattr(dataset, "title", f"dataset-{self.dataset_id}"),
         }
         rec = self.service.create_deposition(metadata=metadata)
         return {"id": rec["id"], "conceptrecid": True, "metadata": rec.get("metadata", {})}
@@ -80,12 +85,26 @@ class FakenodoAdapter:
         return self.service.upload_file(deposition_id, name, content)
 
     def publish_deposition(self, deposition_id):
-        return self.service.publish_deposition(deposition_id)
+        version = self.service.publish_deposition(deposition_id)
+        if version and self.dataset_id:
+            # ✅ Override DOI to use dataset.id instead of deposition_id
+            # This ensures stable DOIs even if fakenodo_db.json is reset
+            new_doi = f"10.1234/fakenodo.{self.dataset_id}.v{version.get('version', 1)}"
+            version["doi"] = new_doi
+        return version
 
     def get_doi(self, deposition_id):
         rec = self.service.get_deposition(deposition_id)
         if not rec:
             return None
+
+        # ✅ If we have a dataset_id, generate stable DOI
+        if self.dataset_id and rec.get("versions"):
+            # Get the version number from the last version
+            version_num = rec["versions"][-1].get("version", 1)
+            return f"10.1234/fakenodo.{self.dataset_id}.v{version_num}"
+
+        # Fallback to stored DOI
         doi = rec.get("doi")
         if doi:
             return doi
@@ -137,7 +156,19 @@ def create_dataset():
     if request.method == "POST":
         dataset = None
 
+        # Debug: log raw form data
+        logger.info(f"Raw request data - publication_type: {request.form.get('publication_type')}")
+        logger.info(
+            f"All feature_models publication_type values: {request.form.getlist('feature_models-0-publication_type')}"
+        )
+
+        # Check available choices
+        logger.info(f"Available publication_type choices: {form.publication_type.choices}")
+        if form.feature_models and len(form.feature_models) > 0:
+            logger.info(f"Feature model 0 publication_type choices: {form.feature_models[0].publication_type.choices}")
+
         if not form.validate_on_submit():
+            logger.error(f"Form validation failed: {form.errors}")
             return jsonify({"message": form.errors}), 400
 
         try:

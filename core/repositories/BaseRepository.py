@@ -25,6 +25,10 @@ class BaseRepository(Generic[T]):
         instance: Optional[T] = self.model.query.get(id)
         return instance
 
+    def get_all(self) -> List[T]:
+        instances: List[T] = self.model.query.all()
+        return instances
+
     def get_by_column(self, column_name: str, value) -> List[T]:
         instances: List[T] = self.session.query(self.model).filter(getattr(self.model, column_name) == value).all()
         return instances
