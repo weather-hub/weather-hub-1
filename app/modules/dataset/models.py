@@ -8,11 +8,11 @@ from app import db
 
 
 class PublicationType(Enum):
-    NONE = "none"
-    REGIONAL = "regional"
-    NATIONAL = "national"
-    CONTINENTAL = "continental"
-    OTHER = "other"
+    NONE = "NONE"
+    REGIONAL = "REGIONAL"
+    NATIONAL = "NATIONAL"
+    CONTINENTAL = "CONTINENTAL"
+    OTHER = "OTHER"
 
 
 class Author(db.Model):

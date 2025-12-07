@@ -1,0 +1,3 @@
+"""
+Fakenodo module HTTP tests.
+"""
