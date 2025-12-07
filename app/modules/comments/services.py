@@ -33,3 +33,13 @@ class CommentService:
             db.or_(Comment.approved == True, Comment.author_id == user.id)
         ).order_by(Comment.created_at.desc()).all()
 
+    def get_comments_for_dataset(self, dataset, user=None):
+            
+            if user and user.is_authenticated and user.id == dataset.user_id:
+                comments = Comment.query.filter_by(dataset_id=dataset.id).order_by(Comment.created_at.desc()).all()
+            elif user and user.is_authenticated:
+                comments = Comment.query.filter(Comment.dataset_id == dataset.id,db.or_(Comment.approved == True, Comment.author_id == user.id)).order_by(Comment.created_at.desc()).all()
+            else:
+                comments = Comment.query.filter_by(dataset_id=dataset.id, approved=True).order_by(Comment.created_at.desc()).all()
+
+            return comments
