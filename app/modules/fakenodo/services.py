@@ -50,11 +50,17 @@ class FakenodoService(BaseService):
             rid = self._next_id()
             record = {
                 "id": rid,
+                "conceptrecid": rid,  # Zenodo compatibility
+                "state": "draft",  # Zenodo compatibility
                 "metadata": metadata or {},
                 "files": [],
                 "versions": [],
                 "published": False,
                 "dirty": False,
+                "links": {  # Zenodo compatibility
+                    "self": f"/api/deposit/depositions/{rid}",
+                    "publish": f"/api/deposit/depositions/{rid}/actions/publish",
+                },
                 "created_at": _current_iso(),
                 "updated_at": _current_iso(),
             }
@@ -119,6 +125,7 @@ class FakenodoService(BaseService):
             rec["published"] = True
             rec["dirty"] = False
             rec["doi"] = doi
+            rec["state"] = "published"  # Update state when published
             rec["updated_at"] = _current_iso()
             self._save()
             return version
