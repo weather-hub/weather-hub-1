@@ -258,8 +258,6 @@ class SizeService:
 
 
 class DSMetaDataEditLogService(BaseService):
-    """Service for tracking minor edits to dataset metadata."""
-
     def __init__(self):
         super().__init__(DSMetaDataEditLogRepository())
 
@@ -272,7 +270,6 @@ class DSMetaDataEditLogService(BaseService):
         new_value: str,
         change_summary: str = None,
     ) -> DSMetaDataEditLog:
-        """Log a single field edit."""
         return self.repository.create(
             ds_meta_data_id=ds_meta_data_id,
             user_id=user_id,
@@ -282,16 +279,7 @@ class DSMetaDataEditLogService(BaseService):
             change_summary=change_summary,
         )
 
-    def log_multiple_edits(
-        self,
-        ds_meta_data_id: int,
-        user_id: int,
-        changes: list,
-    ) -> list:
-        """
-        Log multiple field edits at once.
-        changes = [{'field': 'title', 'old': 'X', 'new': 'Y'}, ...]
-        """
+    def log_multiple_edits(self, ds_meta_data_id: int, user_id: int, changes: list) -> list:
         logs = []
         for change in changes:
             log = self.log_edit(
@@ -306,9 +294,7 @@ class DSMetaDataEditLogService(BaseService):
         return logs
 
     def get_changelog(self, ds_meta_data_id: int) -> list:
-        """Get all edit logs for a dataset, ordered by date descending."""
         return self.repository.get_by_ds_meta_data_id(ds_meta_data_id)
 
     def get_changelog_by_dataset_id(self, dataset_id: int) -> list:
-        """Get all edit logs for a dataset by dataset_id."""
         return self.repository.get_by_dataset_id(dataset_id)

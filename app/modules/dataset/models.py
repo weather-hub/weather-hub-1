@@ -162,27 +162,17 @@ class DOIMapping(db.Model):
 
 
 class DSMetaDataEditLog(db.Model):
-    """
-    Tracks minor edits to dataset metadata that don't generate a new version.
-    Examples: title changes, description updates, tag modifications, author edits.
-    """
+    """Tracks minor edits to dataset metadata that don't generate a new version."""
 
     id = db.Column(db.Integer, primary_key=True)
     ds_meta_data_id = db.Column(db.Integer, db.ForeignKey("ds_meta_data.id"), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     edited_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-
-    # What field was changed
-    field_name = db.Column(db.String(50), nullable=False)  # 'title', 'description', 'tags', 'authors'
-
-    # Old and new values (stored as JSON strings for flexibility)
+    field_name = db.Column(db.String(50), nullable=False)
     old_value = db.Column(db.Text, nullable=True)
     new_value = db.Column(db.Text, nullable=True)
-
-    # Optional: brief description of the change
     change_summary = db.Column(db.String(255), nullable=True)
 
-    # Relationships
     ds_meta_data = db.relationship("DSMetaData", backref=db.backref("edit_logs", lazy=True, cascade="all, delete"))
     user = db.relationship("User", backref=db.backref("dataset_edits", lazy=True))
 

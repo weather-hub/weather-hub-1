@@ -407,10 +407,6 @@ def get_unsynchronized_dataset(dataset_id):
     return render_template("dataset/view_dataset.html", dataset=dataset)
 
 
-# ============================================================================
-# DATASET EDITING, VERSIONS, AND CHANGELOG
-# ============================================================================
-
 edit_log_service = DSMetaDataEditLogService()
 
 
@@ -427,18 +423,15 @@ def edit_dataset(dataset_id):
     if request.method == "GET":
         return render_template("dataset/edit_dataset.html", dataset=dataset)
 
-    # POST: Process edit
     try:
         changes = []
         ds_meta = dataset.ds_meta_data
 
-        # Check title change
         new_title = request.form.get("title", "").strip()
         if new_title and new_title != ds_meta.title:
             changes.append({"field": "title", "old": ds_meta.title, "new": new_title})
             ds_meta.title = new_title
 
-        # Check description change
         new_description = request.form.get("description", "").strip()
         if new_description and new_description != ds_meta.description:
             changes.append(
@@ -450,21 +443,18 @@ def edit_dataset(dataset_id):
             )
             ds_meta.description = new_description
 
-        # Check tags change
         new_tags = request.form.get("tags", "").strip()
         if new_tags != (ds_meta.tags or ""):
             changes.append({"field": "tags", "old": ds_meta.tags or "", "new": new_tags})
             ds_meta.tags = new_tags
 
         if changes:
-            # Log all changes
             edit_log_service.log_multiple_edits(
                 ds_meta_data_id=ds_meta.id,
                 user_id=current_user.id,
                 changes=changes,
             )
 
-            # Update metadata in Fakenodo (doesn't generate new version)
             if ds_meta.deposition_id:
                 fakenodo_service = FakenodoService()
                 fakenodo_service.update_metadata(
@@ -472,7 +462,6 @@ def edit_dataset(dataset_id):
                     {"title": ds_meta.title, "description": ds_meta.description, "tags": ds_meta.tags},
                 )
 
-            # Commit DB changes
             from app import db
 
             db.session.commit()
@@ -491,8 +480,6 @@ def view_dataset_versions(dataset_id):
     """View all published versions of a dataset."""
     dataset = dataset_service.get_or_404(dataset_id)
     ds_meta = dataset.ds_meta_data
-
-    # Get actual file count from dataset
     actual_files_count = dataset.get_files_count()
 
     versions = []
@@ -500,7 +487,6 @@ def view_dataset_versions(dataset_id):
         fakenodo_service = FakenodoService()
         raw_versions = fakenodo_service.list_versions(ds_meta.deposition_id) or []
 
-        # Parse files_json and add files_count for each version
         for v in raw_versions:
             files_count = 0
             if v.get("files_json"):
@@ -510,7 +496,6 @@ def view_dataset_versions(dataset_id):
                 except (json.JSONDecodeError, TypeError):
                     files_count = 0
 
-            # Use actual dataset files count as fallback for current version
             if files_count == 0:
                 v["files_count"] = actual_files_count
             else:
@@ -527,10 +512,8 @@ def view_dataset_versions(dataset_id):
 
 @dataset_bp.route("/dataset/<int:dataset_id>/changelog", methods=["GET"])
 def view_dataset_changelog(dataset_id):
-    """View changelog of minor edits (metadata changes that didn't generate new DOI)."""
+    """View changelog of minor edits."""
     dataset = dataset_service.get_or_404(dataset_id)
-
-    # Get edit logs
     edit_logs = edit_log_service.get_changelog_by_dataset_id(dataset_id)
 
     return render_template(
