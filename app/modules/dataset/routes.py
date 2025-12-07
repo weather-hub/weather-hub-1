@@ -30,6 +30,7 @@ from app.modules.dataset.services import (
     DataSetService,
     DOIMappingService,
     DSDownloadRecordService,
+    DSMetaDataEditLogService,
     DSMetaDataService,
     DSViewRecordService,
 )
@@ -404,3 +405,151 @@ def get_unsynchronized_dataset(dataset_id):
         abort(404)
 
     return render_template("dataset/view_dataset.html", dataset=dataset)
+
+
+# ============================================================================
+# DATASET EDITING, VERSIONS, AND CHANGELOG
+# ============================================================================
+
+edit_log_service = DSMetaDataEditLogService()
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_dataset(dataset_id):
+    """Edit dataset metadata (minor edits that don't generate new version)."""
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    # Check ownership
+    if dataset.user_id != current_user.id:
+        abort(403)
+
+    if request.method == "GET":
+        return render_template("dataset/edit_dataset.html", dataset=dataset)
+
+    # POST: Process edit
+    try:
+        changes = []
+        ds_meta = dataset.ds_meta_data
+
+        # Check title change
+        new_title = request.form.get("title", "").strip()
+        if new_title and new_title != ds_meta.title:
+            changes.append({"field": "title", "old": ds_meta.title, "new": new_title})
+            ds_meta.title = new_title
+
+        # Check description change
+        new_description = request.form.get("description", "").strip()
+        if new_description and new_description != ds_meta.description:
+            changes.append(
+                {
+                    "field": "description",
+                    "old": ds_meta.description[:100] + "..." if len(ds_meta.description) > 100 else ds_meta.description,
+                    "new": new_description[:100] + "..." if len(new_description) > 100 else new_description,
+                }
+            )
+            ds_meta.description = new_description
+
+        # Check tags change
+        new_tags = request.form.get("tags", "").strip()
+        if new_tags != (ds_meta.tags or ""):
+            changes.append({"field": "tags", "old": ds_meta.tags or "", "new": new_tags})
+            ds_meta.tags = new_tags
+
+        if changes:
+            # Log all changes
+            edit_log_service.log_multiple_edits(
+                ds_meta_data_id=ds_meta.id,
+                user_id=current_user.id,
+                changes=changes,
+            )
+
+            # Update metadata in Fakenodo (doesn't generate new version)
+            if ds_meta.deposition_id:
+                fakenodo_service = FakenodoService()
+                fakenodo_service.update_metadata(
+                    ds_meta.deposition_id,
+                    {"title": ds_meta.title, "description": ds_meta.description, "tags": ds_meta.tags},
+                )
+
+            # Commit DB changes
+            from app import db
+
+            db.session.commit()
+
+            return jsonify({"message": "Dataset updated successfully", "changes": len(changes)}), 200
+        else:
+            return jsonify({"message": "No changes detected"}), 200
+
+    except Exception as e:
+        logger.exception(f"Error updating dataset {dataset_id}: {e}")
+        return jsonify({"message": f"Error updating dataset: {str(e)}"}), 500
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/versions", methods=["GET"])
+def view_dataset_versions(dataset_id):
+    """View all published versions of a dataset."""
+    dataset = dataset_service.get_or_404(dataset_id)
+    ds_meta = dataset.ds_meta_data
+
+    # Get actual file count from dataset
+    actual_files_count = dataset.get_files_count()
+
+    versions = []
+    if ds_meta.deposition_id:
+        fakenodo_service = FakenodoService()
+        raw_versions = fakenodo_service.list_versions(ds_meta.deposition_id) or []
+
+        # Parse files_json and add files_count for each version
+        for v in raw_versions:
+            files_count = 0
+            if v.get("files_json"):
+                try:
+                    files_list = json.loads(v["files_json"]) if isinstance(v["files_json"], str) else v["files_json"]
+                    files_count = len(files_list) if files_list else 0
+                except (json.JSONDecodeError, TypeError):
+                    files_count = 0
+
+            # Use actual dataset files count as fallback for current version
+            if files_count == 0:
+                v["files_count"] = actual_files_count
+            else:
+                v["files_count"] = files_count
+
+            versions.append(v)
+
+    return render_template(
+        "dataset/versions.html",
+        dataset=dataset,
+        versions=versions,
+    )
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/changelog", methods=["GET"])
+def view_dataset_changelog(dataset_id):
+    """View changelog of minor edits (metadata changes that didn't generate new DOI)."""
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    # Get edit logs
+    edit_logs = edit_log_service.get_changelog_by_dataset_id(dataset_id)
+
+    return render_template(
+        "dataset/changelog.html",
+        dataset=dataset,
+        edit_logs=edit_logs,
+    )
+
+
+@dataset_bp.route("/api/dataset/<int:dataset_id>/changelog", methods=["GET"])
+def api_dataset_changelog(dataset_id):
+    """API endpoint for dataset changelog."""
+    dataset = dataset_service.get_or_404(dataset_id)
+    edit_logs = edit_log_service.get_changelog_by_dataset_id(dataset_id)
+
+    return jsonify(
+        {
+            "dataset_id": dataset_id,
+            "dataset_title": dataset.ds_meta_data.title,
+            "changelog": [log.to_dict() for log in edit_logs],
+        }
+    )

@@ -8,12 +8,13 @@ from typing import Optional
 from flask import request
 
 from app.modules.auth.services import AuthenticationService
-from app.modules.dataset.models import DataSet, DSMetaData, DSViewRecord
+from app.modules.dataset.models import DataSet, DSMetaData, DSMetaDataEditLog, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
     DataSetRepository,
     DOIMappingRepository,
     DSDownloadRecordRepository,
+    DSMetaDataEditLogRepository,
     DSMetaDataRepository,
     DSViewRecordRepository,
 )
@@ -254,3 +255,60 @@ class SizeService:
             return f"{round(size / (1024 ** 2), 2)} MB"
         else:
             return f"{round(size / (1024 ** 3), 2)} GB"
+
+
+class DSMetaDataEditLogService(BaseService):
+    """Service for tracking minor edits to dataset metadata."""
+
+    def __init__(self):
+        super().__init__(DSMetaDataEditLogRepository())
+
+    def log_edit(
+        self,
+        ds_meta_data_id: int,
+        user_id: int,
+        field_name: str,
+        old_value: str,
+        new_value: str,
+        change_summary: str = None,
+    ) -> DSMetaDataEditLog:
+        """Log a single field edit."""
+        return self.repository.create(
+            ds_meta_data_id=ds_meta_data_id,
+            user_id=user_id,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=new_value,
+            change_summary=change_summary,
+        )
+
+    def log_multiple_edits(
+        self,
+        ds_meta_data_id: int,
+        user_id: int,
+        changes: list,
+    ) -> list:
+        """
+        Log multiple field edits at once.
+        changes = [{'field': 'title', 'old': 'X', 'new': 'Y'}, ...]
+        """
+        logs = []
+        for change in changes:
+            log = self.log_edit(
+                ds_meta_data_id=ds_meta_data_id,
+                user_id=user_id,
+                field_name=change.get("field"),
+                old_value=change.get("old"),
+                new_value=change.get("new"),
+                change_summary=change.get("summary"),
+            )
+            logs.append(log)
+        return logs
+
+    def get_changelog(self, ds_meta_data_id: int) -> list:
+        """Get all edit logs for a dataset, ordered by date descending."""
+        return self.repository.get_by_ds_meta_data_id(ds_meta_data_id)
+
+    def get_changelog_by_dataset_id(self, dataset_id: int) -> list:
+        """Get all edit logs for a dataset by dataset_id."""
+        return self.repository.get_by_dataset_id(dataset_id)
