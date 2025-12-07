@@ -5,7 +5,6 @@
 
 - feat: Integrate Fakenodo service for Zenodo simulation
 - feat: Different DOI + Tags fixed
-- feat: Different DOI + Tags fixed
 - feat: follwing tests
 - feat: following notifications added
 - feat: following feature added
@@ -1281,4 +1280,6 @@
 ## Features
 
 - feat: more CI implemented
+
+
 
