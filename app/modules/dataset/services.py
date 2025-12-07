@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import uuid
+from datetime import datetime
 from typing import Optional
 
 from flask import request
@@ -118,35 +119,47 @@ class DataSetService(BaseService):
         }
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
-            dsmetadata = self.dsmetadata_repository.create(**form.get_dsmetadata())
+
+            # Generar publication_doi automáticamente basado en DOMAIN y timestamp
+            domain = os.getenv("DOMAIN", "localhost")
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            auto_publication_doi = f"https://{domain}/publication/{current_user.id}/{timestamp}"
+
+            # Obtener metadata del formulario y establecer publication_doi automático
+            dsmetadata_data = form.get_dsmetadata()
+            dsmetadata_data["publication_doi"] = auto_publication_doi
+
+            dsmetadata = self.dsmetadata_repository.create(**dsmetadata_data)
             for author_data in [main_author] + form.get_authors():
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
 
             dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
-            # llenalo con los nombres de los ficheros que componen el paquete
+
+            # Procesar archivos CSV del dataset
+            # Nota: Aunque el modelo se llama "feature_model", ahora representa archivos CSV de datos climáticos
             uploaded_filenames = []
-            for feature_model in form.feature_models:
-                filename = feature_model.filename.data
-                fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
-                for author_data in feature_model.get_authors():
+            for csv_file_form in form.feature_models:
+                filename = csv_file_form.filename.data
+
+                # Los archivos CSV no necesitan publication_doi individual, solo metadata básica
+                fmmetadata_data = csv_file_form.get_fmmetadata()
+
+                fmmetadata = self.fmmetadata_repository.create(commit=False, **fmmetadata_data)
+                for author_data in csv_file_form.get_authors():
                     author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
                     fmmetadata.authors.append(author)
 
+                # Crear entrada de feature_model (representa un archivo CSV)
                 fm = self.feature_model_repository.create(
                     commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
                 )
-                uploaded_filenames.append(feature_model.filename.data)
+                uploaded_filenames.append(csv_file_form.filename.data)
 
             file_paths = [os.path.join(current_user.temp_folder(), fn) for fn in uploaded_filenames]
             try:
-                # Si tu flujo es que en create_from_form se añaden varios archivos por feature model,
-                # asegúrate de pasar aquí la lista completa de paths para validar juntos.
-                validate_dataset_package(
-                    # o la lista completa de archivos del paquete
-                    # o True si quieres forzar EXACTAMENTE esas columnas
-                    file_paths=file_paths
-                )
+                # Validar que todos los archivos CSV tengan la estructura correcta
+                validate_dataset_package(file_paths=file_paths)
 
             except Exception:
                 # rollback y propaga error (tu código ya maneja rollback en el except general)
