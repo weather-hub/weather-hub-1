@@ -3,7 +3,6 @@ import logging
 import os
 import shutil
 import uuid
-from datetime import datetime
 from typing import Optional
 
 from flask import request
@@ -120,14 +119,8 @@ class DataSetService(BaseService):
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
 
-            # Generar publication_doi automáticamente basado en DOMAIN y timestamp
-            domain = os.getenv("DOMAIN", "localhost")
-            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            auto_publication_doi = f"https://{domain}/publication/{current_user.id}/{timestamp}"
-
-            # Obtener metadata del formulario y establecer publication_doi automático
+            # Obtener metadata del formulario sin publication_doi auto-generado
             dsmetadata_data = form.get_dsmetadata()
-            dsmetadata_data["publication_doi"] = auto_publication_doi
 
             dsmetadata = self.dsmetadata_repository.create(**dsmetadata_data)
             for author_data in [main_author] + form.get_authors():
