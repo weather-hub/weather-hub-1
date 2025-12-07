@@ -1,0 +1,175 @@
+{% extends "base_template.html" %}
+
+{% block title %}Edit Changelog - {{ dataset.ds_meta_data.title }}{% endblock %}
+
+{% block content %}
+
+<div class="row mb-3">
+    <div class="col-12">
+        <a href="{{ url_for('dataset.subdomain_index', doi=dataset.ds_meta_data.dataset_doi) }}" class="btn btn-outline-secondary btn-sm">
+            <i data-feather="arrow-left" class="center-button-icon"></i>
+            Back to dataset
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-8 col-lg-12 col-md-12 col-sm-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">
+                        <i data-feather="clock" class="me-2"></i>
+                        Edit Changelog
+                    </h4>
+                    <small class="text-muted">
+                        Minor edits to {{ dataset.ds_meta_data.title }}
+                    </small>
+                </div>
+                <span class="badge bg-secondary">{{ edit_logs|length }} edits</span>
+            </div>
+            <div class="card-body">
+                {% if edit_logs %}
+                <div class="timeline">
+                    {% for log in edit_logs %}
+                    <div class="timeline-item mb-4 pb-3 {% if not loop.last %}border-bottom{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge 
+                                    {% if log.field_name == 'title' %}bg-primary
+                                    {% elif log.field_name == 'description' %}bg-info
+                                    {% elif log.field_name == 'tags' %}bg-warning text-dark
+                                    {% elif log.field_name == 'authors' %}bg-success
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ log.field_name|capitalize }}
+                                </span>
+                            </div>
+                            <small class="text-muted">
+                                <i data-feather="calendar" style="width: 14px; height: 14px;"></i>
+                                {{ log.edited_at.strftime('%b %d, %Y at %H:%M') }}
+                            </small>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">Edited by:</small>
+                            <strong>
+                                {% if log.user and log.user.profile %}
+                                    {{ log.user.profile.name }} {{ log.user.profile.surname }}
+                                {% elif log.user %}
+                                    {{ log.user.email }}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </strong>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-2 px-3">
+                                        <small class="text-danger d-block mb-1">
+                                            <i data-feather="minus-circle" style="width: 12px; height: 12px;"></i>
+                                            Old value:
+                                        </small>
+                                        <span class="small">{{ log.old_value or '(empty)' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-2 px-3">
+                                        <small class="text-success d-block mb-1">
+                                            <i data-feather="plus-circle" style="width: 12px; height: 12px;"></i>
+                                            New value:
+                                        </small>
+                                        <span class="small">{{ log.new_value or '(empty)' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if log.change_summary %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i data-feather="message-square" style="width: 12px; height: 12px;"></i>
+                                {{ log.change_summary }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i data-feather="info" class="me-2"></i>
+                    No edits have been made to this dataset's metadata yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Links</h5>
+            </div>
+            <div class="card-body">
+                {% if current_user.is_authenticated and current_user.id == dataset.user_id %}
+                <a href="{{ url_for('dataset.edit_dataset', dataset_id=dataset.id) }}" 
+                   class="btn btn-primary btn-sm w-100 mb-2">
+                    <i data-feather="edit-2" class="me-1"></i>
+                    Edit Dataset
+                </a>
+                {% endif %}
+                <a href="{{ url_for('dataset.view_dataset_versions', dataset_id=dataset.id) }}" 
+                   class="btn btn-outline-secondary btn-sm w-100">
+                    <i data-feather="git-branch" class="me-1"></i>
+                    View Version History
+                </a>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i data-feather="info" class="me-1"></i>
+                    What's Tracked Here
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2">
+                    This changelog tracks <strong>minor edits</strong> - metadata changes that don't affect the scientific content:
+                </p>
+                <ul class="small mb-0">
+                    <li><span class="badge bg-primary">Title</span> corrections</li>
+                    <li><span class="badge bg-info">Description</span> updates</li>
+                    <li><span class="badge bg-warning text-dark">Tags</span> modifications</li>
+                    <li><span class="badge bg-success">Authors</span> information</li>
+                </ul>
+                <hr>
+                <p class="small mb-0 text-muted">
+                    For file changes (which generate new DOIs), see the 
+                    <a href="{{ url_for('dataset.view_dataset_versions', dataset_id=dataset.id) }}">version history</a>.
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Dataset Info</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Current DOI:</strong><br>
+                    <code>{{ dataset.ds_meta_data.dataset_doi }}</code>
+                </p>
+                <p class="mb-0"><strong>Created:</strong><br>
+                    {{ dataset.created_at.strftime('%B %d, %Y') }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
