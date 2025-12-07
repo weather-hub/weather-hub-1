@@ -28,6 +28,7 @@ from app.modules.dataset.services import (
 )
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.zenodo.services import ZenodoService
+from app.modules.comments.services import CommentService
 
 logger = logging.getLogger(__name__)
 
@@ -538,14 +539,8 @@ def subdomain_index(doi):
     all_versions = concept.versions.all()
     latest_version = all_versions[0] if all_versions else None
 
-    if current_user.is_authenticated and current_user.id == current_dataset.user_id:
-        comments = Comment.query.filter_by(dataset_id=current_dataset.id).order_by(Comment.created_at.desc()).all()
-    else:
-        comments = (
-            Comment.query.filter_by(dataset_id=current_dataset.id, approved=True)
-            .order_by(Comment.created_at.desc())
-            .all()
-        )
+    comment_service = CommentService()
+    comments = comment_service.get_comments_for_dataset(current_dataset, current_user)
 
     comment_form = CommentForm()
     # Save the cookie to the user's browser

@@ -20,10 +20,16 @@ class CommentService:
             db.session.commit()
         return comment
 
-    def get_comments_for_dataset(self, dataset_id, approved_only=True):
-        query = Comment.query.filter_by(dataset_id=dataset_id)
-        if approved_only:
-            query = query.filter_by(approved=True)
+    def get_comments_for_dataset(self, dataset, user):
+    
+        if user and user.id == dataset.user_id:
+            return Comment.query \
+                .filter_by(dataset_id=dataset.id) \
+                .order_by(Comment.created_at.desc()) \
+                .all()
 
-        query = query.order_by(Comment.created_at.desc())
-        return query.all()
+        return Comment.query.filter(
+            Comment.dataset_id == dataset.id,
+            db.or_(Comment.approved == True, Comment.author_id == user.id)
+        ).order_by(Comment.created_at.desc()).all()
+
