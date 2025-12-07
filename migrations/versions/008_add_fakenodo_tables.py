@@ -19,36 +19,21 @@ depends_on = None
 
 
 def upgrade():
-    # Update publication_type enum to include REGIONAL, NATIONAL, CONTINENTAL
-    op.execute(
+    # Update publication_type enum to only REGIONAL, NATIONAL, CONTINENTAL, OTHER, NONE
+    # Update both ds_meta_data and fm_meta_data tables
+    for table_name in ["ds_meta_data", "fm_meta_data"]:
+        op.execute(
+            f"""
+            ALTER TABLE {table_name}
+            MODIFY COLUMN publication_type ENUM(
+                'NONE',
+                'REGIONAL',
+                'NATIONAL',
+                'CONTINENTAL',
+                'OTHER'
+            ) NOT NULL
         """
-        ALTER TABLE ds_meta_data 
-        MODIFY COLUMN publication_type ENUM(
-            'NONE',
-            'ANNOTATION_COLLECTION',
-            'BOOK',
-            'BOOK_SECTION',
-            'CONFERENCE_PAPER',
-            'DATA_MANAGEMENT_PLAN',
-            'JOURNAL_ARTICLE',
-            'PATENT',
-            'PREPRINT',
-            'PROJECT_DELIVERABLE',
-            'PROJECT_MILESTONE',
-            'PROPOSAL',
-            'REPORT',
-            'SOFTWARE_DOCUMENTATION',
-            'TAXONOMIC_TREATMENT',
-            'TECHNICAL_NOTE',
-            'THESIS',
-            'WORKING_PAPER',
-            'OTHER',
-            'REGIONAL',
-            'NATIONAL',
-            'CONTINENTAL'
-        ) NOT NULL
-    """
-    )
+        )
 
     # Create fakenodo_deposition table
     try:
@@ -113,33 +98,17 @@ def upgrade():
 
 
 def downgrade():
-    # Revert publication_type enum to original values
-    op.execute(
+    # Revert publication_type enum to original simple values
+    for table_name in ["ds_meta_data", "fm_meta_data"]:
+        op.execute(
+            f"""
+            ALTER TABLE {table_name}
+            MODIFY COLUMN publication_type ENUM(
+                'NONE',
+                'OTHER'
+            ) NOT NULL
         """
-        ALTER TABLE ds_meta_data 
-        MODIFY COLUMN publication_type ENUM(
-            'NONE',
-            'ANNOTATION_COLLECTION',
-            'BOOK',
-            'BOOK_SECTION',
-            'CONFERENCE_PAPER',
-            'DATA_MANAGEMENT_PLAN',
-            'JOURNAL_ARTICLE',
-            'PATENT',
-            'PREPRINT',
-            'PROJECT_DELIVERABLE',
-            'PROJECT_MILESTONE',
-            'PROPOSAL',
-            'REPORT',
-            'SOFTWARE_DOCUMENTATION',
-            'TAXONOMIC_TREATMENT',
-            'TECHNICAL_NOTE',
-            'THESIS',
-            'WORKING_PAPER',
-            'OTHER'
-        ) NOT NULL
-    """
-    )
+        )
 
     try:
         op.drop_table("fakenodo_version")

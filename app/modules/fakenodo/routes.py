@@ -54,8 +54,11 @@ def delete_deposition_fakenodo(deposition_id):
 @fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/files", methods=["POST"])
 def upload_file(deposition_id):
     uploaded = request.files.get("file")
-    name = request.form.get("name") or (uploaded.filename if uploaded else None)
-    content = uploaded.read() if uploaded else None
+    if not uploaded:
+        return jsonify({"message": "No file provided"}), 400
+
+    name = request.form.get("name") or uploaded.filename
+    content = uploaded.read()
 
     if not name:
         return jsonify({"message": "No file name provided"}), 400
