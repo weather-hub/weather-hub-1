@@ -206,6 +206,50 @@ class DSMetaDataService(BaseService):
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.repository.filter_by_doi(doi)
 
+    def find_dataset_by_any_doi(self, doi: str):
+        """
+        Find dataset by DOI, checking:
+        1. Current DOI in DSMetaData
+        2. Any version DOI in FakenodoVersion (including current)
+        Returns (ds_meta, version_info) where version_info contains Fakenodo files for Fakenodo DOIs
+        """
+        import json
+
+        from app.modules.fakenodo.models import FakenodoVersion
+
+        # Check if this is a Fakenodo DOI (format: 10.1234/fakenodo.X.vY)
+        is_fakenodo_doi = "fakenodo" in doi.lower()
+
+        if is_fakenodo_doi:
+            # For Fakenodo DOIs, always get version info from FakenodoVersion
+            fakenodo_version = FakenodoVersion.query.filter_by(doi=doi).first()
+            if fakenodo_version:
+                # Find the dataset that has this deposition_id
+                ds_meta = DSMetaData.query.filter_by(deposition_id=fakenodo_version.deposition_id).first()
+                if ds_meta:
+                    # Check if this is the current version
+                    is_current = ds_meta.dataset_doi == doi
+
+                    # Return dataset with version info (always for Fakenodo DOIs)
+                    version_info = {
+                        "version": fakenodo_version.version,
+                        "doi": fakenodo_version.doi,
+                        "files": json.loads(fakenodo_version.files_json) if fakenodo_version.files_json else [],
+                        "metadata": (
+                            json.loads(fakenodo_version.metadata_json) if fakenodo_version.metadata_json else {}
+                        ),
+                        "created_at": fakenodo_version.created_at,
+                        "is_current": is_current,
+                    }
+                    return (ds_meta, version_info)
+
+        # For non-Fakenodo DOIs, check DSMetaData
+        ds_meta = self.filter_by_doi(doi)
+        if ds_meta:
+            return (ds_meta, None)  # Current version without version_info
+
+        return (None, None)
+
 
 class DSViewRecordService(BaseService):
     def __init__(self):
