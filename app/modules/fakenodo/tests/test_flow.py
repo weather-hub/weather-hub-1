@@ -60,7 +60,11 @@ def test_adapter_dataset_flow(test_client, tmp_path):
             self.filename = filename
             self.file_path = path
 
-    ds = DummyDataset(1, title="mydataset")
+    # Use a unique ID to avoid conflicts with other tests
+    import time
+
+    unique_id = int(time.time() * 1000) % 1000000
+    ds = DummyDataset(unique_id, title="mydataset")
 
     # create deposition via adapter
     resp = adapter.create_new_deposition(ds)
