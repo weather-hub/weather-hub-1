@@ -1,6 +1,7 @@
 import os
 import time
 
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -28,9 +29,15 @@ def count_datasets(driver, host):
 
 def test_upload_dataset():
     driver = initialize_driver()
+    # Nombre temporal para el readme
+    readme_path = os.path.abspath("dummy_readme.txt")
 
     try:
         host = get_host_for_selenium_testing()
+
+        # Crear un README temporal para la prueba (Requerido por el validador)
+        with open(readme_path, "w") as f:
+            f.write("Este es un fichero README de prueba para Selenium.")
 
         # Open the login page
         driver.get(f"{host}/login")
@@ -57,9 +64,9 @@ def test_upload_dataset():
 
         # Find basic info and UVL model and fill values
         title_field = driver.find_element(By.NAME, "title")
-        title_field.send_keys("Title")
+        title_field.send_keys("Selenium Test Dataset")
         desc_field = driver.find_element(By.NAME, "desc")
-        desc_field.send_keys("Description")
+        desc_field.send_keys("Description via Selenium")
         tags_field = driver.find_element(By.NAME, "tags")
         tags_field.send_keys("tag1,tag2")
 
@@ -86,40 +93,62 @@ def test_upload_dataset():
         file1_path = os.path.abspath("app/modules/dataset/csv_examples/file1.csv")
         file2_path = os.path.abspath("app/modules/dataset/csv_examples/file2.csv")
 
-        # Subir el primer archivo
+        # --- SUBIDA DE FICHEROS CON RE-BÚSQUEDA ---
+
+        # 1. Subir el primer archivo
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
         dropzone.send_keys(file1_path)
         wait_for_page_to_load(driver)
 
-        # Subir el segundo archivo
+        # 2. Subir el segundo archivo (BUSCAMOS EL ELEMENTO DE NUEVO)
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
         dropzone.send_keys(file2_path)
         wait_for_page_to_load(driver)
 
-        # No per-file author edits for CSV examples in this test; authors provided in the main form
+        # 3. Subir el README (BUSCAMOS EL ELEMENTO DE NUEVO)
+        dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
+        dropzone.send_keys(readme_path)
+        wait_for_page_to_load(driver)
+
+        # ---------------------------------------------
 
         # Check I agree and send form
         check = driver.find_element(By.ID, "agreeCheckbox")
         check.send_keys(Keys.SPACE)
-        wait_for_page_to_load(driver)
+        time.sleep(1)  # Pequeña espera para UI
 
         upload_btn = driver.find_element(By.ID, "upload_button")
-        upload_btn.send_keys(Keys.RETURN)
-        wait_for_page_to_load(driver)
-        time.sleep(2)  # Force wait time
 
-        assert driver.current_url == f"{host}/dataset/list", "Test failed!"
+        if upload_btn.is_enabled():
+            upload_btn.send_keys(Keys.RETURN)
+
+        wait_for_page_to_load(driver)
+        time.sleep(2)  # Force wait time para redirección
+
+        # Diagnóstico de errores si no redirige
+        if driver.current_url != f"{host}/dataset/list":
+            try:
+                error_elem = driver.find_element(By.ID, "upload_error")
+                if error_elem.is_displayed():
+                    print(f"DEBUG: Error mostrado en UI: {error_elem.text}")
+            except NoSuchElementException:
+                print(f"DEBUG: No redirigió y no se encontró mensaje de error. URL: {driver.current_url}")
+
+        assert driver.current_url == f"{host}/dataset/list", "Test failed! No se redirigió a la lista de datasets."
 
         # Count final datasets
         final_datasets = count_datasets(driver, host)
-        assert final_datasets == initial_datasets + 1, "Test failed!"
+        assert final_datasets == initial_datasets + 1, "Test failed! El contador de datasets no incrementó."
 
         print("Test passed!")
 
     finally:
+        # Limpieza
+        if os.path.exists(readme_path):
+            os.remove(readme_path)
         # Close the browser
         close_driver(driver)
 
 
-# Call the test function
-test_upload_dataset()
+if __name__ == "__main__":
+    test_upload_dataset()
