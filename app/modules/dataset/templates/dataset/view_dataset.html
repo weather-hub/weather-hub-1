@@ -330,6 +330,12 @@
                     <i data-feather="edit-2" class="center-button-icon"></i>
                     Edit Dataset
                 </a>
+                
+                <a href="{{ url_for('dataset.republish_dataset_form', dataset_id=dataset.id) }}" 
+                   class="btn btn-warning btn-sm w-100 mb-2" style="border-radius: 5px;">
+                    <i data-feather="upload-cloud" class="center-button-icon"></i>
+                    Re-publish with New Files
+                </a>
                 {% endif %}
                 
                 <a href="{{ url_for('dataset.view_dataset_versions', dataset_id=dataset.id) }}" 

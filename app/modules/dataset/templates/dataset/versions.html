@@ -77,7 +77,29 @@
     </div>
 
     <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12">
+        
+        {% if current_user.is_authenticated and current_user.id == dataset.user_id %}
         <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i data-feather="upload-cloud" class="me-1"></i>
+                    Create New Version
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-3">
+                    Upload new or modified files to create a new version with a new DOI.
+                </p>
+                <a href="{{ url_for('dataset.republish_dataset_form', dataset_id=dataset.id) }}" 
+                   class="btn btn-warning w-100">
+                    <i data-feather="upload-cloud" class="me-1"></i>
+                    Re-publish Dataset
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card {% if current_user.is_authenticated and current_user.id == dataset.user_id %}mt-3{% endif %}">
             <div class="card-header">
                 <h5 class="mb-0">About Versions</h5>
             </div>
@@ -113,4 +135,3 @@
 </div>
 
 {% endblock %}
-

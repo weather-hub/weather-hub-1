@@ -536,3 +536,100 @@ def api_dataset_changelog(dataset_id):
             "changelog": [log.to_dict() for log in edit_logs],
         }
     )
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/republish", methods=["GET"])
+@login_required
+def republish_dataset_form(dataset_id):
+    """Show form to upload new files for re-publication."""
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    if dataset.user_id != current_user.id:
+        abort(403)
+
+    # Check if dataset is published
+    if not dataset.ds_meta_data.dataset_doi:
+        return redirect(url_for("dataset.subdomain_index", doi=dataset.ds_meta_data.dataset_doi))
+
+    return render_template("dataset/republish_dataset.html", dataset=dataset)
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/republish", methods=["POST"])
+@login_required
+def republish_dataset(dataset_id):
+    """
+    Re-publish dataset with new/modified files.
+    Generates new version with new DOI.
+    """
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    if dataset.user_id != current_user.id:
+        abort(403)
+
+    temp_folder = current_user.temp_folder()
+    if not os.path.exists(temp_folder) or not os.listdir(temp_folder):
+        return jsonify({"message": "No files to upload. Please upload files first."}), 400
+
+    try:
+        ds_meta = dataset.ds_meta_data
+
+        if not ds_meta.deposition_id:
+            return jsonify({"message": "Dataset has no Fakenodo deposition"}), 400
+
+        fakenodo_service = FakenodoService()
+
+        # Upload each file from temp folder (marks dirty=True)
+        uploaded_files = []
+        for filename in os.listdir(temp_folder):
+            file_path = os.path.join(temp_folder, filename)
+            if os.path.isfile(file_path):
+                with open(file_path, "rb") as f:
+                    content = f.read()
+                result = fakenodo_service.upload_file(ds_meta.deposition_id, filename, content)
+                if result:
+                    uploaded_files.append(filename)
+                    logger.info(f"Uploaded file {filename} to deposition {ds_meta.deposition_id}")
+
+        if not uploaded_files:
+            return jsonify({"message": "No valid files were uploaded"}), 400
+
+        # Publish new version (dirty=True generates v2, v3, etc.)
+        version = fakenodo_service.publish_deposition(ds_meta.deposition_id)
+
+        if not version:
+            return jsonify({"message": "Failed to publish new version"}), 500
+
+        # Update DOI in dataset
+        new_doi = version.get("doi")
+        old_doi = ds_meta.dataset_doi
+        dataset_service.update_dsmetadata(ds_meta.id, dataset_doi=new_doi)
+
+        # Move files from temp to dataset folder
+        dataset_service.move_feature_models(dataset)
+
+        # Clean temp folder
+        if os.path.exists(temp_folder):
+            shutil.rmtree(temp_folder)
+
+        logger.info(
+            f"Dataset {dataset_id} republished: v{version.get('version')} "
+            f"with {len(uploaded_files)} files. New DOI: {new_doi}"
+        )
+
+        return (
+            jsonify(
+                {
+                    "message": "New version published successfully",
+                    "version": version.get("version"),
+                    "doi": new_doi,
+                    "old_doi": old_doi,
+                    "files_uploaded": len(uploaded_files),
+                    "files": uploaded_files,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.exception(f"Error republishing dataset {dataset_id}: {e}")
+        return jsonify({"message": f"Error: {str(e)}"}), 500
