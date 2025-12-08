@@ -12,7 +12,14 @@ def send_email():
     smtp_port = int(os.environ.get("MAIL_PORT", 465))
 
     # Lista de destinatarios (puede ser una variable de entorno también)
-    team = ["miguelmirceballos@gmail.com"]
+    team = [
+        "miguelmirceballos@gmail.com",
+        "ignmardia1@alum.us.es",
+        "oscgomgon@alum.us.es",
+        "alecasbar@alum.us.es",
+        "juacarsos@alum.us.es",
+        "migreggar@alum.us.es",
+    ]
 
     msg = EmailMessage()
     msg["Subject"] = "🚀 Notificación de Push: Rama Trunk Actualizada"
