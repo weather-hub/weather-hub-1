@@ -5,8 +5,6 @@ on:
     branches:
       - main
       - trunk
-    # IMPORTANTE: Ignorar los archivos que el propio workflow modifica
-    # para evitar un bucle infinito de commits.
     paths-ignore:
       - "pyproject.toml"
       - "CHANGELOG.md"
@@ -18,10 +16,20 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # 1. Generamos el token de la App
+      - name: Obtener Token de la App
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      # 2. Checkout USANDO el token de la App
       - name: Checkout completo
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Necesario para historial y tags
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }} # <--- AQUÍ LA MAGIA
 
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -37,20 +45,20 @@ jobs:
 
       - name: Publicar cambios
         if: steps.manager.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }} # Usamos el token de la App
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Configuramos git para que firme como el bot
+          git config user.name "weather-hub-releaser[bot]"
+          git config user.email "${{ secrets.APP_ID }}+weather-hub-releaser[bot]@users.noreply.github.com"
 
-          # Añadimos los dos archivos modificados por el script
           git add pyproject.toml CHANGELOG.md
 
-          # Hacemos UN solo commit atómico
           VERSION=${{ steps.manager.outputs.version }}
           git commit -m "chore(release): bump version to $VERSION [skip ci]"
 
-          # Creamos el tag
           git tag "v$VERSION"
 
-          # Push (commits y tags)
-          git push
+          # Push usando el token que ya configuramos en el checkout
+          git push origin HEAD:trunk
           git push origin "v$VERSION"
