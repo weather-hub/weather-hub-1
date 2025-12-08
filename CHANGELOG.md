@@ -1,3 +1,9 @@
+# Version 1.2.0 (2025-12-08)
+
+## Features
+- feat: fix email workflow functionality
+
+
 # Version 1.1.0 (2025-12-08)
 
 ## Features
