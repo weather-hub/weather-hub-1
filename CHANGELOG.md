@@ -1,3 +1,12 @@
+# Version 1.3.0 (2025-12-08)
+
+## Features
+- feat: add emails
+
+## Fixes
+- fix: merge trunk
+
+
 # Version 1.2.0 (2025-12-08)
 
 ## Features
