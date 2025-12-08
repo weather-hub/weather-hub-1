@@ -1,3 +1,9 @@
+# Version 1.3.1 (2025-12-08)
+
+## Fixes
+- fix: remove useless workflows
+
+
 # Version 1.3.0 (2025-12-08)
 
 ## Features
