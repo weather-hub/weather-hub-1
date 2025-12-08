@@ -1,0 +1,56 @@
+name: Release Automática
+
+on:
+  push:
+    branches:
+      - main
+      - trunk
+    # IMPORTANTE: Ignorar los archivos que el propio workflow modifica
+    # para evitar un bucle infinito de commits.
+    paths-ignore:
+      - "pyproject.toml"
+      - "CHANGELOG.md"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout completo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Necesario para historial y tags
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install semver tomlkit
+
+      - name: Calcular versión y generar archivos
+        id: manager
+        run: python .github/scripts/release_manager.py
+
+      - name: Publicar cambios
+        if: steps.manager.outputs.released == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Añadimos los dos archivos modificados por el script
+          git add pyproject.toml CHANGELOG.md
+
+          # Hacemos UN solo commit atómico
+          VERSION=${{ steps.manager.outputs.version }}
+          git commit -m "chore(release): bump version to $VERSION [skip ci]"
+
+          # Creamos el tag
+          git tag "v$VERSION"
+
+          # Push (commits y tags)
+          git push
+          git push origin "v$VERSION"
