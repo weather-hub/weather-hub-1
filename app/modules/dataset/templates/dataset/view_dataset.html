@@ -13,6 +13,10 @@
     .option-button:last-child {
         margin-bottom: 0;
     }
+    
+    .version-redirect-alert {
+        border-left: 4px solid #0d6efd;
+    }
 </style>
 {% endblock %}
 
@@ -225,16 +229,20 @@
                 <div class="row">
                     <div class="col-12 d-flex justify-content-between align-items-center">
                         <h4 style="margin-bottom: 0px">Weather Files</h4>
-                        <h4 style="margin-bottom: 0px;"><span class="badge bg-dark">{{ dataset.get_files_count() }}</span></h4>
+                        <h4 style="margin-bottom: 0px;">
+                            <span class="badge bg-dark">
+                                {{ dataset.get_files_count() }}
+                            </span>
+                        </h4>
                     </div>
                 </div>
                 
 
             </div>
             
-
+            {# Show dataset files #}
             {% for feature_model in dataset.feature_models %}
-                {% for file in feature_model.files %}
+                    {% for file in feature_model.files %}
                     <div class="list-group-item">
                         
                         <div class="row">
@@ -329,6 +337,12 @@
                    class="btn btn-outline-primary btn-sm w-100 mb-2" style="border-radius: 5px;">
                     <i data-feather="edit-2" class="center-button-icon"></i>
                     Edit Dataset
+                </a>
+                
+                <a href="{{ url_for('dataset.republish_dataset_form', dataset_id=dataset.id) }}" 
+                   class="btn btn-warning btn-sm w-100 mb-2" style="border-radius: 5px;">
+                    <i data-feather="upload-cloud" class="center-button-icon"></i>
+                    Re-publish with New Files
                 </a>
                 {% endif %}
                 

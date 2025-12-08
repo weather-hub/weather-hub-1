@@ -31,21 +31,53 @@ class FakenodoService(BaseService):
         self.file_repo = FakenodoFileRepository()
         self.version_repo = FakenodoVersionRepository()
 
-    def create_deposition(self, metadata: Optional[Dict] = None) -> Dict:
-        """Crea un nuevo deposition en estado draft."""
-        deposition = FakenodoDeposition(
-            conceptrecid=0,  # Se actualizará después
-            state="draft",
-            metadata_json=json.dumps(metadata or {}),
-            published=False,
-            dirty=False,
-        )
-        db.session.add(deposition)
-        db.session.flush()  # Obtener el ID
+    def create_deposition(self, metadata: Optional[Dict] = None, deposition_id: Optional[int] = None) -> Dict:
+        """Crea un nuevo deposition en estado draft.
 
-        # Actualizar conceptrecid con el mismo ID
-        deposition.conceptrecid = deposition.id
-        db.session.commit()
+        Args:
+            metadata: Metadata del deposition
+            deposition_id: ID específico para el deposition (debe ser el dataset.id)
+        """
+        if deposition_id:
+            # Verificar que no existe ya un deposition con este ID
+            existing = self.deposition_repo.get_by_id(deposition_id)
+            if existing:
+                raise ValueError(f"Deposition with ID {deposition_id} already exists")
+
+            # Crear deposition con ID específico usando SQL directo
+            db.session.execute(
+                db.text(
+                    "INSERT INTO fakenodo_deposition "
+                    "(id, conceptrecid, state, metadata_json, published, dirty, created_at, updated_at) "
+                    "VALUES (:id, :conceptrecid, :state, :metadata_json, :published, :dirty, :created_at, :updated_at)"
+                ),
+                {
+                    "id": deposition_id,
+                    "conceptrecid": deposition_id,
+                    "state": "draft",
+                    "metadata_json": json.dumps(metadata or {}),
+                    "published": False,
+                    "dirty": False,
+                    "created_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc),
+                },
+            )
+            db.session.commit()
+
+            # Recuperar el deposition creado
+            deposition = self.deposition_repo.get_by_id(deposition_id)
+        else:
+            deposition = FakenodoDeposition(
+                conceptrecid=0,  # Se actualizará después
+                state="draft",
+                metadata_json=json.dumps(metadata or {}),
+                published=False,
+                dirty=False,
+            )
+            db.session.add(deposition)
+            db.session.flush()  # Obtener el ID
+            deposition.conceptrecid = deposition.id
+            db.session.commit()
 
         return self._deposition_to_dict(deposition)
 

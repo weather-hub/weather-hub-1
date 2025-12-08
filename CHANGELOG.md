@@ -1,8 +1,11 @@
-# Changelog - Version 1.15.0 (2025-12-07)
+# Changelog - Version 1.15.0 (2025-12-08)
 
 
 ## Features
 
+- feat: merge adding files creates new DOI and fix seeders
+- feat: Adding files creates new DOI, fix seeders
+- feat: Adding files versions implemented
 - feat: added dataset editing and minor edits viewing features
 - feat:
 - feat: add dataset edit changelog and version history

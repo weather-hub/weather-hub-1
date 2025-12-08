@@ -5,9 +5,8 @@ Revises: 008_add_fakenodo_tables
 Create Date: 2025-11-30
 """
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "009_add_ds_metadata_edit_log"
@@ -49,4 +48,3 @@ def downgrade():
     op.drop_index(op.f("ix_ds_meta_data_edit_log_edited_at"), table_name="ds_meta_data_edit_log")
     op.drop_index(op.f("ix_ds_meta_data_edit_log_ds_meta_data_id"), table_name="ds_meta_data_edit_log")
     op.drop_table("ds_meta_data_edit_log")
-
