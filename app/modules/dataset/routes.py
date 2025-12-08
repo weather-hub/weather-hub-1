@@ -736,7 +736,7 @@ def republish_dataset(dataset_id):
             # Read file content to calculate checksum
             with open(temp_file_path, "rb") as f:
                 content = f.read()
-                checksum = hashlib.md5(content).hexdigest()
+                checksum = hashlib.md5(content, usedforsecurity=False).hexdigest()
 
             # Create Hubfile entry
             new_hubfile = Hubfile(name=filename, checksum=checksum, size=len(content), feature_model_id=new_fm.id)
