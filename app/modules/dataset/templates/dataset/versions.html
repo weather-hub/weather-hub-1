@@ -1,0 +1,151 @@
+{% extends "base_template.html" %}
+
+{% block title %}Version History - {{ dataset.ds_meta_data.title }}{% endblock %}
+
+{% block content %}
+
+<div class="row mb-3">
+    <div class="col-12">
+        <a href="{{ url_for('dataset.subdomain_index', doi=dataset.ds_meta_data.dataset_doi) }}" class="btn btn-outline-secondary btn-sm">
+            <i data-feather="arrow-left" class="center-button-icon"></i>
+            Back to dataset
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-8 col-lg-12 col-md-12 col-sm-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i data-feather="git-branch" class="me-2"></i>
+                    Version History
+                </h4>
+                <small class="text-muted">
+                    {{ dataset.ds_meta_data.title }}
+                </small>
+            </div>
+            <div class="card-body">
+                {% if versions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Version</th>
+                                <th>DOI</th>
+                                <th>Published</th>
+                                <th>Files</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for version in versions|reverse %}
+                            <tr {% if loop.first %}class="table-success"{% endif %}>
+                                <td>
+                                    <span class="badge {% if loop.first %}bg-success{% else %}bg-secondary{% endif %}">
+                                        v{{ version.version }}
+                                    </span>
+                                    {% if loop.first %}
+                                    <span class="badge bg-info ms-1">Current</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('dataset.subdomain_index', doi=version.doi) }}" 
+                                       class="text-decoration-none" 
+                                       title="View this version">
+                                        <code>{{ version.doi }}</code>
+                                        <i data-feather="external-link" class="ms-1" style="width: 14px; height: 14px;"></i>
+                                    </a>
+                                </td>
+                                <td>
+                                    {{ version.created_at[:10] if version.created_at else 'N/A' }}
+                                </td>
+                                <td>
+                                    {% if version.files_count is defined and version.files_count > 0 %}
+                                        {{ version.files_count }} files
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('dataset.subdomain_index', doi=version.doi) }}" 
+                                       class="btn btn-outline-primary btn-sm"
+                                       title="View version {{ version.version }}">
+                                        <i data-feather="eye" style="width: 14px; height: 14px;"></i>
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i data-feather="info" class="me-2"></i>
+                    No version history available for this dataset.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12">
+        
+        {% if current_user.is_authenticated and current_user.id == dataset.user_id %}
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i data-feather="upload-cloud" class="me-1"></i>
+                    Create New Version
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-3">
+                    Upload new or modified files to create a new version with a new DOI.
+                </p>
+                <a href="{{ url_for('dataset.republish_dataset_form', dataset_id=dataset.id) }}" 
+                   class="btn btn-warning w-100">
+                    <i data-feather="upload-cloud" class="me-1"></i>
+                    Re-publish Dataset
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card {% if current_user.is_authenticated and current_user.id == dataset.user_id %}mt-3{% endif %}">
+            <div class="card-header">
+                <h5 class="mb-0">About Versions</h5>
+            </div>
+            <div class="card-body">
+                <p class="small">
+                    <strong>New versions</strong> are created when files are added, removed, or modified.
+                    Each version has its own unique DOI.
+                </p>
+                <p class="small mb-0">
+                    <strong>Minor edits</strong> (title, description, tags) don't create new versions.
+                    See the <a href="{{ url_for('dataset.view_dataset_changelog', dataset_id=dataset.id) }}">changelog</a> for those edits.
+                </p>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Current Version</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>DOI:</strong><br>
+                    <code>{{ dataset.ds_meta_data.dataset_doi }}</code>
+                </p>
+                <p><strong>Files:</strong><br>
+                    {{ dataset.get_files_count() }} files
+                </p>
+                <p class="mb-0"><strong>Total Size:</strong><br>
+                    {{ dataset.get_file_total_size_for_human() }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

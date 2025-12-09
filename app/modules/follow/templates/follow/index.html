@@ -1,0 +1,410 @@
+{% extends 'base_template.html' %}
+
+{% block content %}
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Following</h1>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="mb-3">
+        {% for category, message in messages %}
+          {% set alert_class = 'danger' if category == 'error' else category %}
+          <div class="alert alert-{{ alert_class }}" role="alert">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <form method="get" action="{{ url_for('follow.following_index') }}">
+        <div class="row gx-3 align-items-center">
+          <div class="col-md-9">
+            <label class="form-label mb-1">Search users or communities</label>
+            <input
+              type="text"
+              name="q"
+              class="form-control"
+              placeholder="Type a name, surname, email or community name..."
+              value="{{ q or '' }}"
+            />
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100 mt-3 mt-md-0">Search</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if q %}
+    <h4 class="mb-3">Search results for "<span class="fw-semibold">{{ q }}</span>"</h4>
+
+    <div class="row g-4 mb-4">
+      {% for c in search_communities %}
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card h-100 shadow-sm">
+            {% if c.visual_identity %}
+              <img src="{{ c.visual_identity }}" class="card-img-top" alt="{{ c.name }}"
+                   style="max-height:160px; object-fit:cover;">
+            {% endif %}
+
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">{{ c.name }}</h5>
+              <p class="card-text text-truncate">{{ c.description or 'No description provided' }}</p>
+
+              <div class="mt-auto d-flex justify-content-between gap-2">
+                <form method="post" action="{{ url_for('follow.follow_community', community_id=c.id) }}">
+                  <button type="submit" class="btn btn-success btn-sm">Follow</button>
+                </form>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#communitySearchDetail{{ c.id }}"
+                >
+                  Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# MODAL DETALLE COMUNIDAD (RESULTADO BÚSQUEDA) #}
+        <div class="modal fade" id="communitySearchDetail{{ c.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">{{ c.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p>{{ c.description or 'No description provided' }}</p>
+
+                <hr/>
+                <h6>Curators</h6>
+                <ul>
+                  {% for u in c.curators %}
+                    <li>
+                      {{ u.profile.name }} {{ u.profile.surname }}
+                      {% if u.email %} ({{ u.email }}){% endif %}
+                    </li>
+                  {% else %}
+                    <li class="text-muted">No curators</li>
+                  {% endfor %}
+                </ul>
+
+                <hr/>
+                <h6>Datasets</h6>
+                <ul>
+                  {% set accepted = c.proposals | selectattr('status','equalto','accepted') | list %}
+                  {% if accepted and accepted|length > 0 %}
+                    {% for p in accepted %}
+                      <li>
+                        {% if p.dataset_url %}
+                          <a href="{{ p.dataset_url }}">
+                            {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}
+                          </a>
+                        {% else %}
+                          {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }} (Unsynchronized)
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  {% else %}
+                    <li class="text-muted">No datasets in this community</li>
+                  {% endif %}
+                </ul>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+
+      {% for u in search_users %}
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card h-100 shadow-sm">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">
+                {{ u.profile.name }} {{ u.profile.surname }}
+              </h5>
+              <p class="card-text text-muted mb-2">{{ u.email }}</p>
+
+              <div class="mt-auto d-flex justify-content-between gap-2">
+                <form method="post" action="{{ url_for('follow.follow_author', author_id=u.id) }}">
+                  <button type="submit" class="btn btn-success btn-sm">Follow</button>
+                </form>
+                <button
+                  type="button"
+                  class="btn btn-outline-secondary btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#authorSearchDetail{{ u.id }}"
+                >
+                  Details
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# MODAL DETALLE AUTOR (RESULTADO BÚSQUEDA) #}
+        <div class="modal fade" id="authorSearchDetail{{ u.id }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">{{ u.profile.name }} {{ u.profile.surname }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p><strong>Email:</strong> {{ u.email }}</p>
+                {% if u.profile.affiliation %}
+                  <p><strong>Affiliation:</strong> {{ u.profile.affiliation }}</p>
+                {% endif %}
+                {% if u.profile.orcid %}
+                  <p><strong>ORCID:</strong> {{ u.profile.orcid }}</p>
+                {% endif %}
+
+                <hr/>
+                <h6>Curator in communities</h6>
+                <ul>
+                  {% for c in u.communities %}
+                    <li>{{ c.name }}</li>
+                  {% else %}
+                    <li class="text-muted">This author is not a curator in any community.</li>
+                  {% endfor %}
+                </ul>
+
+                <hr/>
+                <h6>Datasets</h6>
+                <ul>
+                  {% set user_datasets = u.following_datasets or [] %}
+                  {% if user_datasets %}
+                    {% for d in user_datasets %}
+                      <li>
+                        {% set doi = d.ds_meta_data.dataset_doi %}
+                        {% if doi %}
+                          <a href="{{ url_for('dataset.subdomain_index', doi=doi) }}">
+                            {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }}
+                          </a>
+                        {% else %}
+                          {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }} (Unsynchronized)
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  {% else %}
+                    <li class="text-muted">This author has no datasets yet.</li>
+                  {% endif %}
+                </ul>
+
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+
+      {% if not search_communities and not search_users %}
+        <div class="col-12">
+          <div class="alert alert-info mb-0">
+            No results found.
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <hr class="my-4">
+  {% endif %}
+
+  <h4 class="mb-3">Communities you follow</h4>
+  <div class="row g-4 mb-4">
+    {% for c in followed_communities %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+          {% if c.visual_identity %}
+            <img src="{{ c.visual_identity }}" class="card-img-top" alt="{{ c.name }}"
+                 style="max-height:160px; object-fit:cover;">
+          {% endif %}
+
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ c.name }}</h5>
+            <p class="card-text text-truncate">{{ c.description or 'No description provided' }}</p>
+
+            <div class="mt-auto d-flex justify-content-between gap-2">
+              <form method="post" action="{{ url_for('follow.unfollow_community', community_id=c.id) }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Unfollow</button>
+              </form>
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#communityFollowDetail{{ c.id }}"
+              >
+                Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# MODAL DETALLE COMUNIDAD (LISTA SEGUIDAS) #}
+      <div class="modal fade" id="communityFollowDetail{{ c.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">{{ c.name }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p>{{ c.description or 'No description provided' }}</p>
+
+              <hr/>
+              <h6>Curators</h6>
+              <ul>
+                {% for u in c.curators %}
+                  <li>
+                    {{ u.profile.name }} {{ u.profile.surname }}
+                    {% if u.email %} ({{ u.email }}){% endif %}
+                  </li>
+                {% else %}
+                  <li class="text-muted">No curators</li>
+                {% endfor %}
+              </ul>
+
+              <hr/>
+              <h6>Datasets</h6>
+              <ul>
+                {% set accepted = c.proposals | selectattr('status','equalto','accepted') | list %}
+                {% if accepted and accepted|length > 0 %}
+                  {% for p in accepted %}
+                    <li>
+                      {% if p.dataset_url %}
+                        <a href="{{ p.dataset_url }}">
+                          {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }}
+                        </a>
+                      {% else %}
+                        {{ p.dataset_title or ('Dataset #' ~ p.dataset_id) }} (Unsynchronized)
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                {% else %}
+                  <li class="text-muted">No datasets in this community</li>
+                {% endif %}
+              </ul>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-light border">
+          You are not following any communities yet.
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <hr class="my-4">
+
+  <h4 class="mb-3">Authors you follow</h4>
+  <div class="row g-4">
+    {% for u in followed_authors %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">
+              {{ u.profile.name }} {{ u.profile.surname }}
+            </h5>
+            <p class="card-text text-muted mb-2">{{ u.email }}</p>
+
+            <div class="mt-auto d-flex justify-content-between gap-2">
+              <form method="post" action="{{ url_for('follow.unfollow_author', author_id=u.id) }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Unfollow</button>
+              </form>
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#authorFollowDetail{{ u.id }}"
+              >
+                Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# MODAL DETALLE AUTOR (LISTA SEGUIDOS) #}
+      <div class="modal fade" id="authorFollowDetail{{ u.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">{{ u.profile.name }} {{ u.profile.surname }}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <p><strong>Email:</strong> {{ u.email }}</p>
+              {% if u.profile.affiliation %}
+                <p><strong>Affiliation:</strong> {{ u.profile.affiliation }}</p>
+              {% endif %}
+              {% if u.profile.orcid %}
+                <p><strong>ORCID:</strong> {{ u.profile.orcid }}</p>
+              {% endif %}
+
+              <hr/>
+              <h6>Curator in communities</h6>
+              <ul>
+                {% for c in u.communities %}
+                  <li>{{ c.name }}</li>
+                {% else %}
+                  <li class="text-muted">This author is not a curator in any community.</li>
+                {% endfor %}
+              </ul>
+
+              <hr/>
+              <h6>Datasets</h6>
+              <ul>
+                {% set user_datasets = u.following_datasets or [] %}
+                {% if user_datasets %}
+                  {% for d in user_datasets %}
+                    <li>
+                      {% set doi = d.ds_meta_data.dataset_doi %}
+                      {% if doi %}
+                        <a href="{{ url_for('dataset.subdomain_index', doi=doi) }}">
+                          {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }}
+                        </a>
+                      {% else %}
+                        {{ d.ds_meta_data.title or ('Dataset #' ~ d.id) }} (Unsynchronized)
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                {% else %}
+                  <li class="text-muted">This author has no datasets yet.</li>
+                {% endif %}
+              </ul>
+
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="col-12">
+        <div class="alert alert-light border">
+          You are not following any authors yet.
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+{% endblock %}

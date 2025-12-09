@@ -5,7 +5,15 @@ from typing import Optional
 from flask_login import current_user
 from sqlalchemy import desc, func
 
-from app.modules.dataset.models import Author, DataSet, DOIMapping, DSDownloadRecord, DSMetaData, DSViewRecord
+from app.modules.dataset.models import (
+    Author,
+    DataSet,
+    DOIMapping,
+    DSDownloadRecord,
+    DSMetaData,
+    DSMetaDataEditLog,
+    DSViewRecord,
+)
 from core.repositories.BaseRepository import BaseRepository
 
 logger = logging.getLogger(__name__)
@@ -120,3 +128,22 @@ class DOIMappingRepository(BaseRepository):
 
     def get_new_doi(self, old_doi: str) -> str:
         return self.model.query.filter_by(dataset_doi_old=old_doi).first()
+
+
+class DSMetaDataEditLogRepository(BaseRepository):
+    def __init__(self):
+        super().__init__(DSMetaDataEditLog)
+
+    def get_by_ds_meta_data_id(self, ds_meta_data_id: int) -> list:
+        """Get all edit logs for a metadata record, ordered by date descending."""
+        return self.model.query.filter_by(ds_meta_data_id=ds_meta_data_id).order_by(desc(self.model.edited_at)).all()
+
+    def get_by_dataset_id(self, dataset_id: int) -> list:
+        """Get all edit logs for a dataset by dataset_id."""
+        return (
+            self.model.query.join(DSMetaData)
+            .join(DataSet)
+            .filter(DataSet.id == dataset_id)
+            .order_by(desc(self.model.edited_at))
+            .all()
+        )

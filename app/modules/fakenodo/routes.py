@@ -43,19 +43,22 @@ def update_deposition(deposition_id):
     return jsonify(rec), 200
 
 
-@fakenodo_bp.route("/deposit/depositions/<depositionId>", methods=["DELETE"])
-def delete_deposition_fakenodo(depositionId):
-    success = _service.delete_deposition(depositionId)
+@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>", methods=["DELETE"])
+def delete_deposition_fakenodo(deposition_id):
+    success = _service.delete_deposition(deposition_id)
     if success:
-        return jsonify({"status": "success", "message": f"Succesfully deleted deposition {depositionId}"}), 200
-    return jsonify({"status": "error", "message": "Not found"}), 404
+        return jsonify({"message": f"Deposition {deposition_id} deleted successfully"}), 200
+    return jsonify({"message": "Deposition not found"}), 404
 
 
 @fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/files", methods=["POST"])
 def upload_file(deposition_id):
     uploaded = request.files.get("file")
-    name = request.form.get("name") or (uploaded.filename if uploaded else None)
-    content = uploaded.read() if uploaded else None
+    if not uploaded:
+        return jsonify({"message": "No file provided"}), 400
+
+    name = request.form.get("name") or uploaded.filename
+    content = uploaded.read()
 
     if not name:
         return jsonify({"message": "No file name provided"}), 400

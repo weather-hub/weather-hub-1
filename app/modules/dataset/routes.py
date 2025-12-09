@@ -8,8 +8,17 @@ from datetime import datetime, timezone
 from typing import Optional
 from zipfile import ZipFile
 
-# from valid_files import valid_files
-from flask import abort, jsonify, make_response, redirect, render_template, request, send_from_directory, url_for
+from flask import (
+    abort,
+    current_app,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 from flask_login import current_user, login_required
 
 from app.modules.community.repositories import CommunityRepository
@@ -21,11 +30,15 @@ from app.modules.dataset.services import (
     DataSetService,
     DOIMappingService,
     DSDownloadRecordService,
+    DSMetaDataEditLogService,
     DSMetaDataService,
     DSViewRecordService,
 )
 from app.modules.fakenodo.services import FakenodoService
+from app.modules.follow.services import FollowService
 from app.modules.zenodo.services import ZenodoService
+
+follow_service = FollowService()
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +51,22 @@ dsmetadata_service = DSMetaDataService()
 class FakenodoAdapter:
     """Adapter that exposes create_new_deposition, upload_file, publish_deposition
     and get_doi so the rest of the code doesn't need to change.
+
+    Uses dataset.id to generate stable DOIs even if fakenodo_db.json is reset.
     """
 
     def __init__(self, working_dir: str | None = None):
         self.service = FakenodoService(working_dir=working_dir)
+        self.dataset_id = None  # Store dataset ID for DOI generation
 
     def create_new_deposition(self, dataset) -> dict:
+        # Store dataset.id to use for stable DOI generation
+        self.dataset_id = getattr(dataset, "id", None)
         metadata = {
-            "title": getattr(dataset, "title", f"dataset-{getattr(dataset, 'id', '')}"),
+            "title": getattr(dataset, "title", f"dataset-{self.dataset_id}"),
         }
-        rec = self.service.create_deposition(metadata=metadata)
+        # Pasar dataset.id como deposition_id para DOI consistente desde v1
+        rec = self.service.create_deposition(metadata=metadata, deposition_id=self.dataset_id)
         return {"id": rec["id"], "conceptrecid": True, "metadata": rec.get("metadata", {})}
 
     def upload_file(self, dataset, deposition_id, feature_model) -> Optional[dict]:
@@ -68,12 +87,24 @@ class FakenodoAdapter:
         return self.service.upload_file(deposition_id, name, content)
 
     def publish_deposition(self, deposition_id):
-        return self.service.publish_deposition(deposition_id)
+        version = self.service.publish_deposition(deposition_id)
+        if version and self.dataset_id:
+            # This ensures stable DOIs even if fakenodo_db.json is reset
+            new_doi = f"10.1234/fakenodo.{self.dataset_id}.v{version.get('version', 1)}"
+            version["doi"] = new_doi
+        return version
 
     def get_doi(self, deposition_id):
         rec = self.service.get_deposition(deposition_id)
         if not rec:
             return None
+
+        if self.dataset_id and rec.get("versions"):
+            # Get the version number from the last version
+            version_num = rec["versions"][-1].get("version", 1)
+            return f"10.1234/fakenodo.{self.dataset_id}.v{version_num}"
+
+        # Fallback to stored DOI
         doi = rec.get("doi")
         if doi:
             return doi
@@ -125,7 +156,19 @@ def create_dataset():
     if request.method == "POST":
         dataset = None
 
+        # Debug: log raw form data
+        logger.info(f"Raw request data - publication_type: {request.form.get('publication_type')}")
+        logger.info(
+            f"All feature_models publication_type values: {request.form.getlist('feature_models-0-publication_type')}"
+        )
+
+        # Check available choices
+        logger.info(f"Available publication_type choices: {form.publication_type.choices}")
+        if form.feature_models and len(form.feature_models) > 0:
+            logger.info(f"Feature model 0 publication_type choices: {form.feature_models[0].publication_type.choices}")
+
         if not form.validate_on_submit():
+            logger.error(f"Form validation failed: {form.errors}")
             return jsonify({"message": form.errors}), 400
 
         try:
@@ -176,6 +219,11 @@ def create_dataset():
                 msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
 
+        try:
+            follow_service.notify_dataset_published(dataset)
+        except Exception:
+            current_app.logger.exception("Error sending 'dataset published' notification")
+
         # Delete temp folder
         file_path = current_user.temp_folder()
         if os.path.exists(file_path) and os.path.isdir(file_path):
@@ -208,10 +256,21 @@ def list_dataset():
 @dataset_bp.route("/dataset/file/upload", methods=["POST"])
 @login_required
 def upload():
-    file = request.files["file"]
+    logger.info(f"Upload request from user {current_user.id}")
+    file = request.files.get("file")
     temp_folder = current_user.temp_folder()
-    if not file or not file.filename.endswith(("csv", "txt", "md")):
-        return jsonify({"message": "No valid file"}), 400
+
+    # Validate file exists and has valid extension (case-insensitive)
+    if not file or not file.filename:
+        logger.warning("No file provided in upload request")
+        return jsonify({"message": "No file provided"}), 400
+
+    logger.info(f"Received file: {file.filename}")
+    filename_lower = file.filename.lower()
+    valid_extensions = (".csv", ".txt", ".md")
+    if not any(filename_lower.endswith(ext) for ext in valid_extensions):
+        logger.warning(f"Invalid file extension: {file.filename}")
+        return jsonify({"message": f"Invalid file type. Allowed: {', '.join(valid_extensions)}"}), 400
     # create temp folder
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
@@ -231,7 +290,9 @@ def upload():
 
     try:
         file.save(file_path)
+        logger.info(f"File saved successfully: {file_path} ({os.path.getsize(file_path)} bytes)")
     except Exception as e:
+        logger.error(f"Error saving file {file.filename}: {str(e)}")
         return jsonify({"message": str(e)}), 500
 
     return (
@@ -323,13 +384,7 @@ def download_dataset(dataset_id):
 
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])
 def subdomain_index(doi):
-    # Check if the DOI is an old DOI
-    new_doi = doi_mapping_service.get_new_doi(doi)
-    if new_doi:
-        # Redirect to the same path with the new DOI
-        return redirect(url_for("dataset.subdomain_index", doi=new_doi), code=302)
-
-    # Try to search the dataset by the provided DOI (which should already be the new one)
+    # Find dataset by DOI - each version is a separate dataset
     ds_meta_data = dsmetadata_service.filter_by_doi(doi)
 
     if not ds_meta_data:
@@ -356,3 +411,370 @@ def get_unsynchronized_dataset(dataset_id):
         abort(404)
 
     return render_template("dataset/view_dataset.html", dataset=dataset)
+
+
+edit_log_service = DSMetaDataEditLogService()
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_dataset(dataset_id):
+    """Edit dataset metadata (minor edits that don't generate new version)."""
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    # Check ownership
+    if dataset.user_id != current_user.id:
+        abort(403)
+
+    if request.method == "GET":
+        return render_template("dataset/edit_dataset.html", dataset=dataset)
+
+    try:
+        changes = []
+        ds_meta = dataset.ds_meta_data
+
+        new_title = request.form.get("title", "").strip()
+        if new_title and new_title != ds_meta.title:
+            changes.append({"field": "title", "old": ds_meta.title, "new": new_title})
+            ds_meta.title = new_title
+
+        new_description = request.form.get("description", "").strip()
+        if new_description and new_description != ds_meta.description:
+            changes.append(
+                {
+                    "field": "description",
+                    "old": ds_meta.description[:100] + "..." if len(ds_meta.description) > 100 else ds_meta.description,
+                    "new": new_description[:100] + "..." if len(new_description) > 100 else new_description,
+                }
+            )
+            ds_meta.description = new_description
+
+        new_tags = request.form.get("tags", "").strip()
+        if new_tags != (ds_meta.tags or ""):
+            changes.append({"field": "tags", "old": ds_meta.tags or "", "new": new_tags})
+            ds_meta.tags = new_tags
+
+        if changes:
+            edit_log_service.log_multiple_edits(
+                ds_meta_data_id=ds_meta.id,
+                user_id=current_user.id,
+                changes=changes,
+            )
+
+            if ds_meta.deposition_id:
+                fakenodo_service = FakenodoService()
+                fakenodo_service.update_metadata(
+                    ds_meta.deposition_id,
+                    {"title": ds_meta.title, "description": ds_meta.description, "tags": ds_meta.tags},
+                )
+
+            from app import db
+
+            db.session.commit()
+
+            return jsonify({"message": "Dataset updated successfully", "changes": len(changes)}), 200
+        else:
+            return jsonify({"message": "No changes detected"}), 200
+
+    except Exception as e:
+        logger.exception(f"Error updating dataset {dataset_id}: {e}")
+        return jsonify({"message": f"Error updating dataset: {str(e)}"}), 500
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/versions", methods=["GET"])
+def view_dataset_versions(dataset_id):
+    """View all published versions of a dataset."""
+    dataset = dataset_service.get_or_404(dataset_id)
+    ds_meta = dataset.ds_meta_data
+
+    versions = []
+    if ds_meta.deposition_id:
+        fakenodo_service = FakenodoService()
+        raw_versions = fakenodo_service.list_versions(ds_meta.deposition_id) or []
+
+        for v in raw_versions:
+            # v["files"] already contains the parsed list of files from to_dict()
+            files_list = v.get("files", [])
+            v["files_count"] = len(files_list)
+            logger.info(f"Version {v.get('version')}: {len(files_list)} files - {[f['name'] for f in files_list]}")
+            versions.append(v)
+
+    return render_template(
+        "dataset/versions.html",
+        dataset=dataset,
+        versions=versions,
+    )
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/changelog", methods=["GET"])
+def view_dataset_changelog(dataset_id):
+    """View changelog of minor edits."""
+    dataset = dataset_service.get_or_404(dataset_id)
+    edit_logs = edit_log_service.get_changelog_by_dataset_id(dataset_id)
+
+    return render_template(
+        "dataset/changelog.html",
+        dataset=dataset,
+        edit_logs=edit_logs,
+    )
+
+
+@dataset_bp.route("/api/dataset/<int:dataset_id>/changelog", methods=["GET"])
+def api_dataset_changelog(dataset_id):
+    """API endpoint for dataset changelog."""
+    dataset = dataset_service.get_or_404(dataset_id)
+    edit_logs = edit_log_service.get_changelog_by_dataset_id(dataset_id)
+
+    return jsonify(
+        {
+            "dataset_id": dataset_id,
+            "dataset_title": dataset.ds_meta_data.title,
+            "changelog": [log.to_dict() for log in edit_logs],
+        }
+    )
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/republish", methods=["GET"])
+@login_required
+def republish_dataset_form(dataset_id):
+    """Show form to upload new files for re-publication."""
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    if dataset.user_id != current_user.id:
+        abort(403)
+
+    # Check if dataset is published
+    if not dataset.ds_meta_data.dataset_doi:
+        return redirect(url_for("dataset.subdomain_index", doi=dataset.ds_meta_data.dataset_doi))
+
+    return render_template("dataset/republish_dataset.html", dataset=dataset)
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/republish", methods=["POST"])
+@login_required
+def republish_dataset(dataset_id):
+    """
+    Re-publish dataset with new/modified files.
+    Generates new version with new DOI.
+    """
+    dataset = dataset_service.get_or_404(dataset_id)
+
+    if dataset.user_id != current_user.id:
+        logger.warning(
+            f"User {current_user.id} ({current_user.email}) attempted to republish "
+            f"dataset {dataset_id} owned by user {dataset.user_id}"
+        )
+        abort(403)
+
+    temp_folder = current_user.temp_folder()
+    logger.info(
+        f"Republish request for dataset {dataset_id} by user {current_user.id} "
+        f"({current_user.email}), temp folder: {temp_folder}"
+    )
+
+    if not os.path.exists(temp_folder):
+        logger.warning(f"Temp folder does not exist: {temp_folder}")
+        return (
+            jsonify(
+                {
+                    "message": "No files uploaded yet. Please drag and drop files to the upload area "
+                    "before clicking Republish."
+                }
+            ),
+            400,
+        )
+
+    temp_files = os.listdir(temp_folder)
+    if not temp_files:
+        logger.warning(f"Temp folder is empty: {temp_folder}")
+        return (
+            jsonify(
+                {
+                    "message": "No files uploaded yet. Please drag and drop files to the upload area "
+                    "before clicking Republish."
+                }
+            ),
+            400,
+        )
+
+    logger.info(f"Found {len(temp_files)} files in temp folder: {temp_files}")
+
+    try:
+        ds_meta = dataset.ds_meta_data
+
+        if not ds_meta.deposition_id:
+            return jsonify({"message": "Dataset has no Fakenodo deposition"}), 400
+
+        fakenodo_service = FakenodoService()
+
+        # Upload each file from temp folder (marks dirty=True)
+        uploaded_files = []
+        temp_folder_files = os.listdir(temp_folder) if os.path.exists(temp_folder) else []
+        logger.info(f"Files in temp folder {temp_folder}: {temp_folder_files}")
+
+        for filename in temp_folder_files:
+            file_path = os.path.join(temp_folder, filename)
+            logger.info(f"Processing file: {filename}, path: {file_path}, is_file: {os.path.isfile(file_path)}")
+
+            if os.path.isfile(file_path):
+                with open(file_path, "rb") as f:
+                    content = f.read()
+                logger.info(f"File {filename} size: {len(content)} bytes")
+
+                result = fakenodo_service.upload_file(ds_meta.deposition_id, filename, content)
+                logger.info(f"Fakenodo upload result for {filename}: {result}")
+
+                if result:
+                    uploaded_files.append(filename)
+                    logger.info(f"Uploaded file {filename} to deposition {ds_meta.deposition_id}")
+                else:
+                    logger.warning(f"Fakenodo upload returned None/False for {filename}")
+            else:
+                logger.warning(f"Skipping {filename} - not a file")
+
+        if not uploaded_files:
+            logger.error(f"No files uploaded. Temp folder: {temp_folder}, files found: {temp_folder_files}")
+            return (
+                jsonify({"message": "No valid files were uploaded. Please check that files are properly uploaded."}),
+                400,
+            )
+
+        # Publish new version (dirty=True generates v2, v3, etc.)
+        version = fakenodo_service.publish_deposition(ds_meta.deposition_id)
+
+        if not version:
+            return jsonify({"message": "Failed to publish new version"}), 500
+
+        # Get new DOI
+        new_doi = version.get("doi")
+        old_doi = ds_meta.dataset_doi
+
+        logger.info(f"Creating NEW dataset for version {version.get('version')}: {new_doi}")
+
+        # Create a CLONE of the current dataset with the new DOI
+        from app import db
+        from app.modules.dataset.models import DataSet as DataSetModel
+        from app.modules.dataset.models import DSMetaData, DSMetrics
+        from app.modules.featuremodel.models import FeatureModel
+        from app.modules.hubfile.models import Hubfile
+
+        # Clone metrics (or create default if none exist)
+        old_metrics = ds_meta.ds_metrics
+        if old_metrics:
+            new_metrics = DSMetrics(
+                number_of_models=old_metrics.number_of_models, number_of_features=old_metrics.number_of_features
+            )
+        else:
+            # Create default metrics if original dataset has none
+            new_metrics = DSMetrics(number_of_models="0", number_of_features="0")
+        db.session.add(new_metrics)
+        db.session.flush()
+
+        # Clone DSMetaData
+        logger.info(f"Cloning DSMetaData - Original deposition_id: {ds_meta.deposition_id}")
+        new_ds_meta = DSMetaData(
+            deposition_id=ds_meta.deposition_id,  # MANTENER el mismo deposition_id
+            title=ds_meta.title,
+            description=ds_meta.description,
+            publication_type=ds_meta.publication_type,
+            publication_doi=ds_meta.publication_doi,
+            dataset_doi=new_doi,  # NEW DOI
+            tags=ds_meta.tags,
+            ds_metrics_id=new_metrics.id,
+        )
+        db.session.add(new_ds_meta)
+        db.session.flush()
+        logger.info(
+            f"New DSMetaData created - deposition_id: {new_ds_meta.deposition_id}, "
+            f"dataset_doi: {new_ds_meta.dataset_doi}"
+        )
+
+        # Clone Dataset
+        new_dataset = DataSetModel(
+            user_id=dataset.user_id, ds_meta_data_id=new_ds_meta.id, created_at=datetime.now(timezone.utc)
+        )
+        db.session.add(new_dataset)
+        db.session.flush()
+
+        # Clone ALL existing FeatureModels and Hubfiles
+        for fm in dataset.feature_models:
+            new_fm = FeatureModel(data_set_id=new_dataset.id)
+            db.session.add(new_fm)
+            db.session.flush()
+
+            # Clone all files from this feature model
+            for file in fm.files:
+                new_file = Hubfile(name=file.name, checksum=file.checksum, size=file.size, feature_model_id=new_fm.id)
+                db.session.add(new_file)
+
+                # Copy physical file
+                import shutil as sh
+
+                old_path = file.get_path()
+                new_path = new_file.get_path()
+                os.makedirs(os.path.dirname(new_path), exist_ok=True)
+                if os.path.exists(old_path):
+                    sh.copy2(old_path, new_path)
+                    logger.info(f"Copied file: {old_path} -> {new_path}")
+
+        db.session.flush()
+
+        # Now add NEW files from temp to the new dataset
+        # Get or create a FeatureModel for new files
+        new_fm = FeatureModel.query.filter_by(data_set_id=new_dataset.id).first()
+        if not new_fm:
+            new_fm = FeatureModel(data_set_id=new_dataset.id)
+            db.session.add(new_fm)
+            db.session.flush()
+
+        # Copy new files from temp folder
+        import hashlib
+
+        for filename in uploaded_files:
+            temp_file_path = os.path.join(temp_folder, filename)
+
+            # Read file content to calculate checksum
+            with open(temp_file_path, "rb") as f:
+                content = f.read()
+                checksum = hashlib.md5(content, usedforsecurity=False).hexdigest()
+
+            # Create Hubfile entry
+            new_hubfile = Hubfile(name=filename, checksum=checksum, size=len(content), feature_model_id=new_fm.id)
+            db.session.add(new_hubfile)
+            db.session.flush()
+
+            # Copy physical file to dataset folder
+            dest_path = new_hubfile.get_path()
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            sh.copy2(temp_file_path, dest_path)
+            logger.info(f"Added new file: {filename} -> {dest_path}")
+
+        db.session.commit()
+
+        # Clean temp folder
+        if os.path.exists(temp_folder):
+            shutil.rmtree(temp_folder)
+
+        logger.info(
+            f"Created NEW dataset {new_dataset.id} (cloned from {dataset_id}) "
+            f"for version v{version.get('version')} with DOI: {new_doi}. "
+            f"Added {len(uploaded_files)} new files."
+        )
+
+        return (
+            jsonify(
+                {
+                    "message": "New version published successfully",
+                    "version": version.get("version"),
+                    "doi": new_doi,
+                    "old_doi": old_doi,
+                    "files_uploaded": len(uploaded_files),
+                    "files": uploaded_files,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.exception(f"Error republishing dataset {dataset_id}: {e}")
+        return jsonify({"message": f"Error: {str(e)}"}), 500

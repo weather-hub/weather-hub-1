@@ -25,7 +25,6 @@ def edit_profile():
             result, errors, "profile.edit_profile", "Profile updated successfully", "profile/edit.html", form
         )
 
-    # load user's communities to show in the profile edit page
     try:
         user_communities = current_user.communities.all() if hasattr(current_user, "communities") else []
     except Exception:
@@ -51,9 +50,7 @@ def my_profile():
 
     print(user_datasets_pagination.items)
 
-    # Load the communities the current user is curator/member of
     try:
-        # `communities` is a dynamic relationship on User created by Community.curators backref
         user_communities = current_user.communities.all() if hasattr(current_user, "communities") else []
     except Exception:
         user_communities = []
@@ -80,22 +77,18 @@ def setup_2fa():
     import qrcode
     from flask import session
 
-    # Generar secret temporal
     secret = pyotp.random_base32()
     session["temp_otp_secret"] = secret  # Guardamos temporalmente en sesión
 
-    # Generar URI para el QR
     user_name = current_user.profile.name
     uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user_name, issuer_name="WEATHERHUB")
 
-    # Generar QR code
     qr = qrcode.make(uri)
     buf = io.BytesIO()
     qr.save(buf, format="PNG")
     qr_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
     session["qr_b64"] = qr_b64
 
-    # Redirigir al perfil (el modal se mostrará automáticamente)
     return redirect(url_for("profile.edit_profile"))
 
 
@@ -113,21 +106,17 @@ def verify_2fa():
         flash("Session expired. Please try again.", "error")
         return redirect(url_for("profile.edit_profile"))
 
-    # Verificar el código
     totp = pyotp.TOTP(temp_secret)
     if totp.verify(verification_code, valid_window=1):
-        # Código correcto: guardar el secret en el usuario
         current_user.otp_secret = temp_secret
         current_user.twofa_enabled = True
         db.session.commit()
 
-        # Limpiar la sesión
         session.pop("temp_otp_secret", None)
         session.pop("qr_b64", None)
 
         flash("Two-factor authentication has been enabled successfully!", "success")
     else:
-        # Código incorrecto: guardar error en sesión para mostrarlo en el modal, y no con flash en la pagina base
         session["2fa_error"] = "Invalid verification code. Please try again."
 
     return redirect(url_for("profile.edit_profile"))
@@ -139,7 +128,6 @@ def cancel_2fa():
     """Cancela el proceso de configuración de 2FA"""
     from flask import session
 
-    # Limpiar la sesión
     session.pop("temp_otp_secret", None)
     session.pop("qr_b64", None)
 

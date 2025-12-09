@@ -108,7 +108,7 @@ referencing==0.36.2
 requests==2.32.4
 rpds-py==0.26.0
 rq==2.4.1
-selenium==4.34.2
+selenium==4.35.0
 selenium-wire==5.1.0
 setuptools==80.9.0
 simple-websocket==1.1.0
@@ -124,7 +124,7 @@ trio-websocket==0.12.2
 typing_extensions==4.14.1
 tzdata==2025.2
 Unidecode==1.4.0
-urllib3==2.5.0
+urllib3==2.6.0
 uvlparser==2.0.1
 webdriver-manager==4.0.2
 webencodings==0.5.1

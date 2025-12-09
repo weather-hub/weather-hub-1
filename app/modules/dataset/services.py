@@ -8,12 +8,13 @@ from typing import Optional
 from flask import request
 
 from app.modules.auth.services import AuthenticationService
-from app.modules.dataset.models import DataSet, DSMetaData, DSViewRecord
+from app.modules.dataset.models import DataSet, DSMetaData, DSMetaDataEditLog, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
     DataSetRepository,
     DOIMappingRepository,
     DSDownloadRecordRepository,
+    DSMetaDataEditLogRepository,
     DSMetaDataRepository,
     DSViewRecordRepository,
 )
@@ -118,35 +119,41 @@ class DataSetService(BaseService):
         }
         try:
             logger.info(f"Creating dsmetadata...: {form.get_dsmetadata()}")
-            dsmetadata = self.dsmetadata_repository.create(**form.get_dsmetadata())
+
+            # Obtener metadata del formulario sin publication_doi auto-generado
+            dsmetadata_data = form.get_dsmetadata()
+
+            dsmetadata = self.dsmetadata_repository.create(**dsmetadata_data)
             for author_data in [main_author] + form.get_authors():
                 author = self.author_repository.create(commit=False, ds_meta_data_id=dsmetadata.id, **author_data)
                 dsmetadata.authors.append(author)
 
             dataset = self.create(commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id)
-            # llenalo con los nombres de los ficheros que componen el paquete
+
+            # Procesar archivos CSV del dataset
+            # Nota: Aunque el modelo se llama "feature_model", ahora representa archivos CSV de datos climáticos
             uploaded_filenames = []
-            for feature_model in form.feature_models:
-                filename = feature_model.filename.data
-                fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
-                for author_data in feature_model.get_authors():
+            for csv_file_form in form.feature_models:
+                filename = csv_file_form.filename.data
+
+                # Los archivos CSV no necesitan publication_doi individual, solo metadata básica
+                fmmetadata_data = csv_file_form.get_fmmetadata()
+
+                fmmetadata = self.fmmetadata_repository.create(commit=False, **fmmetadata_data)
+                for author_data in csv_file_form.get_authors():
                     author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
                     fmmetadata.authors.append(author)
 
+                # Crear entrada de feature_model (representa un archivo CSV)
                 fm = self.feature_model_repository.create(
                     commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
                 )
-                uploaded_filenames.append(feature_model.filename.data)
+                uploaded_filenames.append(csv_file_form.filename.data)
 
             file_paths = [os.path.join(current_user.temp_folder(), fn) for fn in uploaded_filenames]
             try:
-                # Si tu flujo es que en create_from_form se añaden varios archivos por feature model,
-                # asegúrate de pasar aquí la lista completa de paths para validar juntos.
-                validate_dataset_package(
-                    # o la lista completa de archivos del paquete
-                    # o True si quieres forzar EXACTAMENTE esas columnas
-                    file_paths=file_paths
-                )
+                # Validar que todos los archivos CSV tengan la estructura correcta
+                validate_dataset_package(file_paths=file_paths)
 
             except Exception:
                 # rollback y propaga error (tu código ya maneja rollback en el except general)
@@ -199,6 +206,50 @@ class DSMetaDataService(BaseService):
     def filter_by_doi(self, doi: str) -> Optional[DSMetaData]:
         return self.repository.filter_by_doi(doi)
 
+    def find_dataset_by_any_doi(self, doi: str):
+        """
+        Find dataset by DOI, checking:
+        1. Current DOI in DSMetaData
+        2. Any version DOI in FakenodoVersion (including current)
+        Returns (ds_meta, version_info) where version_info contains Fakenodo files for Fakenodo DOIs
+        """
+        import json
+
+        from app.modules.fakenodo.models import FakenodoVersion
+
+        # Check if this is a Fakenodo DOI (format: 10.1234/fakenodo.X.vY)
+        is_fakenodo_doi = "fakenodo" in doi.lower()
+
+        if is_fakenodo_doi:
+            # For Fakenodo DOIs, always get version info from FakenodoVersion
+            fakenodo_version = FakenodoVersion.query.filter_by(doi=doi).first()
+            if fakenodo_version:
+                # Find the dataset that has this deposition_id
+                ds_meta = DSMetaData.query.filter_by(deposition_id=fakenodo_version.deposition_id).first()
+                if ds_meta:
+                    # Check if this is the current version
+                    is_current = ds_meta.dataset_doi == doi
+
+                    # Return dataset with version info (always for Fakenodo DOIs)
+                    version_info = {
+                        "version": fakenodo_version.version,
+                        "doi": fakenodo_version.doi,
+                        "files": json.loads(fakenodo_version.files_json) if fakenodo_version.files_json else [],
+                        "metadata": (
+                            json.loads(fakenodo_version.metadata_json) if fakenodo_version.metadata_json else {}
+                        ),
+                        "created_at": fakenodo_version.created_at,
+                        "is_current": is_current,
+                    }
+                    return (ds_meta, version_info)
+
+        # For non-Fakenodo DOIs, check DSMetaData
+        ds_meta = self.filter_by_doi(doi)
+        if ds_meta:
+            return (ds_meta, None)  # Current version without version_info
+
+        return (None, None)
+
 
 class DSViewRecordService(BaseService):
     def __init__(self):
@@ -248,3 +299,46 @@ class SizeService:
             return f"{round(size / (1024 ** 2), 2)} MB"
         else:
             return f"{round(size / (1024 ** 3), 2)} GB"
+
+
+class DSMetaDataEditLogService(BaseService):
+    def __init__(self):
+        super().__init__(DSMetaDataEditLogRepository())
+
+    def log_edit(
+        self,
+        ds_meta_data_id: int,
+        user_id: int,
+        field_name: str,
+        old_value: str,
+        new_value: str,
+        change_summary: str = None,
+    ) -> DSMetaDataEditLog:
+        return self.repository.create(
+            ds_meta_data_id=ds_meta_data_id,
+            user_id=user_id,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=new_value,
+            change_summary=change_summary,
+        )
+
+    def log_multiple_edits(self, ds_meta_data_id: int, user_id: int, changes: list) -> list:
+        logs = []
+        for change in changes:
+            log = self.log_edit(
+                ds_meta_data_id=ds_meta_data_id,
+                user_id=user_id,
+                field_name=change.get("field"),
+                old_value=change.get("old"),
+                new_value=change.get("new"),
+                change_summary=change.get("summary"),
+            )
+            logs.append(log)
+        return logs
+
+    def get_changelog(self, ds_meta_data_id: int) -> list:
+        return self.repository.get_by_ds_meta_data_id(ds_meta_data_id)
+
+    def get_changelog_by_dataset_id(self, dataset_id: int) -> list:
+        return self.repository.get_by_dataset_id(dataset_id)
