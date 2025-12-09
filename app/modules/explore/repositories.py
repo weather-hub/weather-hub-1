@@ -27,30 +27,40 @@ class ExploreRepository(BaseRepository):
         t = re.sub(r'[,.":\'()\[\]^;!¡¿?]', "", t)
         return [w for w in t.split() if w]
 
-    # Main filter method
     def filter(
         self, query="", sorting="newest", publication_type="any", tags=None, start_date=None, end_date=None, **kwargs
     ):
 
-        q = self.model.query.join(DataSet.ds_meta_data).outerjoin(DSMetaData.authors).distinct()
+        q = self.model.query.join(DataSet.ds_meta_data).outerjoin(DSMetaData.authors).distinct(DataSet.id)
 
         words = self._tokens(query)
         has_query = bool(words)
         has_pub_type = bool(publication_type and publication_type != "any")
-        has_tags = any(t.strip() for t in tags)
+
+        if isinstance(tags, str):
+            tag_list = self._tokens(tags)
+        elif isinstance(tags, list):
+            tag_list = [t.strip() for t in tags if isinstance(t, str) and t.strip()]
+        else:
+            tag_list = []
+
+        has_tags = bool(tag_list)
 
         sd = self._parse_date(start_date)
         ed = self._parse_date(end_date)
 
-        # No filters
+        # No filters applied
         if not (has_query or has_pub_type or has_tags or sd or ed):
-            return q.order_by(DataSet.created_at.desc(), DSMetaData.title.asc()).all()
+            if sorting == "oldest":
+                q = q.order_by(DataSet.created_at.asc(), DataSet.id.asc())
+            else:
+                q = q.order_by(DataSet.created_at.desc(), DataSet.id.desc())
 
         # Dates
         if sd:
             q = q.filter(DataSet.created_at >= sd)
         if ed:
-            q = q.filter(DataSet.created_at < (ed + timedelta(days=1)))  # día completo
+            q = q.filter(DataSet.created_at < (ed + timedelta(days=1)))
 
         # Publication type
         if has_pub_type:
@@ -60,7 +70,7 @@ class ExploreRepository(BaseRepository):
 
         # Tags
         if has_tags:
-            clauses = [DSMetaData.tags.ilike(f"%{t.strip()}%") for t in tags if t.strip()]
+            clauses = [DSMetaData.tags.ilike(f"%{t}%") for t in tag_list]
             if clauses:
                 q = q.filter(and_(*clauses))
 
@@ -81,8 +91,8 @@ class ExploreRepository(BaseRepository):
 
         # Ordering
         if sorting == "oldest":
-            q = q.order_by(DataSet.created_at.asc(), DSMetaData.title.asc())
+            q = q.order_by(DataSet.created_at.asc(), DataSet.id.asc())
         else:
-            q = q.order_by(DataSet.created_at.desc(), DSMetaData.title.asc())
+            q = q.order_by(DataSet.created_at.desc(), DataSet.id.desc())
 
         return q.all()
