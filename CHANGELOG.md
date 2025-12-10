@@ -1,3 +1,10 @@
+# Version 1.3.3 (2025-12-10)
+
+## Fixes
+- fix: bring trunl
+- fix: change message
+
+
 # Version 1.3.2 (2025-12-10)
 
 ## Fixes
