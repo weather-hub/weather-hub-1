@@ -50,9 +50,10 @@ else
 
     # Run the migration process to apply all database schema changes
     flask db upgrade
-    rosemary db:seed
 fi
 
 # Start the application using Gunicorn, binding it to port 80
 # Set the logging level to info and the timeout to 3600 seconds
-exec gunicorn --bind 0.0.0.0:80 app:app --log-level info --timeout 3600
+# Usamos ${PORT:-80} para que use la variable PORT de Render,
+# o el 80 si estás en local y no existe la variable.
+exec gunicorn --bind 0.0.0.0:${PORT:-80} app:app --log-level info --timeout 3600
