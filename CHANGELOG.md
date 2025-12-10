@@ -1,3 +1,10 @@
+# Version 1.3.5 (2025-12-10)
+
+## Fixes
+- fix: release
+- fix: release dont update on main
+
+
 # Version 1.3.4 (2025-12-10)
 
 ## Fixes
