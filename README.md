@@ -1,5 +1,5 @@
 <div style="text-align: center">
-  <img src="app/static/img/logos/logo-weather.png" alt="Weather-hub Logo" />
+  <img src="app/static/img/logos/logo-weather-dark.png" alt="Weather-hub Logo" />
 </div>
 
 # 🌦️ Weather-Hub
