@@ -1,3 +1,10 @@
+# Version 1.3.4 (2025-12-10)
+
+## Fixes
+- fix: merge trunk
+- fix: render database problem
+
+
 # Version 1.3.3 (2025-12-10)
 
 ## Fixes
