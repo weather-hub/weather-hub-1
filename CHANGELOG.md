@@ -1,3 +1,12 @@
+# Version 1.3.2 (2025-12-10)
+
+## Fixes
+- fix: update ordering logic
+
+## Others
+- test: update tests for advanced search
+
+
 # Version 1.3.1 (2025-12-08)
 
 ## Fixes
