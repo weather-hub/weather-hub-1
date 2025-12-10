@@ -33,13 +33,33 @@
                                 <td>{{ dataset.ds_meta_data.publication_type.name.replace('_', ' ').title() }}</td>
                                 <td><a href="{{ dataset.get_uvlhub_doi() }}"
                                        target="_blank">{{ dataset.get_uvlhub_doi() }}</a></td>
-                                <td>
+                                <td class="d-flex align-items-center gap-2">
                                     <a href="{{ dataset.get_uvlhub_doi() }}">
                                         <i data-feather="eye"></i>
                                     </a>
                                     <a href="{{ url_for('dataset.download_dataset', dataset_id=dataset.id) }}">
                                         <i data-feather="download"></i>
                                     </a>
+
+                                    {# Add to community dropdown - only show if there are communities #}
+                                    {# Add to community dropdown - only show if there are communities and dataset is published #}
+                                    {% if communities and communities|length > 0 and dataset.ds_meta_data.dataset_doi %}
+                                    <div class="btn-group ms-auto">
+                                        <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Add to community
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            {% for c in communities %}
+                                            <li>
+                                                <form method="post" action="{{ url_for('community.propose_dataset', community_id=c.id) }}" style="display:inline;">
+                                                    <input type="hidden" name="dataset_id" value="{{ dataset.id }}" />
+                                                    <button type="submit" class="dropdown-item">{{ c.name }}</button>
+                                                </form>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}
@@ -97,13 +117,33 @@
                                         </td>
                                         <td>{{ local_dataset.ds_meta_data.description }}</td>
                                         <td>{{ local_dataset.ds_meta_data.publication_type.name.replace('_', ' ').title() }}</td>
-                                        <td>
+                                        <td class="d-flex align-items-center gap-2">
                                             <a href="{{ url_for('dataset.get_unsynchronized_dataset', dataset_id=local_dataset.id) }}">
                                                 <i data-feather="eye"></i>
                                             </a>
                                             <a href="{{ url_for('dataset.download_dataset', dataset_id=local_dataset.id) }}">
                                                 <i data-feather="download"></i>
                                             </a>
+
+                                            {# Add to community dropdown - only show if there are communities and dataset is published #}
+                                            {% if communities and communities|length > 0 and local_dataset.ds_meta_data.dataset_doi %}
+                                            <div class="btn-group ms-auto">
+                                                <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Add to community
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    {% for c in communities %}
+                                                    <li>
+                                                        <form method="post" action="{{ url_for('community.propose_dataset', community_id=c.id) }}" style="display:inline;">
+                                                            <input type="hidden" name="dataset_id" value="{{ local_dataset.id }}" />
+                                                            <button type="submit" class="dropdown-item">{{ c.name }}</button>
+                                                        </form>
+                                                    </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                            {% endif %}
+
                                         </td>
                                     </tr>
                                 {% endfor %}

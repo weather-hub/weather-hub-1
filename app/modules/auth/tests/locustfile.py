@@ -1,10 +1,11 @@
-from locust import HttpUser, TaskSet, task, between
+import random
 
 import pyotp  # asegúrate de tenerlo en requirements
+from bs4 import BeautifulSoup
+from locust import HttpUser, TaskSet, between, task
 
 from core.environment.host import get_host_for_locust_testing
 from core.locust.common import fake, get_csrf_token
-
 
 # Mapea usuarios de prueba 2FA a su secreto TOTP
 # Deben coincidir con los que tengas en la base de datos
@@ -152,7 +153,60 @@ class LoginBehavior(TaskSet):
             print(f"2FA verification failed: {response.status_code}")
 
 
+class SessionBehavior(TaskSet):
+    """Simulate session management actions: view sessions, close one, close all others."""
+
+    def on_start(self):
+        # Ensure the user is logged in before performing session actions
+        self.ensure_logged_out()
+        self.login()
+
+    @task(3)
+    def view_sessions(self):
+        response = self.client.get("/sessions")
+        if response.status_code != 200:
+            print(f"View sessions failed: {response.status_code}")
+
+    @task(1)
+    def close_random_session(self):
+        # Load sessions page and find any close forms to extract a session_id
+        response = self.client.get("/sessions")
+        if response.status_code != 200:
+            return
+        soup = BeautifulSoup(response.text, "html.parser")
+        # find form actions that contain '/sessions/close/'
+        forms = soup.find_all("form", action=True)
+        close_forms = [f for f in forms if "/sessions/close/" in f["action"]]
+        if not close_forms:
+            return
+        chosen = random.choice(close_forms)
+        action = chosen["action"]
+        # attempt to get CSRF token from the page
+        try:
+            csrf = get_csrf_token(response)
+        except Exception:
+            csrf = None
+
+        data = {"csrf_token": csrf} if csrf else {}
+        # POST to the action URL
+        self.client.post(action, data=data)
+
+    @task(1)
+    def close_all_others(self):
+        # Close all other sessions via the dedicated endpoint
+        response = self.client.get("/sessions")
+        if response.status_code != 200:
+            return
+        try:
+            csrf = get_csrf_token(response)
+        except Exception:
+            csrf = None
+        data = {"csrf_token": csrf} if csrf else {}
+        self.client.post("/sessions/close-all", data=data)
+
+
 class AuthUser(HttpUser):
+
     tasks = [SignupBehavior, LoginBehavior]
     wait_time = between(5, 9)
     host = get_host_for_locust_testing()

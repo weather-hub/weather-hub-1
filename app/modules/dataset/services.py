@@ -8,13 +8,14 @@ from typing import Optional
 from flask import request
 
 from app.modules.auth.services import AuthenticationService
-from app.modules.dataset.models import DataSet, DSMetaData, DSViewRecord
+from app.modules.dataset.models import DataSet, DSMetaData, DSMetaDataEditLog, DSViewRecord
 from app.modules.dataset.repositories import (
     AuthorRepository,
     DataSetConceptRepository,
     DataSetRepository,
     DOIMappingRepository,
     DSDownloadRecordRepository,
+    DSMetaDataEditLogRepository,
     DSMetaDataRepository,
     DSViewRecordRepository,
 )
@@ -53,6 +54,7 @@ class DataSetService(BaseService):
         self.hubfileviewrecord_repository = HubfileViewRecordRepository()
         self.dsmetadata_service = DSMetaDataService()
         self.zenodo_service = ZenodoService()
+        self.ds_metadata_edit_log_service = DSMetaDataEditLogService()
 
     def move_feature_models(self, dataset: DataSet):
         current_user = AuthenticationService().get_authenticated_user()
@@ -74,18 +76,15 @@ class DataSetService(BaseService):
             dst_path = os.path.join(dest_dir, filename)
 
             if not os.path.exists(src_path):
-                # If the file isn't in the user's temp folder, warn and continue.
                 logger.warning(f"Source file not found, skipping move: {src_path}")
                 continue
             try:
-                # If destination file already exists, remove it (overwrite behaviour).
                 if os.path.exists(dst_path):
                     logger.info(f"Destination file {dst_path} exists — removing before move.")
                     os.remove(dst_path)
 
                 shutil.move(src_path, dst_path)
             except Exception as exc:
-                # Log and raise so upstream code can handle rollback if needed.
                 logger.exception(f"Failed moving file {src_path} to {dst_path}: {exc}")
                 raise
 
@@ -136,40 +135,35 @@ class DataSetService(BaseService):
             dataset = self.create(
                 commit=False, user_id=current_user.id, ds_meta_data_id=dsmetadata.id, version_number=form_vnumber
             )
-            # llenalo con los nombres de los ficheros que componen el paquete
+
             uploaded_filenames = []
-            for feature_model in form.feature_models:
-                filename = feature_model.filename.data
-                fmmetadata = self.fmmetadata_repository.create(commit=False, **feature_model.get_fmmetadata())
-                for author_data in feature_model.get_authors():
+            for csv_file_form in form.feature_models:
+                filename = csv_file_form.filename.data
+                fmmetadata_data = csv_file_form.get_fmmetadata()
+
+                fmmetadata = self.fmmetadata_repository.create(commit=False, **fmmetadata_data)
+                for author_data in csv_file_form.get_authors():
                     author = self.author_repository.create(commit=False, fm_meta_data_id=fmmetadata.id, **author_data)
                     fmmetadata.authors.append(author)
 
                 fm = self.feature_model_repository.create(
                     commit=False, data_set_id=dataset.id, fm_meta_data_id=fmmetadata.id
                 )
-                uploaded_filenames.append(feature_model.filename.data)
+                uploaded_filenames.append(csv_file_form.filename.data)
 
             file_paths = [os.path.join(current_user.temp_folder(), fn) for fn in uploaded_filenames]
             try:
-                # Si tu flujo es que en create_from_form se añaden varios archivos por feature model,
-                # asegúrate de pasar aquí la lista completa de paths para validar juntos.
                 validate_dataset_package(
-                    # o la lista completa de archivos del paquete
-                    # o True si quieres forzar EXACTAMENTE esas columnas
                     file_paths=file_paths,
                     allow_empty=allow_empty_package,
                 )
             except Exception:
-                # rollback y propaga error (tu código ya maneja rollback en el except general)
                 self.repository.session.rollback()
                 raise
 
             for e in range(0, len(uploaded_filenames)):
                 filename = uploaded_filenames[e]
-
                 file_path = file_paths[e]
-
                 checksum, size = calculate_checksum_and_size(file_path)
 
                 file = self.hubfilerepository.create(
@@ -182,6 +176,42 @@ class DataSetService(BaseService):
             self.repository.session.rollback()
             raise exc
         return dataset
+
+    def update_dsmetadata_with_log(self, dataset_id, user_id, title, description, tags, **kwargs):
+        dataset = self.repository.get(dataset_id)
+        if not dataset:
+            raise Exception("Dataset not found")
+
+        meta = dataset.ds_meta_data
+        changes = []
+
+        def check_change(field_name, old_val, new_val):
+            old_str = str(old_val).strip() if old_val is not None else ""
+            new_str = str(new_val).strip() if new_val is not None else ""
+            if old_str != new_str:
+                changes.append(
+                    {"field": field_name, "old": old_str, "new": new_str, "summary": f"Updated {field_name}"}
+                )
+
+        check_change("title", meta.title, title)
+        check_change("description", meta.description, description)
+        check_change("tags", meta.tags, tags)
+
+        if "publication_type" in kwargs and kwargs["publication_type"] is not None:
+            old_pt = meta.publication_type.name if meta.publication_type else "NONE"
+            new_pt_val = kwargs["publication_type"]
+            new_pt = new_pt_val.name if hasattr(new_pt_val, "name") else str(new_pt_val)
+            if old_pt != new_pt:
+                changes.append({"field": "publication_type", "old": old_pt, "new": new_pt, "summary": "Updated Type"})
+
+        if not changes:
+            return False, "No changes detected"
+
+        self.dsmetadata_repository.update(meta.id, title=title, description=description, tags=tags, **kwargs)
+
+        self.ds_metadata_edit_log_service.log_multiple_edits(meta.id, user_id, changes)
+
+        return True, "Dataset updated successfully"
 
     def update_dsmetadata(self, id, **kwargs):
         return self.dsmetadata_repository.update(id, **kwargs)
@@ -199,7 +229,6 @@ class DataSetService(BaseService):
 
     @staticmethod
     def infer_is_major_from_form(form) -> bool:
-        """Devuelve True si el formulario contiene al menos un feature model (archivos subidos)."""
         try:
             return bool(getattr(form, "feature_models", [])) and len(form.feature_models) > 0
         except Exception:
@@ -207,7 +236,6 @@ class DataSetService(BaseService):
 
     @staticmethod
     def check_introduced_version(current_version: str, is_major: bool, form_version: str) -> tuple[bool, str]:
-        """Calcula la siguiente versión basada en la versión actual y si es una versión mayor."""
         clean_current = current_version.lstrip("v")
         clean_form_version = form_version.lstrip("v")
         current_parts = clean_current.split(".")
@@ -216,9 +244,7 @@ class DataSetService(BaseService):
         error_message = ""
 
         if len(current_parts) != 3 or len(form_parts) != 3:
-            is_valid = False
-            error_message = "Version format must be X.Y.Z where X, Y, and Z are integers."
-            return is_valid, error_message
+            return False, "Version format must be X.Y.Z where X, Y, and Z are integers."
 
         major_current, minor_current, patch_current = map(int, current_parts)
         major_form, minor_form, patch_form = map(int, form_parts)
@@ -323,3 +349,46 @@ class SizeService:
             return f"{round(size / (1024 ** 2), 2)} MB"
         else:
             return f"{round(size / (1024 ** 3), 2)} GB"
+
+
+class DSMetaDataEditLogService(BaseService):
+    def __init__(self):
+        super().__init__(DSMetaDataEditLogRepository())
+
+    def log_edit(
+        self,
+        ds_meta_data_id: int,
+        user_id: int,
+        field_name: str,
+        old_value: str,
+        new_value: str,
+        change_summary: str = None,
+    ) -> DSMetaDataEditLog:
+        return self.repository.create(
+            ds_meta_data_id=ds_meta_data_id,
+            user_id=user_id,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=new_value,
+            change_summary=change_summary,
+        )
+
+    def log_multiple_edits(self, ds_meta_data_id: int, user_id: int, changes: list) -> list:
+        logs = []
+        for change in changes:
+            log = self.log_edit(
+                ds_meta_data_id=ds_meta_data_id,
+                user_id=user_id,
+                field_name=change.get("field"),
+                old_value=change.get("old"),
+                new_value=change.get("new"),
+                change_summary=change.get("summary"),
+            )
+            logs.append(log)
+        return logs
+
+    def get_changelog(self, ds_meta_data_id: int) -> list:
+        return self.repository.get_by_ds_meta_data_id(ds_meta_data_id)
+
+    def get_changelog_by_dataset_id(self, dataset_id: int) -> list:
+        return self.repository.get_by_dataset_id(dataset_id)

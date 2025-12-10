@@ -1,23 +1,31 @@
 # ----------------------------------------------------------------------------
 # Commits Syntax Checker Workflow
 # This workflow validates commit messages against the Conventional Commits specification.
-# It runs on every push and pull request to ensure consistent commit history.
+# Skips validation for automated commits from bots.
 # ----------------------------------------------------------------------------
 
 name: Commits Syntax Checker
 
 on:
-  # Trigger the workflow on every push to any branch
   push:
-  # Trigger the workflow on every pull request (opened, synchronized, or updated)
+    branches:
+      - main
+      - trunk
   pull_request:
+    branches:
+      - main
+      - trunk
 
 jobs:
   check:
     name: Conventional Commits
     runs-on: ubuntu-24.04
+    # Skip if the actor is a bot (github-actions, actions-user, etc.)
+    if: |
+      github.actor != 'github-actions[bot]' &&
+      github.actor != 'github-actions' &&
+      github.actor != 'actions-user'
 
     steps:
-      # Step to validate commit messages following the Conventional Commits standard
       - name: Validate commit messages
         uses: webiny/action-conventional-commits@v1.3.0

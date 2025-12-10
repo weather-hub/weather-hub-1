@@ -8,11 +8,11 @@ from app import db
 
 
 class PublicationType(Enum):
-    NONE = "none"
-    REGIONAL = "regional"
-    NATIONAL = "national"
-    CONTINENTAL = "continental"
-    OTHER = "other"
+    NONE = "NONE"
+    REGIONAL = "REGIONAL"
+    NATIONAL = "NATIONAL"
+    CONTINENTAL = "CONTINENTAL"
+    OTHER = "OTHER"
 
 
 class Author(db.Model):
@@ -189,3 +189,41 @@ class DOIMapping(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dataset_doi_old = db.Column(db.String(120))
     dataset_doi_new = db.Column(db.String(120))
+
+
+class DSMetaDataEditLog(db.Model):
+    """Tracks minor edits to dataset metadata that don't generate a new version."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    ds_meta_data_id = db.Column(db.Integer, db.ForeignKey("ds_meta_data.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    edited_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    field_name = db.Column(db.String(50), nullable=False)
+    old_value = db.Column(db.Text, nullable=True)
+    new_value = db.Column(db.Text, nullable=True)
+    change_summary = db.Column(db.String(255), nullable=True)
+
+    ds_meta_data = db.relationship("DSMetaData", backref=db.backref("edit_logs", lazy=True, cascade="all, delete"))
+    user = db.relationship("User", backref=db.backref("dataset_edits", lazy=True))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "field_name": self.field_name,
+            "old_value": self.old_value,
+            "new_value": self.new_value,
+            "change_summary": self.change_summary,
+            "edited_at": self.edited_at.isoformat() if self.edited_at else None,
+            "edited_by": (
+                {
+                    "id": self.user.id,
+                    "email": self.user.email,
+                    "name": self.user.profile.name if self.user.profile else None,
+                }
+                if self.user
+                else None
+            ),
+        }
+
+    def __repr__(self):
+        return f"<DSMetaDataEditLog id={self.id} field={self.field_name} at={self.edited_at}>"

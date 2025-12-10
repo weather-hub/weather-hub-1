@@ -13,6 +13,10 @@
     .option-button:last-child {
         margin-bottom: 0;
     }
+
+    .version-redirect-alert {
+        border-left: 4px solid #0d6efd;
+    }
 </style>
 {% endblock %}
 
@@ -101,20 +105,7 @@
 
                 </div>
 
-                {% if dataset.ds_meta_data.publication_doi %}
-                <div class="row mb-2">
-                    <div class="col-md-4 col-12">
-                        <span class="text-secondary">
-                            Publication DOI
-                        </span>
-                    </div>
-                    <div class="col-md-8 col-12">
-                        <a href="{{ dataset.ds_meta_data.publication_doi }}">
-                            {{ dataset.ds_meta_data.publication_doi }}
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
+                {# Removed auto-generated publication_doi section #}
 
                 {% include 'comments/coments.html' %}
 
@@ -324,7 +315,11 @@
                 <div class="row">
                     <div class="col-12 d-flex justify-content-between align-items-center">
                         <h4 style="margin-bottom: 0px">Weather Files</h4>
-                        <h4 style="margin-bottom: 0px;"><span class="badge bg-dark">{{ dataset.get_files_count() }}</span></h4>
+                        <h4 style="margin-bottom: 0px;">
+                            <span class="badge bg-dark">
+                                {{ dataset.get_files_count() }}
+                            </span>
+                        </h4>
                     </div>
                 </div>
 
@@ -332,8 +327,10 @@
             </div>
 
 
+
+            {# Show dataset files #}
             {% for feature_model in dataset.feature_models %}
-                {% for file in feature_model.files %}
+                    {% for file in feature_model.files %}
                     <div class="list-group-item">
 
                         <div class="row">
@@ -411,6 +408,40 @@
             <i data-feather="download" class="center-button-icon"></i>
             Download all ({{ dataset.get_file_total_size_for_human() }})
         </a>
+
+        <!-- Dataset Management Buttons -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Dataset Management</h6>
+            </div>
+            <div class="card-body">
+                {% if current_user.is_authenticated and current_user.id == dataset.user_id %}
+                <a href="{{ url_for('dataset.edit_dataset', dataset_id=dataset.id) }}"
+                   class="btn btn-outline-primary btn-sm w-100 mb-2" style="border-radius: 5px;">
+                    <i data-feather="edit-2" class="center-button-icon"></i>
+                    Edit Dataset
+                </a>
+
+                <a href="{{ url_for('dataset.republish_dataset_form', dataset_id=dataset.id) }}"
+                   class="btn btn-warning btn-sm w-100 mb-2" style="border-radius: 5px;">
+                    <i data-feather="upload-cloud" class="center-button-icon"></i>
+                    Re-publish with New Files
+                </a>
+                {% endif %}
+
+                <a href="{{ url_for('dataset.view_dataset_versions', dataset_id=dataset.id) }}"
+                   class="btn btn-outline-secondary btn-sm w-100 mb-2" style="border-radius: 5px;">
+                    <i data-feather="git-branch" class="center-button-icon"></i>
+                    Version History
+                </a>
+
+                <a href="{{ url_for('dataset.view_dataset_changelog', dataset_id=dataset.id) }}"
+                   class="btn btn-outline-info btn-sm w-100" style="border-radius: 5px;">
+                    <i data-feather="clock" class="center-button-icon"></i>
+                    Edit Changelog
+                </a>
+            </div>
+        </div>
     </div>
 
 </div>

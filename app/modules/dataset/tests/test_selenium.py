@@ -27,6 +27,21 @@ def count_datasets(driver, host):
     return amount_datasets
 
 
+def login_user(driver, host, email="user1@example.com", password="1234"):
+    """Helper function to log in a user."""
+    driver.get(f"{host}/login")
+    wait_for_page_to_load(driver)
+
+    email_field = driver.find_element(By.NAME, "email")
+    password_field = driver.find_element(By.NAME, "password")
+
+    email_field.send_keys(email)
+    password_field.send_keys(password)
+    password_field.send_keys(Keys.RETURN)
+    time.sleep(2)
+    wait_for_page_to_load(driver)
+
+
 def test_upload_dataset():
     driver = initialize_driver()
     # Nombre temporal para el readme
@@ -43,26 +58,21 @@ def test_upload_dataset():
         driver.get(f"{host}/login")
         wait_for_page_to_load(driver)
 
-        # Find the username and password field and enter the values
         email_field = driver.find_element(By.NAME, "email")
         password_field = driver.find_element(By.NAME, "password")
 
         email_field.send_keys("user1@example.com")
         password_field.send_keys("1234")
 
-        # Send the form
         password_field.send_keys(Keys.RETURN)
         time.sleep(4)
         wait_for_page_to_load(driver)
 
-        # Count initial datasets
         initial_datasets = count_datasets(driver, host)
 
-        # Open the upload dataset
         driver.get(f"{host}/dataset/upload")
         wait_for_page_to_load(driver)
 
-        # Find basic info and UVL model and fill values
         title_field = driver.find_element(By.NAME, "title")
         title_field.send_keys("Selenium Test Dataset")
         desc_field = driver.find_element(By.NAME, "desc")
@@ -70,7 +80,6 @@ def test_upload_dataset():
         tags_field = driver.find_element(By.NAME, "tags")
         tags_field.send_keys("tag1,tag2")
 
-        # Add two authors and fill
         add_author_button = driver.find_element(By.ID, "add_author")
         add_author_button.send_keys(Keys.RETURN)
         wait_for_page_to_load(driver)
@@ -78,18 +87,27 @@ def test_upload_dataset():
         wait_for_page_to_load(driver)
 
         name_field0 = driver.find_element(By.NAME, "authors-0-name")
+        name_field0.clear()
         name_field0.send_keys("Author0")
         affiliation_field0 = driver.find_element(By.NAME, "authors-0-affiliation")
+        affiliation_field0.clear()
         affiliation_field0.send_keys("Club0")
         orcid_field0 = driver.find_element(By.NAME, "authors-0-orcid")
+        orcid_field0.clear()
         orcid_field0.send_keys("0000-0000-0000-0000")
 
         name_field1 = driver.find_element(By.NAME, "authors-1-name")
+        name_field1.clear()
         name_field1.send_keys("Author1")
         affiliation_field1 = driver.find_element(By.NAME, "authors-1-affiliation")
+        affiliation_field1.clear()
         affiliation_field1.send_keys("Club1")
 
-        # Obtén las rutas absolutas de los archivos CSV de ejemplo
+        readme_content = "# Dataset README\n\nThis is a test README file for the dataset."
+        readme_path = os.path.abspath("test_readme.md")
+        with open(readme_path, "w", encoding="utf-8") as f:
+            f.write(readme_content)
+
         file1_path = os.path.abspath("app/modules/dataset/csv_examples/file1.csv")
         file2_path = os.path.abspath("app/modules/dataset/csv_examples/file2.csv")
 
@@ -99,11 +117,13 @@ def test_upload_dataset():
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
         dropzone.send_keys(file1_path)
         wait_for_page_to_load(driver)
+        time.sleep(1)
 
         # 2. Subir el segundo archivo (BUSCAMOS EL ELEMENTO DE NUEVO)
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
         dropzone.send_keys(file2_path)
         wait_for_page_to_load(driver)
+        time.sleep(1)
 
         # 3. Subir el README (BUSCAMOS EL ELEMENTO DE NUEVO)
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
@@ -112,7 +132,6 @@ def test_upload_dataset():
 
         # ---------------------------------------------
 
-        # Check I agree and send form
         check = driver.find_element(By.ID, "agreeCheckbox")
         check.send_keys(Keys.SPACE)
         time.sleep(1)  # Pequeña espera para UI
@@ -136,7 +155,6 @@ def test_upload_dataset():
 
         assert driver.current_url == f"{host}/dataset/list", "Test failed! No se redirigió a la lista de datasets."
 
-        # Count final datasets
         final_datasets = count_datasets(driver, host)
         assert final_datasets == initial_datasets + 1, "Test failed! El contador de datasets no incrementó."
 

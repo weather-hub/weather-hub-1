@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=80.3.1", "wheel"]
+requires = [ "setuptools>=80.3.1", "wheel",]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,32 +8,20 @@ version = "1.3.5"
 description = "Rosemary is a CLI to be able to work on UVLHub development more easily."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "click",
-    "python-dotenv"
-    ]
+dependencies = [ "click", "python-dotenv",]
 
 [project.optional-dependencies]
-dev = [
-    "black",
-    "isort",
-    "flake8",
-    "autoflake"
-    ]
+dev = [ "black", "isort", "flake8", "autoflake",]
 
 [project.scripts]
 rosemary = "rosemary.cli:cli"
 
 [tool.setuptools]
-packages = ["rosemary"]
-
-# --------------------
-# Formatting & linting
-# --------------------
+packages = [ "rosemary",]
 
 [tool.black]
 line-length = 120
-target-version = ["py312"]
+target-version = [ "py312",]
 
 [tool.isort]
 line_length = 120
@@ -41,4 +29,4 @@ profile = "black"
 
 [tool.flake8]
 max-line-length = 120
-extend-ignore = ["E203", "W503"]
+extend-ignore = [ "E203", "W503",]
