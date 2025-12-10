@@ -112,7 +112,7 @@ If you want to contribute to the Weather-Hub project, please:
 3. **Commit your changes using conventional commits**(`git commit -m 'feat: Add a new feature'`
    `'fix: Bug fix'`
    `'docs: Documentation only changes'`)
-5. **Push to the branch** (`git push origin feature/YourFeature`)
+4. **Push to the branch** (`git push origin feature/YourFeature`)
 
 Please ensure that your changes:
 - Pass the pre-commit hooks
