@@ -3,7 +3,6 @@ name: Release Automática
 on:
   push:
     branches:
-      - main
       - trunk
     paths-ignore:
       - "pyproject.toml"
