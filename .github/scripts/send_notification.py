@@ -27,7 +27,7 @@ def send_email():
     msg["To"] = ", ".join(team)
     msg.set_content(
         "Se ha realizado un merge/push exitoso a la rama trunk.\n\n"
-        "Por favor, haced 'git pull' para actualizar vuestros entornos locales."
+        "Por favor, haced 'git pull' para actualizar vuestros entornos locales!"
     )
 
     # 2. Enviar el correo usando contexto seguro SSL
