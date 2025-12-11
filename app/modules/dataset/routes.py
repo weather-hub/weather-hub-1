@@ -27,6 +27,7 @@ from app.modules.dataset.forms import DataSetForm
 from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
+    DatasetCommentService,
     DataSetService,
     DOIMappingService,
     DSDownloadRecordService,
@@ -778,3 +779,90 @@ def republish_dataset(dataset_id):
     except Exception as e:
         logger.exception(f"Error republishing dataset {dataset_id}: {e}")
         return jsonify({"message": f"Error: {str(e)}"}), 500
+
+
+# ===================== DATASET COMMENTS ROUTES =====================
+
+
+comment_service = DatasetCommentService()
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/comments", methods=["GET"])
+def get_dataset_comments(dataset_id):
+    """Get all comments for a dataset."""
+    try:
+        comments = comment_service.get_comments_by_dataset(dataset_id)
+        return jsonify({"comments": [comment.to_dict() for comment in comments]}), 200
+    except Exception as e:
+        logger.exception(f"Error getting comments for dataset {dataset_id}: {e}")
+        return jsonify({"message": "Error retrieving comments"}), 500
+
+
+@dataset_bp.route("/dataset/<int:dataset_id>/comments", methods=["POST"])
+@login_required
+def create_dataset_comment(dataset_id):
+    """Create a new comment on a dataset."""
+    try:
+        # Verify dataset exists
+        dataset = dataset_service.get_by_id(dataset_id)
+        if not dataset:
+            return jsonify({"message": "Dataset not found"}), 404
+
+        # Get comment content from request
+        data = request.get_json() if request.is_json else request.form
+        content = data.get("content", "").strip()
+
+        if not content:
+            return jsonify({"message": "Comment content is required"}), 400
+
+        # Create comment
+        comment = comment_service.create_comment(dataset_id=dataset_id, user_id=current_user.id, content=content)
+
+        return jsonify({"message": "Comment posted successfully", "comment": comment.to_dict()}), 201
+
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 400
+    except Exception as e:
+        logger.exception(f"Error creating comment on dataset {dataset_id}: {e}")
+        return jsonify({"message": "Error creating comment"}), 500
+
+
+@dataset_bp.route("/dataset/comments/<int:comment_id>", methods=["PUT"])
+@login_required
+def update_dataset_comment(comment_id):
+    """Update an existing comment."""
+    try:
+        data = request.get_json() if request.is_json else request.form
+        content = data.get("content", "").strip()
+
+        if not content:
+            return jsonify({"message": "Comment content is required"}), 400
+
+        comment = comment_service.update_comment(comment_id=comment_id, content=content, user_id=current_user.id)
+
+        return jsonify({"message": "Comment updated successfully", "comment": comment.to_dict()}), 200
+
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 400
+    except Exception as e:
+        logger.exception(f"Error updating comment {comment_id}: {e}")
+        return jsonify({"message": "Error updating comment"}), 500
+
+
+@dataset_bp.route("/dataset/comments/<int:comment_id>", methods=["DELETE"])
+@login_required
+def delete_dataset_comment(comment_id):
+    """Delete a comment."""
+    try:
+        # Check if user is admin
+        is_admin = hasattr(current_user, "is_admin") and current_user.is_admin
+
+        comment_service.delete_comment(comment_id=comment_id, user_id=current_user.id, is_admin=is_admin)
+
+        return jsonify({"message": "Comment deleted successfully"}), 200
+
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 400
+    except Exception as e:
+        logger.exception(f"Error deleting comment {comment_id}: {e}")
+        return jsonify({"message": "Error deleting comment"}), 500

@@ -42,7 +42,8 @@
                                     </a>
 
                                     {# Add to community dropdown - only show if there are communities #}
-                                    {% if communities and communities|length > 0 %}
+                                    {# Add to community dropdown - only show if there are communities and dataset is published #}
+                                    {% if communities and communities|length > 0 and dataset.ds_meta_data.dataset_doi %}
                                     <div class="btn-group ms-auto">
                                         <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                             Add to community
@@ -124,7 +125,8 @@
                                                 <i data-feather="download"></i>
                                             </a>
 
-                                            {% if communities and communities|length > 0 %}
+                                            {# Add to community dropdown - only show if there are communities and dataset is published #}
+                                            {% if communities and communities|length > 0 and local_dataset.ds_meta_data.dataset_doi %}
                                             <div class="btn-group ms-auto">
                                                 <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                                     Add to community

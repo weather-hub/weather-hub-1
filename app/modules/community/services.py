@@ -10,6 +10,7 @@ from app.modules.notifications.service import send_dataset_accepted_email
 from core.services.BaseService import BaseService
 
 follow_service = FollowService()
+MAX_VISUAL_IDENTITY_LENGTH = 100
 
 
 class CommunityService(BaseService):
@@ -21,6 +22,9 @@ class CommunityService(BaseService):
         existing = self.repository.get_by_name(name)
         if existing:
             raise ValueError("Community name already exists")
+
+        if visual_identity and len(visual_identity) > MAX_VISUAL_IDENTITY_LENGTH:
+            raise ValueError(f"Visual identity URL is too long (max {MAX_VISUAL_IDENTITY_LENGTH} characters)")
 
         return self.repository.create(name=name, description=description, visual_identity=visual_identity)
 
@@ -39,6 +43,13 @@ class CommunityService(BaseService):
     def propose_dataset(
         self, community: Community, dataset_id: int, proposed_by_user_id: int
     ) -> CommunityDatasetProposal:
+        dataset = DataSet.query.get(dataset_id)
+        if not dataset:
+            raise ValueError("Dataset not found")
+
+        if not dataset.ds_meta_data or not dataset.ds_meta_data.dataset_doi:
+            raise ValueError("Only published datasets can be proposed to a community")
+
         existing = self.proposal_repository.get_by_dataset_and_community(dataset_id, community.id)
         if existing:
             return existing
