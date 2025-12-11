@@ -152,8 +152,6 @@ class DSMetaDataEditLogRepository(BaseRepository):
 
 class DatasetCommentRepository(BaseRepository):
     def __init__(self):
-        from app.modules.dataset.models import DatasetComment
-
         super().__init__(DatasetComment)
 
     def get_by_dataset_id(self, dataset_id: int) -> list:

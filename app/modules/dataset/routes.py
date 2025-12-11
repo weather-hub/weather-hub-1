@@ -23,7 +23,7 @@ from flask_login import current_user, login_required
 
 from app.modules.community.repositories import CommunityRepository
 from app.modules.dataset import dataset_bp
-from app.modules.dataset.forms import DataSetForm, DatasetCommentForm
+from app.modules.dataset.forms import DataSetForm
 from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
@@ -816,9 +816,7 @@ def create_dataset_comment(dataset_id):
             return jsonify({"message": "Comment content is required"}), 400
 
         # Create comment
-        comment = comment_service.create_comment(
-            dataset_id=dataset_id, user_id=current_user.id, content=content
-        )
+        comment = comment_service.create_comment(dataset_id=dataset_id, user_id=current_user.id, content=content)
 
         return jsonify({"message": "Comment posted successfully", "comment": comment.to_dict()}), 201
 

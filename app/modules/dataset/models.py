@@ -222,14 +222,16 @@ class DatasetComment(db.Model):
             "content": self.content,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "user": {
-                "id": self.user.id,
-                "email": self.user.email,
-                "name": self.user.profile.name if self.user.profile else None,
-                "surname": self.user.profile.surname if self.user.profile else None,
-            }
-            if self.user
-            else None,
+            "user": (
+                {
+                    "id": self.user.id,
+                    "email": self.user.email,
+                    "name": self.user.profile.name if self.user.profile else None,
+                    "surname": self.user.profile.surname if self.user.profile else None,
+                }
+                if self.user
+                else None
+            ),
         }
 
     def __repr__(self):
