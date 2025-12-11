@@ -8,6 +8,7 @@ from sqlalchemy import desc, func
 from app.modules.dataset.models import (
     Author,
     DataSet,
+    DatasetComment,
     DOIMapping,
     DSDownloadRecord,
     DSMetaData,
@@ -147,3 +148,20 @@ class DSMetaDataEditLogRepository(BaseRepository):
             .order_by(desc(self.model.edited_at))
             .all()
         )
+
+
+class DatasetCommentRepository(BaseRepository):
+    def __init__(self):
+        super().__init__(DatasetComment)
+
+    def get_by_dataset_id(self, dataset_id: int) -> list:
+        """Get all comments for a dataset, ordered by date descending."""
+        return self.model.query.filter_by(dataset_id=dataset_id).order_by(desc(self.model.created_at)).all()
+
+    def count_by_dataset_id(self, dataset_id: int) -> int:
+        """Count total comments for a dataset."""
+        return self.model.query.filter_by(dataset_id=dataset_id).count()
+
+    def get_by_user_id(self, user_id: int) -> list:
+        """Get all comments by a user, ordered by date descending."""
+        return self.model.query.filter_by(user_id=user_id).order_by(desc(self.model.created_at)).all()
