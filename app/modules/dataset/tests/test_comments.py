@@ -7,7 +7,13 @@ import pytest
 from app import db
 from app.modules.auth.models import User
 from app.modules.conftest import login, logout
-from app.modules.dataset.models import DataSet, DatasetComment, DSMetaData, DSMetrics, PublicationType
+from app.modules.dataset.models import (
+    DataSet,
+    DatasetComment,
+    DSMetaData,
+    DSMetrics,
+    PublicationType,
+)
 from app.modules.profile.models import UserProfile
 
 
@@ -320,7 +326,6 @@ def test_comment_cascade_delete_with_dataset(test_client):
         db.session.commit()
 
         comment_id = comment.id
-        dataset_id = dataset.id
 
         # Delete the dataset
         db.session.delete(dataset)
