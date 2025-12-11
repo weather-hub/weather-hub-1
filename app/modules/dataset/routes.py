@@ -357,12 +357,14 @@ def list_dataset():
     try:
         community_repo = CommunityRepository()
         communities = community_repo.session.query(community_repo.model).all()
+        datasets = dataset_service.get_synchronized(current_user.id)
+        dataset_to_show = [ds for ds in datasets if ds.is_latest]
     except Exception:
         communities = []
 
     return render_template(
         "dataset/list_datasets.html",
-        datasets=dataset_service.get_synchronized(current_user.id),
+        datasets=dataset_to_show,
         local_datasets=dataset_service.get_unsynchronized(current_user.id),
         communities=communities,
     )
