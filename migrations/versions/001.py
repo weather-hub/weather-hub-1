@@ -1,8 +1,8 @@
-"""Initial migration clean
+"""empty message
 
 Revision ID: 001
 Revises:
-Create Date: 2025-12-10 17:37:34.416382
+Create Date: 2025-12-11 20:49:01.413913
 
 """
 
@@ -52,7 +52,8 @@ def upgrade():
     op.create_table(
         "fakenodo_deposition",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("conceptrecid", sa.Integer(), nullable=False),
+        sa.Column("conceptrecid", sa.String(length=120), nullable=False),
+        sa.Column("conceptdoi", sa.String(length=120), nullable=False),
         sa.Column("state", sa.String(length=50), nullable=False),
         sa.Column("metadata_json", sa.Text(), nullable=True),
         sa.Column("published", sa.Boolean(), nullable=True),
@@ -61,6 +62,7 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("conceptdoi"),
     )
     op.create_table(
         "fm_metrics",
@@ -288,7 +290,6 @@ def upgrade():
         sa.Column("ds_concept_id", sa.Integer(), nullable=True),
         sa.Column("version_number", sa.String(length=64), nullable=True),
         sa.Column("is_latest", sa.Boolean(), nullable=True),
-        sa.Column("is_major_edition", sa.Boolean(), nullable=True),
         sa.ForeignKeyConstraint(
             ["ds_concept_id"],
             ["dataset_concept.id"],
