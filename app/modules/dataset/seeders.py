@@ -81,9 +81,9 @@ class DataSetSeeder(BaseSeeder):
                 "10.seed/concept.1",
                 user1,
                 [
-                    ("v1.0.0", "Weather Data V1"),
-                    ("v1.1.0", "Weather Data V1.1 (Fixes)"),
                     ("v2.0.0", "Weather Data V2 (Major)"),
+                    ("v1.1.0", "Weather Data V1.1 (Fixes)"),
+                    ("v1.0.0", "Weather Data V1"),
                 ],
             ),
             # Concepto 2: Otro usuario
@@ -91,7 +91,7 @@ class DataSetSeeder(BaseSeeder):
             # Concepto 3: Dataset vacío o simple
             ("10.seed/concept.3", user1, [("v1.0.0", "Empty Set V1")]),
             # Concepto 4: Nuevo dato
-            ("10.seed/concept.4", user2, [("v1.0.0", "Experimental Data"), ("v1.0.1", "Experimental Data (Patch)")]),
+            ("10.seed/concept.4", user2, [("v1.0.1", "Experimental Data (Patch)"), ("v1.0.0", "Experimental Data")]),
         ]
 
         created_ds_ids = []

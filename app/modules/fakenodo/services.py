@@ -36,6 +36,8 @@ class FakenodoService(BaseService):
         """
         # Asegurar que metadata sea un dict si es None
         metadata = metadata or {}
+        conceptrecid = metadata.get("conceptrecid") or str(uuid4())
+        concept_doi = metadata.get("conceptdoi") or f"10.1234/fakenodo.concept.{conceptrecid}"
 
         if deposition_id:
             # Verificar que no existe ya un deposition con este ID
@@ -49,12 +51,14 @@ class FakenodoService(BaseService):
             db.session.execute(
                 db.text(
                     "INSERT INTO fakenodo_deposition "
-                    "(id, conceptrecid, state, metadata_json, published, dirty, created_at, updated_at) "
-                    "VALUES (:id, :conceptrecid, :state, :metadata_json, :published, :dirty, :created_at, :updated_at)"
+                    "(id, conceptrecid, conceptdoi, state, metadata_json, published, dirty, created_at, updated_at) "
+                    "VALUES (:id, :conceptrecid, :conceptdoi, :state, "
+                    + ":metadata_json, :published, :dirty, :created_at, :updated_at)"
                 ),
                 {
                     "id": deposition_id,
-                    "conceptrecid": deposition_id,
+                    "conceptrecid": conceptrecid,
+                    "conceptdoi": concept_doi,
                     "state": "draft",
                     "metadata_json": json.dumps(metadata),
                     "published": False,
@@ -70,7 +74,8 @@ class FakenodoService(BaseService):
         else:
             # Creación estándar (deja que la BD asigne el ID)
             deposition = FakenodoDeposition(
-                conceptrecid=0,  # Se actualizará después con el ID real
+                conceptrecid=conceptrecid,  # Se actualizará después con el ID real
+                conceptdoi=concept_doi,
                 state="draft",
                 metadata_json=json.dumps(metadata),
                 published=False,
@@ -130,48 +135,56 @@ class FakenodoService(BaseService):
         """
         Publica un deposition. Si hay cambios (dirty=True), crea una nueva versión.
         Si no hay cambios, retorna la última versión existente.
+        Mantiene la lógica original pero usando la base de datos.
         """
         deposition = self.deposition_repo.get_by_id(deposition_id)
         if not deposition:
             return None
 
-        # Obtener última versión
+        # Obtener la última versión para determinar si se necesita una nueva
         last_version = (
             FakenodoVersion.query.filter_by(deposition_id=deposition_id)
             .order_by(FakenodoVersion.version.desc())
             .first()
         )
 
+        # Comprobar si se necesita una nueva versión (primera publicación o si hay cambios)
         need_new = last_version is None or deposition.dirty
 
         if not need_new:
+            # No hay cambios, devolver la última versión existente
             return last_version.to_dict()
 
-        # Crear nueva versión
+        # Calcular el nuevo número de versión
         new_version_num = (last_version.version + 1) if last_version else 1
+
+        # Generar el DOI específico para esta nueva versión
         doi = f"10.1234/fakenodo.{deposition_id}.v{new_version_num}"
 
-        # Snapshot de archivos actuales
+        # Crear un snapshot de los archivos actuales para la nueva versión
         files_snapshot = [file.to_dict() for file in deposition.files]
 
+        # Crear la nueva instancia de FakenodoVersion
         version = FakenodoVersion(
             deposition_id=deposition_id,
             version=new_version_num,
             doi=doi,
-            metadata_json=deposition.metadata_json,
+            metadata_json=deposition.metadata_json,  # Snapshot de la metadata actual
             files_json=json.dumps(files_snapshot),
         )
         db.session.add(version)
 
-        # Actualizar deposition
+        # Actualizar el deposition principal
         deposition.published = True
-        deposition.dirty = False
-        deposition.doi = doi
+        deposition.dirty = False  # Marcar como "limpio" después de publicar
+        deposition.doi = doi  # Actualizar el DOI del deposition al de la última versión
         deposition.state = "published"
         deposition.updated_at = datetime.now(timezone.utc)
 
+        # Guardar todos los cambios en la base de datos
         db.session.commit()
 
+        # Devolver la nueva versión como un diccionario, manteniendo la compatibilidad
         return version.to_dict()
 
     def list_versions(self, deposition_id: int) -> Optional[List[Dict]]:
@@ -211,6 +224,7 @@ class FakenodoService(BaseService):
         return {
             "id": deposition.id,
             "conceptrecid": deposition.conceptrecid,
+            "conceptdoi": deposition.conceptdoi,
             "state": deposition.state,
             "metadata": metadata,
             "files": files,

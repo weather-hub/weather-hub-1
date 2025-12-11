@@ -97,11 +97,14 @@ class FakenodoAdapter:
 
     def create_new_deposition(self, dataset) -> dict:
         self.dataset_id = getattr(dataset, "id", None)
-        metadata = {
-            "title": getattr(dataset, "title", f"dataset-{self.dataset_id}"),
-        }
+        metadata = {"title": getattr(dataset, "title", f"dataset-{self.dataset_id}")}
         rec = self.service.create_deposition(metadata=metadata)
-        return {"id": rec["id"], "conceptrecid": rec.get("conceptrecid"), "metadata": rec.get("metadata", {})}
+        return {
+            "id": rec["id"],
+            "conceptrecid": rec.get("conceptrecid"),
+            "conceptid": rec.get("conceptid"),
+            "metadata": rec.get("metadata", {}),
+        }
 
     def upload_file(self, dataset, deposition_id, feature_model) -> Optional[dict]:
         name = getattr(feature_model, "filename", None) or getattr(feature_model, "name", None)
@@ -143,12 +146,9 @@ class FakenodoAdapter:
         rec = self.service.get_deposition(deposition_id)
         if not rec:
             return None
-        cdoi = rec.get("conceptdoi")
+        cdoi = rec["conceptdoi"]
         if cdoi:
             return cdoi
-        versions = rec.get("versions") or []
-        if versions:
-            return versions[-1].get("conceptdoi")
         return None
 
 
@@ -546,74 +546,6 @@ def search_dataset():
     return render_template("dataset/search_results.html", datasets=results, filters=filters)
 
 
-# --- RUTAS CORREGIDAS PARA EDITAR, LOGS Y VERSIONES ---
-
-
-@dataset_bp.route("/dataset/<int:dataset_id>/edit", methods=["GET", "POST"])
-@login_required
-def edit_dataset(dataset_id):
-    """Edit dataset metadata (minor edits that don't generate new version)."""
-    dataset = dataset_service.get_or_404(dataset_id)
-
-    # Check ownership
-    if dataset.user_id != current_user.id:
-        abort(403)
-
-    if request.method == "GET":
-        return render_template("dataset/edit_dataset.html", dataset=dataset)
-
-    try:
-        changes = []
-        ds_meta = dataset.ds_meta_data
-
-        new_title = request.form.get("title", "").strip()
-        if new_title and new_title != ds_meta.title:
-            changes.append({"field": "title", "old": ds_meta.title, "new": new_title})
-            ds_meta.title = new_title
-
-        new_description = request.form.get("description", "").strip()
-        if new_description and new_description != ds_meta.description:
-            changes.append(
-                {
-                    "field": "description",
-                    "old": ds_meta.description[:100] + "..." if len(ds_meta.description) > 100 else ds_meta.description,
-                    "new": new_description[:100] + "..." if len(new_description) > 100 else new_description,
-                }
-            )
-            ds_meta.description = new_description
-
-        new_tags = request.form.get("tags", "").strip()
-        if new_tags != (ds_meta.tags or ""):
-            changes.append({"field": "tags", "old": ds_meta.tags or "", "new": new_tags})
-            ds_meta.tags = new_tags
-
-        if changes:
-            ds_metadata_edit_log_service.log_multiple_edits(
-                ds_meta_data_id=ds_meta.id,
-                user_id=current_user.id,
-                changes=changes,
-            )
-
-            if ds_meta.deposition_id:
-                fakenodo_service = FakenodoService()
-                fakenodo_service.update_metadata(
-                    ds_meta.deposition_id,
-                    {"title": ds_meta.title, "description": ds_meta.description, "tags": ds_meta.tags},
-                )
-
-            from app import db
-
-            db.session.commit()
-
-            return jsonify({"message": "Dataset updated successfully", "changes": len(changes)}), 200
-        else:
-            return jsonify({"message": "No changes detected"}), 200
-
-    except Exception as e:
-        logger.exception(f"Error updating dataset {dataset_id}: {e}")
-        return jsonify({"message": f"Error updating dataset: {str(e)}"}), 500
-
-
 @dataset_bp.route("/dataset/<int:dataset_id>/changelog", methods=["GET"])
 @login_required
 def view_dataset_changelog(dataset_id):
@@ -646,9 +578,3 @@ def view_dataset_versions(dataset_id):
     if dataset.concept:
         versions = dataset.concept.versions
     return render_template("dataset/versions.html", dataset=dataset, versions=versions)
-
-
-@dataset_bp.route("/dataset/<int:dataset_id>/republish", methods=["GET", "POST"])
-@login_required
-def republish_dataset_form(dataset_id):
-    return redirect(url_for("dataset.create_new_ds_version", dataset_id=dataset_id))
