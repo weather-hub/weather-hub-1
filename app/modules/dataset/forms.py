@@ -101,3 +101,8 @@ class DataSetForm(FlaskForm):
 
     def get_feature_models(self):
         return [fm.get_feature_model() for fm in self.feature_models]
+
+
+class DatasetCommentForm(FlaskForm):
+    content = TextAreaField("Comment", validators=[DataRequired()])
+    submit = SubmitField("Post Comment")

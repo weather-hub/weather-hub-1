@@ -197,3 +197,40 @@ class DSMetaDataEditLog(db.Model):
 
     def __repr__(self):
         return f"<DSMetaDataEditLog id={self.id} field={self.field_name} at={self.edited_at}>"
+
+
+class DatasetComment(db.Model):
+    """Comments and feedback on datasets."""
+
+    __tablename__ = "dataset_comment"
+
+    id = db.Column(db.Integer, primary_key=True)
+    dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.utcnow)
+
+    # Relationships
+    dataset = db.relationship("DataSet", backref=db.backref("comments", lazy="dynamic", cascade="all, delete"))
+    user = db.relationship("User", backref=db.backref("dataset_comments", lazy=True))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "dataset_id": self.dataset_id,
+            "content": self.content,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "user": {
+                "id": self.user.id,
+                "email": self.user.email,
+                "name": self.user.profile.name if self.user.profile else None,
+                "surname": self.user.profile.surname if self.user.profile else None,
+            }
+            if self.user
+            else None,
+        }
+
+    def __repr__(self):
+        return f"<DatasetComment id={self.id} dataset_id={self.dataset_id} user_id={self.user_id}>"
