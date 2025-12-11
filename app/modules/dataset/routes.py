@@ -80,29 +80,110 @@ class FakenodoAdapter:
         except Exception:
             logger.exception("Failed to update concept linkage or latest flags")
 
+        # Mover los feature models nuevos que haya subido el usuario (si hay)
+        logger.info(
+            f"[VERSIONING] New dataset {new_dataset.id} created."
+            + f" Feature models uploaded by user: {len(new_dataset.feature_models)}"
+        )
         _dataset_service.move_feature_models(new_dataset)
-        data = self.create_new_deposition(new_dataset)
-        deposition_id = data.get("id")
+        logger.info(f"[VERSIONING] After move_feature_models: {len(new_dataset.feature_models)} files")
+
+        # SIEMPRE copiar archivos del dataset original
+        # Esto permite que las nuevas versiones tengan todos los archivos anteriores
+        # más cualquier archivo nuevo que el usuario haya subido
+        logger.info(
+            f"[VERSIONING] Original dataset {original_dataset.id} has {len(original_dataset.feature_models)} files"
+        )
+        logger.info(
+            f"[VERSIONING] Starting copy from original dataset {original_dataset.id} to new version {new_dataset.id}"
+        )
+        _dataset_service.copy_feature_models_from_original(new_dataset, original_dataset)
+
+        # Refrescar dataset para ver archivos copiados
+        from app import db
+
+        db.session.refresh(new_dataset)
+        logger.info(
+            f"[VERSIONING] After copy_feature_models_from_original: {len(new_dataset.feature_models)} files total"
+        )
+
+        # Reutilizar el deposition existente en lugar de crear uno nuevo
+        # Todas las versiones de un concepto comparten el mismo deposition
+        original_deposition_id = original_dataset.ds_meta_data.deposition_id
+
+        if original_deposition_id:
+            # Reutilizar deposition existente
+            deposition_id = original_deposition_id
+        else:
+            # Fallback: crear nuevo si el original no tiene deposition (datos legacy)
+            data = self.create_new_deposition(new_dataset)
+            deposition_id = data.get("id")
 
         for feature_model in new_dataset.feature_models:
             self.upload_file(new_dataset, deposition_id, feature_model)
 
-        self.publish_deposition(deposition_id)
+        # CRÍTICO: Solo crear nueva versión de DOI si es major version
+        self.publish_deposition(deposition_id, is_major=is_major)
         new_doi = self.get_doi(deposition_id)
-        doi_to_store = new_doi if is_major else original_dataset.ds_meta_data.dataset_doi
+
+        # Para major version: nuevo DOI. Para minor: mismo DOI del original
+        if not is_major and original_dataset.ds_meta_data.dataset_doi:
+            # Minor version: mantener el DOI del original
+            new_doi = original_dataset.ds_meta_data.dataset_doi
+            logger.info(f"[VERSIONING] Minor version - reusing DOI: {new_doi}")
+
+            # Registrar la creación de la minor version en el changelog
+            # El repositorio se encarga de agrupar todos los logs de la misma major version
+            from datetime import datetime, timezone
+
+            from app.modules.dataset.models import DSMetaDataEditLog
+
+            # Detectar qué cambió entre versiones
+            changes = []
+            if original_dataset.ds_meta_data.title != new_dataset.ds_meta_data.title:
+                changes.append("title updated")
+            if original_dataset.ds_meta_data.description != new_dataset.ds_meta_data.description:
+                changes.append("description updated")
+            if original_dataset.ds_meta_data.tags != new_dataset.ds_meta_data.tags:
+                changes.append("tags updated")
+
+            files_added = len(new_dataset.feature_models) - len(original_dataset.feature_models)
+            if files_added > 0:
+                changes.append(f"{files_added} file(s) added")
+
+            # Guardar en el ds_meta_data_id de la nueva versión
+            # El changelog se agregará automáticamente al visualizar cualquier versión de esta major
+            changelog_entry = DSMetaDataEditLog(
+                ds_meta_data_id=new_dataset.ds_meta_data_id,
+                user_id=current_user.id,
+                edited_at=datetime.now(timezone.utc),
+                field_name="version",
+                old_value=str(original_dataset.version_number),
+                new_value=str(new_dataset.version_number),
+                change_summary=f"Minor version {new_dataset.version_number}:"
+                + f"{', '.join(changes) if changes else 'metadata revision'}",
+            )
+            db.session.add(changelog_entry)
+            db.session.commit()
+            logger.info(f"[VERSIONING] Changelog entry created for minor version {new_dataset.version_number}")
+        else:
+            logger.info(f"[VERSIONING] Major version - new DOI: {new_doi}")
+
         _dataset_service.update_dsmetadata(
-            new_dataset.ds_meta_data_id, deposition_id=deposition_id, dataset_doi=doi_to_store
+            new_dataset.ds_meta_data_id, deposition_id=deposition_id, dataset_doi=new_doi
         )
         return new_dataset
 
     def create_new_deposition(self, dataset) -> dict:
         self.dataset_id = getattr(dataset, "id", None)
         metadata = {"title": getattr(dataset, "title", f"dataset-{self.dataset_id}")}
-        rec = self.service.create_deposition(metadata=metadata)
+        # Forzar que deposition_id = dataset.id para consistencia
+        rec = self.service.create_deposition(metadata=metadata, deposition_id=self.dataset_id)
         return {
             "id": rec["id"],
             "conceptrecid": rec.get("conceptrecid"),
             "conceptid": rec.get("conceptid"),
+            "conceptdoi": rec.get("conceptdoi"),  # CRÍTICO 2: Incluir conceptdoi
             "metadata": rec.get("metadata", {}),
         }
 
@@ -120,8 +201,9 @@ class FakenodoAdapter:
             name = f"feature_model_{getattr(feature_model, 'id', uuid.uuid4())}.bin"
         return self.service.upload_file(deposition_id, name, content)
 
-    def publish_deposition(self, deposition_id):
-        version = self.service.publish_deposition(deposition_id)
+    def publish_deposition(self, deposition_id, is_major=True):
+        """Publica deposition. Si is_major=False, no crea nueva versión de DOI."""
+        version = self.service.publish_deposition(deposition_id, is_major=is_major)
         if version and self.dataset_id:
             new_doi = f"10.1234/fakenodo.{self.dataset_id}.v{version.get('version', 1)}"
             version["doi"] = new_doi
@@ -222,14 +304,19 @@ def create_dataset():
                 deposition_doi = zenodo_service.get_doi(deposition_id)
                 dataset_service.update_dsmetadata(ds_meta_id, dataset_doi=deposition_doi)
 
+                # Obtener concept_doi del deposition, NUNCA derivar
                 concept_doi = None
                 try:
                     if hasattr(zenodo_service, "get_concept_doi"):
                         concept_doi = zenodo_service.get_concept_doi(deposition_id)
                 except Exception:
+                    logger.exception("Failed to get concept DOI from zenodo service")
                     concept_doi = None
-                if not concept_doi and deposition_doi:
-                    concept_doi = deposition_doi.split(".v")[0]
+
+                # Si no se pudo obtener, crear uno basado en deposition_id como fallback
+                if not concept_doi:
+                    concept_doi = f"10.1234/concept.{deposition_id}"
+                    logger.warning(f"Could not get concept DOI from deposition, using fallback: {concept_doi}")
 
                 if concept_doi:
                     from app import db
@@ -458,7 +545,14 @@ def create_new_ds_version(dataset_id):
         else:
             return jsonify({"message": form.errors}), 400
 
+    # Cargar datos del dataset original en el formulario
     form.version_number.data = str(original_dataset.version_number)
+    form.title.data = original_dataset.ds_meta_data.title
+    form.desc.data = original_dataset.ds_meta_data.description
+    form.publication_type.data = original_dataset.ds_meta_data.publication_type.value
+    form.publication_doi.data = original_dataset.ds_meta_data.publication_doi
+    form.tags.data = original_dataset.ds_meta_data.tags
+
     return render_template("dataset/new_version.html", form=form, dataset=original_dataset)
 
 

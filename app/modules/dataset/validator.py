@@ -83,10 +83,6 @@ def validate_dataset_package(
     Validate a package (list of file paths). Raises ValueError with readable message on failure.
     - Uses pattern-based matching: allowed headers like 'BASEL_temp_mean' satisfy '_temp_mean'
     """
-    # Permitir paquete vacío si así se indica (caso: nueva versión sin ficheros)
-    if allow_empty and (not file_paths or len(file_paths) == 0):
-        return
-    # Si hay ficheros, se aplican las validaciones normales
     csv_paths = []
     readme_paths = []
     others = []
@@ -103,12 +99,18 @@ def validate_dataset_package(
     warnings = []
 
     # cardinality checks
-    if len(csv_paths) == 0:
-        errors.append("No se subió ningún CSV. Se requiere 1 o 2 CSV.")
-    if len(csv_paths) > max_csv:
-        errors.append(f"Máximo {max_csv} CSV permitidos; se recibieron {len(csv_paths)}.")
-    if require_readme and len(readme_paths) == 0:
-        errors.append("Falta README (.md o .txt). Debe incluirse un fichero README.")
+    # Si allow_empty=True, no exigir CSVs ni README (permite paquetes sin CSV)
+    if not allow_empty:
+        if len(csv_paths) == 0:
+            errors.append("No se subió ningún CSV. Se requiere 1 o 2 CSV.")
+        if len(csv_paths) > max_csv:
+            errors.append(f"Máximo {max_csv} CSV permitidos; se recibieron {len(csv_paths)}.")
+        if require_readme and len(readme_paths) == 0:
+            errors.append("Falta README (.md o .txt). Debe incluirse un fichero README.")
+    else:
+        # Con allow_empty, solo verificar que no exceda el máximo si hay CSVs
+        if len(csv_paths) > max_csv:
+            errors.append(f"Máximo {max_csv} CSV permitidos; se recibieron {len(csv_paths)}.")
 
     # For each CSV, check headers using pattern matching
     for csvp in csv_paths:

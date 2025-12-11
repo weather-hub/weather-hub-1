@@ -131,11 +131,11 @@ class FakenodoService(BaseService):
 
         return file.to_dict()
 
-    def publish_deposition(self, deposition_id: int) -> Optional[Dict]:
+    def publish_deposition(self, deposition_id: int, is_major: bool = True) -> Optional[Dict]:
         """
-        Publica un deposition. Si hay cambios (dirty=True), crea una nueva versión.
-        Si no hay cambios, retorna la última versión existente.
-        Mantiene la lógica original pero usando la base de datos.
+        Publica un deposition.
+        - Si is_major=True: crea una nueva versión con nuevo DOI (v1 -> v2)
+        - Si is_major=False: actualiza metadata pero mantiene el mismo DOI (minor edit)
         """
         deposition = self.deposition_repo.get_by_id(deposition_id)
         if not deposition:
@@ -148,14 +148,23 @@ class FakenodoService(BaseService):
             .first()
         )
 
-        # Comprobar si se necesita una nueva versión (primera publicación o si hay cambios)
-        need_new = last_version is None or deposition.dirty
+        # Comprobar si se necesita una nueva versión
+        # Solo crear nueva versión si:
+        # 1. Es la primera publicación (last_version is None), O
+        # 2. Es una major version (is_major=True)
+        need_new_version = last_version is None or is_major
 
-        if not need_new:
-            # No hay cambios, devolver la última versión existente
+        if not need_new_version:
+            # Minor version: NO crear nueva versión, solo actualizar metadata
+            last_version.metadata_json = deposition.metadata_json
+            deposition.published = True
+            deposition.dirty = False
+            deposition.state = "published"
+            deposition.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
             return last_version.to_dict()
 
-        # Calcular el nuevo número de versión
+        # Calcular el nuevo número de versión (solo para major versions)
         new_version_num = (last_version.version + 1) if last_version else 1
 
         # Generar el DOI específico para esta nueva versión

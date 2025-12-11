@@ -88,6 +88,87 @@ class DataSetService(BaseService):
                 logger.exception(f"Failed moving file {src_path} to {dst_path}: {exc}")
                 raise
 
+    def copy_feature_models_from_original(self, new_dataset: DataSet, original_dataset: DataSet):
+        """
+        Copia los feature models del dataset original al nuevo dataset.
+        Esto es necesario cuando se crea una nueva versión para que los archivos persistan.
+        Incluye la copia de metadata, archivos físicos y registros Hubfile.
+        """
+        from app import db
+        from app.modules.featuremodel.models import FeatureModel, FMMetaData
+        from app.modules.hubfile.models import Hubfile
+
+        working_dir = os.getenv("WORKING_DIR", "")
+
+        # Directorios de origen y destino
+        src_dir = os.path.join(
+            working_dir,
+            "uploads",
+            f"user_{original_dataset.user_id}",
+            f"dataset_{original_dataset.id}",
+        )
+
+        dest_dir = os.path.join(
+            working_dir,
+            "uploads",
+            f"user_{new_dataset.user_id}",
+            f"dataset_{new_dataset.id}",
+        )
+
+        os.makedirs(dest_dir, exist_ok=True)
+
+        # Copiar cada feature model
+        for original_fm in original_dataset.feature_models:
+            # Copiar metadata
+            new_fm_meta = FMMetaData(
+                filename=original_fm.fm_meta_data.filename,
+                title=original_fm.fm_meta_data.title,
+                description=original_fm.fm_meta_data.description,
+                publication_type=original_fm.fm_meta_data.publication_type,
+                publication_doi=original_fm.fm_meta_data.publication_doi,
+                tags=original_fm.fm_meta_data.tags,
+                version=original_fm.fm_meta_data.version,
+            )
+            db.session.add(new_fm_meta)
+            db.session.flush()
+
+            # Copiar feature model
+            new_fm = FeatureModel(
+                data_set_id=new_dataset.id,
+                fm_meta_data_id=new_fm_meta.id,
+            )
+            db.session.add(new_fm)
+            db.session.flush()
+
+            # Copiar registros Hubfile (necesario para get_files_count())
+            for original_hubfile in original_fm.files:
+                new_hubfile = Hubfile(
+                    name=original_hubfile.name,
+                    checksum=original_hubfile.checksum,
+                    size=original_hubfile.size,
+                    feature_model_id=new_fm.id,
+                )
+                db.session.add(new_hubfile)
+                logger.info(f"Copied Hubfile record: {original_hubfile.name} (size: {original_hubfile.size})")
+
+            # Copiar archivo físico
+            src_file = os.path.join(src_dir, original_fm.fm_meta_data.filename)
+            dest_file = os.path.join(dest_dir, original_fm.fm_meta_data.filename)
+
+            if os.path.exists(src_file):
+                try:
+                    shutil.copy2(src_file, dest_file)
+                    logger.info(f"Copied feature model file: {src_file} -> {dest_file}")
+                except Exception as exc:
+                    logger.exception(f"Failed copying file {src_file} to {dest_file}: {exc}")
+            else:
+                logger.warning(f"Source feature model file not found: {src_file}")
+
+        db.session.commit()
+        logger.info(
+            f"Copied {len(original_dataset.feature_models)} feature models from dataset {original_dataset.id} to {new_dataset.id}"
+        )
+
     def get_synchronized(self, current_user_id: int) -> DataSet:
         return self.repository.get_synchronized(current_user_id)
 
@@ -177,42 +258,6 @@ class DataSetService(BaseService):
             raise exc
         return dataset
 
-    def update_dsmetadata_with_log(self, dataset_id, user_id, title, description, tags, **kwargs):
-        dataset = self.repository.get(dataset_id)
-        if not dataset:
-            raise Exception("Dataset not found")
-
-        meta = dataset.ds_meta_data
-        changes = []
-
-        def check_change(field_name, old_val, new_val):
-            old_str = str(old_val).strip() if old_val is not None else ""
-            new_str = str(new_val).strip() if new_val is not None else ""
-            if old_str != new_str:
-                changes.append(
-                    {"field": field_name, "old": old_str, "new": new_str, "summary": f"Updated {field_name}"}
-                )
-
-        check_change("title", meta.title, title)
-        check_change("description", meta.description, description)
-        check_change("tags", meta.tags, tags)
-
-        if "publication_type" in kwargs and kwargs["publication_type"] is not None:
-            old_pt = meta.publication_type.name if meta.publication_type else "NONE"
-            new_pt_val = kwargs["publication_type"]
-            new_pt = new_pt_val.name if hasattr(new_pt_val, "name") else str(new_pt_val)
-            if old_pt != new_pt:
-                changes.append({"field": "publication_type", "old": old_pt, "new": new_pt, "summary": "Updated Type"})
-
-        if not changes:
-            return False, "No changes detected"
-
-        self.dsmetadata_repository.update(meta.id, title=title, description=description, tags=tags, **kwargs)
-
-        self.ds_metadata_edit_log_service.log_multiple_edits(meta.id, user_id, changes)
-
-        return True, "Dataset updated successfully"
-
     def update_dsmetadata(self, id, **kwargs):
         return self.dsmetadata_repository.update(id, **kwargs)
 
@@ -229,6 +274,13 @@ class DataSetService(BaseService):
 
     @staticmethod
     def infer_is_major_from_form(form) -> bool:
+        """
+        Determina si es major version comparando números de versión.
+        Major version: incrementa el primer número (1.0.0 -> 2.0.0)
+        Minor version: incrementa segundo o tercer número (1.0.0 -> 1.1.0 o 1.0.1)
+
+        DEPRECATED: Esta lógica es incorrecta. Use infer_is_major_from_versions() en su lugar.
+        """
         try:
             return bool(getattr(form, "feature_models", [])) and len(form.feature_models) > 0
         except Exception:

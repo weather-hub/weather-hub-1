@@ -82,7 +82,6 @@ class DataSet(db.Model):
     version_number = db.Column(db.String(64), default="v1.0.0")
     # puntero de last version
     is_latest = db.Column(db.Boolean, default=True)  # Puede sobrar
-    is_major_edition = db.Column(db.Boolean, default=True)
 
     ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
     feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
