@@ -1,3 +1,9 @@
+# Version 1.3.6 (2025-12-12)
+
+## Fixes
+- fix(comments): comments seeders añadidos
+
+
 # Version 1.3.5 (2025-12-10)
 
 ## Fixes
