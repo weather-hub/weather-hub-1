@@ -68,9 +68,7 @@
 ## Fixes
 
 - fix: added user link for following user
-- fix: added user link for following user
 - fix: fixed link when following an user
-- fix: now users cannot see other users active sessions
 - fix: now users cannot see other users active sessions
 - fix: now users cannot see other users active sessions
 - fix: new functional website logo
@@ -115,8 +113,6 @@
 
 ## Others
 
-- chore: bump version [skip ci]
-- chore: update changelog [skip ci]
 - chore: update changelog [skip ci]
 - chore: bump version [skip ci]
 - chore: bump version [skip ci]
