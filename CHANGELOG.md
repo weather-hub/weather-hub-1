@@ -1,3 +1,9 @@
+# Version 1.4.6 (2025-12-12)
+
+## Fixes
+- fix: edit change adapted
+
+
 # Version 1.4.5 (2025-12-12)
 
 ## Fixes
