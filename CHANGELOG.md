@@ -1,3 +1,230 @@
+# Changelog - Version 1.23.0 (2025-12-12)
+
+
+## Features
+
+- feat: added user profile
+- feat: add profile user view
+- feat: added selenium test for view user profile
+- feat: added locustfile test for view user profile
+- feat: added unitary test for view user profile
+- feat: added html for users view profile
+- feat: added route for view users profile
+- feat: Added comments on datasets
+- feat: added dataset feedback
+- feat: merge Fakenodo improvements and security fixes from trunk
+- feat: merge adding files creates new DOI and fix seeders
+- feat: Adding files creates new DOI, fix seeders
+- feat: Adding files versions implemented
+- feat: added dataset editing and minor edits viewing features
+- feat:
+- feat: add dataset edit changelog and version history
+- feat: Merge Fakenodo service integration from trunk
+- feat: Integrate Fakenodo service for Zenodo simulation
+- feat: Different DOI + Tags fixed
+- feat: Different DOI + Tags fixed
+- feat: following feat added
+- feat: follwing tests
+- feat: following notifications added
+- feat: following feature added
+- feat: Added management session from trunk to main
+- feat: Added management for active sessions
+- feat: notifications for dataset posts to communities and test
+- feat: test notifications in dataset in communities
+- feat: add notifications to community datasets
+- feat: deploy email verification and workflow fixes
+- feat: Added verification email when signing up
+- feat: Added email verification
+- feat(communities): merge feature/WI74-communities into trunk
+- feat: more CI implemented
+- feat: more CI implemented
+- feat: Implemented CD with docker
+- feat: :lipstick: communities on profile screen
+- feat: :lipstick: add to community buttons
+- feat: :sparkles: add community model and migrations
+- feat: Fakenodo simplified as an endpoint
+- feat: :sparkles: Add Schema Changes to DB migrations
+- feat: :sparkles: Add storage_path to data_set table if missing
+- feat: :sparkles: Add dataset columns to data_set table if missing
+- feat: :sparkles: Add dataset_type column to data_set table if missing
+- feat: :sparkles: Fakenodo implemented
+- feat: Merge repos
+- feat(dataset): integrate dataset from feature/Dataset
+- feat: :rocket: Added CD for main branch
+- feat: Ci script added
+- feat: Finish WeatherHub
+- feat(auth): add migration for 2FA fields (otp_secret, twofa_enabled)
+- feat(admin): add backend validation for exclusive guest role
+- feat(auth): seeding robusto
+- feat(admin): gestión de usuarios y roles (rutas, vista y tests) + guards RBAC
+- feat(auth): add Role model, migration, repository, seeder and tests for admin roles
+- feat: Add files that are not UVL only. CSV, TXT and JSON
+- feat: design and workflow improved
+- feat: qr generation in profile
+- feat: Readme With Infor added
+- feat: CI LOCAL IMPLEMENTED
+- feat: 2fa required in login
+
+## Fixes
+
+- fix: added user link for following user
+- fix: added user link for following user
+- fix: fixed link when following an user
+- fix: now users cannot see other users active sessions
+- fix: now users cannot see other users active sessions
+- fix: now users cannot see other users active sessions
+- fix: new functional website logo
+- fix: new weather logo for our app
+- fix: sun logo replaced
+- fix: slint errors
+- fix: unit test
+- fix: code formatting
+- fix: prevent adding unpublished datasets
+- fix: fix long URL image loading
+- fix: use MD5 with usedforsecurity=False for file checksums
+- fix: logo images restored
+- fix: logo image restored
+- fix: users can not edit datasets they do not own
+- fix: users can not edit datasets they do not own
+- fix: Remove auto-generated publication_doi and show Zenodo record only for real Zenodo datasets
+- fix: Publication type error in DB
+- fix: initial implementation DOI managements
+- fix: change selenium version
+- fix: change in requirements and unused route deleted
+- fix: minor changes in following
+- fix: eslint errors for  management for active sessions
+- fix: werkzeug version fix
+- fix: skip commit validation for bot users
+- fix: add retry logic and concurrency to changelog and version workflows
+- fix: update automatic commit messages to follow conventional commits
+- fix: improve main deploy worflow error handling
+- fix: WI error
+- fix: fixing errors and improving communinties
+- fix: CD with docker
+- fix: :bug: fix Schema Changes to DB migrations
+- fix: :bug: fix Schema Changes to DB migrations
+- fix: 🐛 usar COUNT agregado para evitar error 'Unknown column'
+- fix: :lock: No debugger enabled by default when starting fakenodo
+- fix: 🔧 CI tests
+- fix: 🔧 Vulnerabilities in libraries
+- fix: 🔧Code vulnerabilty
+- fix: minor mistakes in merge
+- fix: remove line
+- fix: Remove line
+- fix: check pre-commit hooks
+
+## Others
+
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- Merge trunk into main
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: merge trunk into feature/WI74-communities
+- test(load): add Locust tests
+- test(ui): add Selenium integration tests
+- test(unit): add unit tests
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- test: Added testing for dataset editing functionality
+- chore: clean code
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- 🚀 Deploy: email verification, workflow improvements, pytest-mock
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- Versión automática [skip ci]
+- Actualizar changelog [skip ci]
+- 🚀 Deploy: Communities y mejoras de CI/CD
+- Actualizar changelog [skip ci]
+- Versión automática [skip ci]
+- Versión automática [skip ci]
+- Actualizar changelog [skip ci]
+- Actualizar changelog [skip ci]
+- Versión automática [skip ci]
+- Actualizar changelog [skip ci]
+- Actualizar changelog [skip ci]
+- style: fix imports
+- chore: 🔧 fix flake8 E501 line lengths in migrations
+- style: 🎨 apply isort to fix import order (profile black)
+- chore: 🎨 format code with black and update pyproject target-version to py312
+- style: :fire: Removal of an unused variable
+- refactor: :fire: Cleared code after merge
+- chore: :rocket: Add concurrency check to CD
+- chore: :rocket: Added CD for trunk branch
+- style: fix linting errors in trunk (flake8, black, isort)
+- Merge branch 'feat/admin-roles' into trunk
+- style: fix import ordering in auth module
+- Seed: estado inicial propio tras el fork
+- refactor(templates): saneo JS
+- Add or update the Azure App Service build and deployment workflow config
+- Add or update the Azure App Service build and deployment workflow config
+- Merge branch 'feature/2fa' into trunk
+- dasfdas
+- dasfdas
+- chore: add pre-commit config and commit-msg hook
+- dfdsfsdf
+- x
+- q
+- adas
+- seed: second pull of original repo
+
 # Changelog - Version 1.22.0 (2025-12-12)
 
 
