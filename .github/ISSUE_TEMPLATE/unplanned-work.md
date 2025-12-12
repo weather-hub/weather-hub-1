@@ -4,15 +4,7 @@ about: For urgent incidents, production bugs, hotfixes, or unexpected requests t
 title: "[Unplanned] <Describe the incident>"
 labels: unplanned
 assignees: ''
-
----
-
----
-name: Unplanned Work
-about: Template for urgent incidents, production issues, or unplanned requests.
-title: "[Unplanned] "
-labels: ["unplanned"]
-assignees: []
+type: Bug
 ---
 
 ## 🚨 Issue / Urgency Description

@@ -4,15 +4,7 @@ about: For roadmap initiatives, user stories, planned improvements, and schedule
 title: "[Planned] <Write the title here>"
 labels: planned
 assignees: ''
-
----
-
----
-name: "Planned Work"
-about: "Template for scheduled / roadmap-related tasks."
-title: "[Planned] "
-labels: ["planned"]
-assignees: ""
+type: Task
 ---
 
 ## 🎯 Technical Objective

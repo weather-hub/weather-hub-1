@@ -4,7 +4,7 @@ about: Template for requesting, documenting, or executing tests on an existing W
 title: "[Test] Validate Working Item <ID>"
 labels: test
 assignees: ''
-
+type: Task
 ---
 
 ## 🧪 Purpose of the Test
