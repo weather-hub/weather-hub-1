@@ -8,9 +8,8 @@ name: Commits Syntax Checker
 
 on:
   push:
-    branches:
-      - main
-      - trunk
+    branches: [main, trunk, feature/*, task/*]
+
   pull_request:
     branches:
       - main
