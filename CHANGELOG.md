@@ -1,3 +1,25 @@
+# Version 1.3.8 (2025-12-12)
+
+## Fixes
+- fix(admin-roles): prevent removing last role from user
+
+## Others
+- chore: apply pre-commit hooks formatting
+- test(admin-roles): add regression test for last-role removal
+
+
+# Version 1.3.7 (2025-12-12)
+
+## Fixes
+- fix(comments): fix del test de selenium de comments
+
+
+# Version 1.3.6 (2025-12-12)
+
+## Fixes
+- fix(comments): comments seeders añadidos
+
+
 # Version 1.3.5 (2025-12-10)
 
 ## Fixes

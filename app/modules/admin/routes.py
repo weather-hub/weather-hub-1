@@ -85,9 +85,14 @@ def add_user_role(user_id, role_id):
 def remove_user_role(user_id, role_id):
     """
     Remove a single role from a user.
+    Business rule: A user must have at least one role at all times.
     """
     user = User.query.get_or_404(user_id)
     role = Role.query.get_or_404(role_id)
+
+    # Prevent removing the last role from a user (RBAC invariant)
+    if len(user.roles) <= 1:
+        return jsonify({"error": "Cannot remove last role. User must have at least one role"}), 400
 
     if role in user.roles:
         user.roles.remove(role)

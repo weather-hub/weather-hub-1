@@ -1,16 +1,15 @@
 import pytest
-from flask import url_for
+
+from app import db
 from app.modules.auth.models import User
-from app.modules.comments.models import Comment
+from app.modules.auth.repositories import UserRepository
 from app.modules.comments.services import CommentService
 from app.modules.dataset.models import DataSet, DSMetaData
-from app.modules.auth.repositories import UserRepository
-from app import db
-
 
 # ----------------------------
 # Fixtures
 # ----------------------------
+
 
 @pytest.fixture
 def comment_service():
@@ -32,9 +31,7 @@ def user(test_app, clean_database):
 def comment_user(test_app, clean_database):
     """Otro usuario para comentar"""
     with test_app.app_context():
-        u = UserRepository().create(
-            email="commenter@example.com", password="1234"
-        )
+        u = UserRepository().create(email="commenter@example.com", password="1234")
         db.session.commit()
         return db.session.get(User, u.id)
 
@@ -53,10 +50,10 @@ def dataset(test_app, user):
         return db.session.get(DataSet, ds.id)
 
 
-
 # ----------------------------
 # Tests de CommentService
 # ----------------------------
+
 
 def test_create_comment_success(comment_service, dataset, comment_user, test_app):
     with test_app.app_context():
@@ -65,7 +62,6 @@ def test_create_comment_success(comment_service, dataset, comment_user, test_app
         assert comment.content == "This is a test comment"
         assert comment.dataset_id == dataset.id
         assert comment.author_id == comment_user.id
-
 
 
 def test_approve_comment_success(comment_service, dataset, user, test_app):
