@@ -121,10 +121,10 @@ Please ensure that your changes:
 
 ## 📧 Contact and Support
 
-If you have questions or encounter issues:
-
-- Open an [issue](https://github.com/weather-hub/weather-hub-1/issues) on the repository
-- Check the [official documentation](https://docs.uvlhub.io/)
+- 🐛 Open an issue on the repository to [report a bug](https://github.com/weather-hub/weather-hub-1/issues/new?template=bug_report.md)
+- 💡 [Request a feature](https://github.com/weather-hub/weather-hub-1/issues/new?template=feature_request.md)
+- 📖 [Check the Wiki](https://github.com/weather-hub/weather-hub-1/wiki)
+- 📚 [Official Documentation](https://docs.uvlhub.io/)
 
 ---
 
