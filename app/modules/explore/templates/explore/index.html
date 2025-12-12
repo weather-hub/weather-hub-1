@@ -233,6 +233,15 @@
       });
     }
 
+    // Apply publication type on change
+    const pubSelect = form.querySelector('select[name="publication_type"]');
+    if (pubSelect) {
+      pubSelect.addEventListener('change', (e) => {
+        e.preventDefault();
+        navigateWithSideForm();
+      });
+    }
+
     const clearBtn = form.querySelector('.btn-clear-filters');
     if (clearBtn) {
       clearBtn.addEventListener('click', (e) => {
