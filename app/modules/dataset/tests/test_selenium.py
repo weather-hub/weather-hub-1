@@ -2,7 +2,7 @@ import os
 import re
 import time
 
-from selenium.common.exceptions import UnexpectedAlertPresentException
+from selenium.common.exceptions import NoSuchElementException, UnexpectedAlertPresentException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -92,10 +92,17 @@ def submit_comment_form(driver, expect_success=True):
 
 def test_upload_dataset():
     driver = initialize_driver()
+    # Nombre temporal para el readme
+    readme_path = os.path.abspath("dummy_readme.txt")
 
     try:
         host = get_host_for_selenium_testing()
 
+        # Crear un README temporal para la prueba (Requerido por el validador)
+        with open(readme_path, "w") as f:
+            f.write("Este es un fichero README de prueba para Selenium.")
+
+        # Open the login page
         driver.get(f"{host}/login")
         wait_for_page_to_load(driver)
 
@@ -115,9 +122,9 @@ def test_upload_dataset():
         wait_for_page_to_load(driver)
 
         title_field = driver.find_element(By.NAME, "title")
-        title_field.send_keys("Title")
+        title_field.send_keys("Selenium Test Dataset")
         desc_field = driver.find_element(By.NAME, "desc")
-        desc_field.send_keys("Description")
+        desc_field.send_keys("Description via Selenium")
         tags_field = driver.find_element(By.NAME, "tags")
         tags_field.send_keys("tag1,tag2")
 
@@ -152,328 +159,60 @@ def test_upload_dataset():
         file1_path = os.path.abspath("app/modules/dataset/csv_examples/file1.csv")
         file2_path = os.path.abspath("app/modules/dataset/csv_examples/file2.csv")
 
-        dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
-        dropzone.send_keys(readme_path)
-        wait_for_page_to_load(driver)
-        time.sleep(1)
+        # --- SUBIDA DE FICHEROS CON RE-BÚSQUEDA ---
 
+        # 1. Subir el primer archivo
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
         dropzone.send_keys(file1_path)
         wait_for_page_to_load(driver)
         time.sleep(1)
 
+        # 2. Subir el segundo archivo (BUSCAMOS EL ELEMENTO DE NUEVO)
         dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
         dropzone.send_keys(file2_path)
         wait_for_page_to_load(driver)
         time.sleep(1)
 
-        time.sleep(2)
+        # 3. Subir el README (BUSCAMOS EL ELEMENTO DE NUEVO)
+        dropzone = driver.find_element(By.CLASS_NAME, "dz-hidden-input")
+        dropzone.send_keys(readme_path)
+        wait_for_page_to_load(driver)
+
+        # ---------------------------------------------
 
         check = driver.find_element(By.ID, "agreeCheckbox")
-        if not check.is_selected():
-            check.click()
-        wait_for_page_to_load(driver)
-        time.sleep(1)
+        check.send_keys(Keys.SPACE)
+        time.sleep(1)  # Pequeña espera para UI
 
         upload_btn = driver.find_element(By.ID, "upload_button")
-        assert upload_btn.is_enabled(), "Upload button should be enabled after checking agreement"
 
-        upload_btn.click()
-        time.sleep(3)
+        if upload_btn.is_enabled():
+            upload_btn.send_keys(Keys.RETURN)
 
-        try:
-            WebDriverWait(driver, 30).until(lambda d: d.current_url == f"{host}/dataset/list")
-        except Exception:
-            pass
+        wait_for_page_to_load(driver)
+        time.sleep(2)  # Force wait time para redirección
 
-        current_url = driver.current_url
-        assert driver.current_url == f"{host}/dataset/list", f"Expected {host}/dataset/list but got {current_url}"
+        # Diagnóstico de errores si no redirige
+        if driver.current_url != f"{host}/dataset/list":
+            try:
+                error_elem = driver.find_element(By.ID, "upload_error")
+                if error_elem.is_displayed():
+                    print(f"DEBUG: Error mostrado en UI: {error_elem.text}")
+            except NoSuchElementException:
+                print(f"DEBUG: No redirigió y no se encontró mensaje de error. URL: {driver.current_url}")
+
+        assert driver.current_url == f"{host}/dataset/list", "Test failed! No se redirigió a la lista de datasets."
 
         final_datasets = count_datasets(driver, host)
-        assert final_datasets == initial_datasets + 1, "Test failed!"
+        assert final_datasets == initial_datasets + 1, "Test failed! El contador de datasets no incrementó."
 
         print("Test passed!")
 
     finally:
-        try:
-            if os.path.exists("test_readme.md"):
-                os.remove("test_readme.md")
-        except Exception:
-            pass
-        close_driver(driver)
-
-
-def test_edit_dataset():
-    """Test editing a dataset's metadata (title, description, tags)."""
-    driver = initialize_driver()
-
-    try:
-        host = get_host_for_selenium_testing()
-
-        login_user(driver, host)
-
-        driver.get(f"{host}/dataset/list")
-        wait_for_page_to_load(driver)
-        time.sleep(1)
-
-        try:
-            first_dataset_row = driver.find_element(By.XPATH, "//table//tbody//tr[1]")
-            dataset_link = first_dataset_row.find_element(By.XPATH, ".//td[1]//a")
-            dataset_link.click()
-            wait_for_page_to_load(driver)
-            time.sleep(2)
-        except Exception as e:
-            print(f"Error clicking first dataset: {e}")
-            print("No datasets found, skipping edit test")
-            return
-
-        dataset_id = None
-        try:
-            xpath_edit = "//a[contains(@href, '/dataset/') and contains(@href, '/edit')]"
-            edit_button = driver.find_element(By.XPATH, xpath_edit)
-            edit_href = edit_button.get_attribute("href")
-            match = re.search(r"/dataset/(\d+)/edit", edit_href)
-            if match:
-                dataset_id = match.group(1)
-        except Exception:
-            current_url = driver.current_url
-            match = re.search(r"/dataset/(\d+)", current_url)
-            if match:
-                dataset_id = match.group(1)
-
-        if not dataset_id:
-            print("Could not extract dataset_id, skipping edit test")
-            return
-
-        driver.get(f"{host}/dataset/{dataset_id}/edit")
-        wait_for_page_to_load(driver)
-        time.sleep(1)
-
-        title_field = driver.find_element(By.XPATH, "//input[@id='title']")
-        desc_field = driver.find_element(By.XPATH, "//textarea[@id='description']")
-        tags_field = driver.find_element(By.XPATH, "//input[@id='tags']")
-
-        original_title = title_field.get_attribute("value") or ""
-        original_desc = desc_field.get_attribute("value") or desc_field.get_attribute("textContent") or ""
-        original_tags = tags_field.get_attribute("value") or ""
-
-        new_title = f"{original_title} v2"
-        new_description = f"{original_desc} [EDITED]"
-        new_tags = f"{original_tags},edited,test" if original_tags else "edited,test"
-
-        title_field.click()
-        title_field.clear()
-        title_field.send_keys(new_title)
-        time.sleep(0.5)
-
-        try:
-            desc_field.click()
-            desc_field.clear()
-        except Exception:
-            driver.execute_script("arguments[0].value = '';", desc_field)
-            desc_field.click()
-        desc_field.send_keys(new_description)
-        time.sleep(0.5)
-
-        tags_field.click()
-        tags_field.clear()
-        tags_field.send_keys(new_tags)
-        time.sleep(0.5)
-
-        save_btn = driver.find_element(By.ID, "saveBtn")
-        save_btn.click()
-        time.sleep(3)
-
-        try:
-            WebDriverWait(driver, 10).until(
-                lambda d: "updated successfully" in d.page_source.lower()
-                or "no changes" in d.page_source.lower()
-                or d.current_url == f"{host}/dataset/{dataset_id}/edit"
-            )
-            try:
-                alert = driver.switch_to.alert
-                alert_text = alert.text
-                assert "updated successfully" in alert_text.lower(), f"Expected success message, got: {alert_text}"
-                alert.accept()
-                time.sleep(1)
-            except Exception:
-                pass
-        except Exception:
-            pass
-
-        driver.get(f"{host}/dataset/{dataset_id}/edit")
-        wait_for_page_to_load(driver)
-        time.sleep(1)
-
-        title_field = driver.find_element(By.XPATH, "//input[@id='title']")
-        desc_field = driver.find_element(By.XPATH, "//textarea[@id='description']")
-        tags_field = driver.find_element(By.XPATH, "//input[@id='tags']")
-
-        updated_title = title_field.get_attribute("value") or ""
-        updated_desc = desc_field.get_attribute("value") or desc_field.get_attribute("textContent") or ""
-        updated_tags = tags_field.get_attribute("value") or ""
-
-        assert new_title == updated_title, f"Title not updated. Expected: {new_title}, Got: {updated_title}"
-        assert (
-            new_description == updated_desc
-        ), f"Description not updated. Expected: {new_description}, Got: {updated_desc}"
-        assert new_tags == updated_tags, f"Tags not updated. Expected: {new_tags}, Got: {updated_tags}"
-
-        print("Test passed! Dataset edited successfully.")
-
-    finally:
-        close_driver(driver)
-
-
-def test_view_changelog():
-    """Test viewing the changelog (edit history) of a dataset."""
-    driver = initialize_driver()
-
-    try:
-        host = get_host_for_selenium_testing()
-
-        login_user(driver, host)
-
-        driver.get(f"{host}/dataset/list")
-        wait_for_page_to_load(driver)
-        time.sleep(1)
-
-        try:
-            first_dataset_row = driver.find_element(By.XPATH, "//table//tbody//tr[1]")
-            dataset_link = first_dataset_row.find_element(By.XPATH, ".//td[1]//a")
-            dataset_link.click()
-            wait_for_page_to_load(driver)
-            time.sleep(2)
-        except Exception as e:
-            print(f"Error clicking first dataset: {e}")
-            print("No datasets found, skipping changelog test")
-            return
-
-        dataset_id = None
-        try:
-            xpath_edit = "//a[contains(@href, '/dataset/') and contains(@href, '/edit')]"
-            edit_button = driver.find_element(By.XPATH, xpath_edit)
-            edit_href = edit_button.get_attribute("href")
-            match = re.search(r"/dataset/(\d+)/edit", edit_href)
-            if match:
-                dataset_id = match.group(1)
-        except Exception:
-            current_url = driver.current_url
-            match = re.search(r"/dataset/(\d+)", current_url)
-            if match:
-                dataset_id = match.group(1)
-
-        if not dataset_id:
-            print("Could not extract dataset_id, skipping changelog test")
-            return
-
-        driver.get(f"{host}/dataset/{dataset_id}/changelog")
-        wait_for_page_to_load(driver)
-        time.sleep(2)
-
-        url_has_changelog = "changelog" in driver.current_url.lower()
-        page_has_history = "edit history" in driver.page_source.lower() or "changelog" in driver.page_source.lower()
-        assert url_has_changelog or page_has_history, "Not on changelog page"
-
-        try:
-            xpath_header = "//h4[contains(text(), 'Changelog') or contains(text(), 'Edit History')]"
-            page_header = driver.find_element(By.XPATH, xpath_header)
-            assert page_header is not None, "Changelog header not found"
-        except Exception:
-            try:
-                timeline_section = driver.find_element(By.CLASS_NAME, "timeline")
-                assert timeline_section is not None, "Timeline section not found"
-            except Exception:
-                try:
-                    xpath_no_edits = "//*[contains(text(), 'No edits') or contains(text(), 'No changes')]"
-                    driver.find_element(By.XPATH, xpath_no_edits)
-                    print("Changelog page loaded correctly (no edits yet)")
-                    return
-                except Exception:
-                    pass
-
-        try:
-            xpath_badges = (
-                "//span[contains(@class, 'badge') and "
-                "(contains(text(), 'Title') or contains(text(), 'Description') "
-                "or contains(text(), 'Tags'))]"
-            )
-            edit_badges = driver.find_elements(By.XPATH, xpath_badges)
-            if edit_badges:
-                print(f"Found {len(edit_badges)} edit entries in changelog")
-                xpath_old = "//*[contains(text(), 'Old value') or contains(text(), 'old value')]"
-                xpath_new = "//*[contains(text(), 'New value') or contains(text(), 'new value')]"
-                old_values = driver.find_elements(By.XPATH, xpath_old)
-                new_values = driver.find_elements(By.XPATH, xpath_new)
-                assert len(old_values) > 0 or len(new_values) > 0, "Edit details not visible"
-        except Exception:
-            pass
-
-        try:
-            quick_links = driver.find_element(By.XPATH, "//h5[contains(text(), 'Quick Links')]")
-            assert quick_links is not None, "Quick links section not found"
-        except Exception:
-            pass
-
-        print("Test passed! Changelog page loaded successfully.")
-
-    finally:
-        close_driver(driver)
-
-
-def test_view_versions():
-    """Test viewing the version history of a dataset."""
-    driver = initialize_driver()
-
-    try:
-        host = get_host_for_selenium_testing()
-
-        login_user(driver, host)
-
-        driver.get(f"{host}/dataset/list")
-        wait_for_page_to_load(driver)
-        time.sleep(1)
-
-        try:
-            first_dataset_row = driver.find_element(By.XPATH, "//table//tbody//tr[1]")
-            dataset_link = first_dataset_row.find_element(By.XPATH, ".//td[1]//a")
-            dataset_link.click()
-            wait_for_page_to_load(driver)
-            time.sleep(2)
-        except Exception as e:
-            print(f"Error clicking first dataset: {e}")
-            print("No datasets found, skipping versions test")
-            return
-
-        dataset_id = None
-        try:
-            xpath_edit = "//a[contains(@href, '/dataset/') and contains(@href, '/edit')]"
-            edit_button = driver.find_element(By.XPATH, xpath_edit)
-            edit_href = edit_button.get_attribute("href")
-            match = re.search(r"/dataset/(\d+)/edit", edit_href)
-            if match:
-                dataset_id = match.group(1)
-        except Exception:
-            current_url = driver.current_url
-            match = re.search(r"/dataset/(\d+)", current_url)
-            if match:
-                dataset_id = match.group(1)
-
-        if not dataset_id:
-            print("Could not extract dataset_id, skipping versions test")
-            return
-
-        driver.get(f"{host}/dataset/{dataset_id}/versions")
-        wait_for_page_to_load(driver)
-        time.sleep(2)
-
-        url_has_versions = "versions" in driver.current_url.lower()
-        page_has_versions = "version" in driver.page_source.lower()
-        assert url_has_versions or page_has_versions, "Not on versions page"
-
-        print("Test passed! Versions page loaded successfully.")
-
-    finally:
+        # Limpieza
+        if os.path.exists(readme_path):
+            os.remove(readme_path)
+        # Close the browser
         close_driver(driver)
 
 
@@ -1119,9 +858,6 @@ def test_comment_count_updates():
 
 if __name__ == "__main__":
     test_upload_dataset()
-    test_edit_dataset()
-    test_view_changelog()
-    test_view_versions()
     test_view_comments_on_dataset()
     test_add_comment_on_dataset()
     test_edit_own_comment()

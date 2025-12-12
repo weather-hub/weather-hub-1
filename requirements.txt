@@ -39,6 +39,7 @@ flamapy-sat==2.0.1
 flasgger==0.9.7.1
 Flask==3.1.1
 flask-cors==6.0.1
+Flask-Limiter==3.12.0
 Flask-Login==0.6.3
 Flask-Mail==0.10.0
 Flask-Migrate==4.1.0
@@ -137,4 +138,9 @@ zope.event==5.1.1
 zope.interface==7.2
 zstandard==0.23.0
 pre-commit
+toml
+
+semver
+
+yagmail
 user-agents==2.2.0

@@ -13,7 +13,7 @@
     .option-button:last-child {
         margin-bottom: 0;
     }
-    
+
     .version-redirect-alert {
         border-left: 4px solid #0d6efd;
     }
@@ -31,6 +31,14 @@
         </a>
     </div>
 
+    {% if current_user.is_authenticated and current_user.id == dataset.user_id and dataset.ds_meta_data.dataset_doi and dataset.is_latest %}
+    <div class="col-6 text-end">
+        <a href="{{ url_for('dataset.create_new_ds_version', dataset_id=dataset.id) }}" class="btn btn-success btn-sm" style="border-radius: 5px;">
+            <i data-feather="plus-circle" class="center-button-icon"></i>
+            Create New Version
+        </a>
+    </div>
+    {% endif %}
 </div>
 
 <div class="row">
@@ -81,7 +89,7 @@
                         </span>
                     </div>
                     <div class="col-md-8 col-12">
-                        {% for author in dataset.ds_meta_data.authors %}
+                        {% for author in authors %}
                         <p class="p-0 m-0">
                             {{ author.name }}
                             {% if author.affiliation %}
@@ -97,11 +105,27 @@
 
                 </div>
 
+                {% if dataset.ds_meta_data.publication_doi %}
+                <div class="row mb-2">
+                    <div class="col-md-4 col-12">
+                        <span class=" text-secondary">
+                            Publication DOI
+                        </span>
+                    </div>
+                    <div class="col-md-8 col-12">
+                        <a href="{{ dataset.ds_meta_data.publication_doi }}" target="_blank">{{ dataset.ds_meta_data.publication_doi }}</a>
+                    </div>
+                </div>
+                {% endif %}
+
                 {# Removed auto-generated publication_doi section #}
 
-                {% if dataset.ds_meta_data.dataset_doi and 'zenodo.org' in (dataset.ds_meta_data.dataset_doi or '') %}
+                {% include 'comments/coments.html' %}
+
+
+                {% if dataset.ds_meta_data.dataset_doi %}
                 <div class="row mb-2">
-                    
+
                         <div class="col-md-4 col-12">
                             <span class=" text-secondary">
                                 Zenodo record
@@ -145,42 +169,84 @@
 
                 </div>
 
-                
+                <hr>
+                <h4 class="mt-4">How to Cite</h4>
+                {# CONCEPTUAL DOI SECTION #}
+                <div class="mb-3"> {% if dataset.get_conceptual_doi() %}
 
-            </div>
+                        <div class="d-flex align-items-center">
+                            <span class="d-inline-flex align-items-center bg-dark text-white px-2 py-1 rounded-start" style="height: 31px; white-space: nowrap;">
+                                <i data-feather="tag" class="me-1" style="width: 14px; height: 14px;"></i>
+                                <small><b>Conceptual DOI</b></small>
+                            </span>
 
-            {% if dataset.ds_meta_data.dataset_doi %}
-            <div class="card-body" style="padding-top: 0px">
+                            <a href="{{ url_for('dataset.subdomain_index', doi=conceptual_doi) }}" target="_blank"
+                               class="d-inline-flex align-items-center bg-primary text-white px-2 py-1 rounded-end text-decoration-none text-truncate"
+                               style="height: 31px; max-width: 350px;">
+                                <small>{{ dataset.get_conceptual_doi() }}</small>
+                            </a>
 
-                <div id="dataset_doi" style="display: none">
-                    {{ dataset.get_uvlhub_doi() }}
+                            <button onclick="copyText('dataset_conceptual_doi')" class="btn btn-sm btn-light border ms-2" title="Copy to clipboard">
+                                <i data-feather="clipboard" style="width: 16px; height: 16px;"></i>
+                            </button>
+                        </div>
+
+                        <div class="mt-1">
+                            <small class="text-secondary">(Cite the concept - always resolves to latest version)</small>
+                        </div>
+
+                        <div id="dataset_conceptual_doi" style="display: none">{{ dataset.get_conceptual_doi() }}</div>
+
+                    {% else %}
+                        <span class="text-muted" style="display: none">Conceptual DOI: Not assigned yet (Unsynchronized)</span>
+                    {% endif %}
                 </div>
 
-                <button type="button" class="btn doi_button btn-sm" onclick="copyText('dataset_doi')">
-                    <span class="button_doi_id">
-                        <i data-feather="clipboard" class="center-button-icon" style="cursor: pointer"></i>
-                        <b>DOI</b>
-                    </span>
-                    <span class="doi_text">
-                        {{ dataset.get_uvlhub_doi() }}
-                    </span>
-                </button>
-                
-                <div id="dataset_doi" style="display: none">
-                    {{ dataset.get_uvlhub_doi() }}
-                </div>
-                
-            </div>
-            {% endif %}
 
+                {# ALERT IF DOI NOT ASSIGNED #}
+                {% if not dataset.ds_meta_data.dataset_doi %}
+                    <div class="alert alert-warning mt-3" role="alert">
+                        <i data-feather="alert-triangle" class="center-button-icon"></i>
+                        This dataset version has not been synchronized with Zenodo yet. Therefore, it does not have a DOI assigned.
+                    </div>
+                {% else %}
+
+                {# SPECIFIC DOI SECTION #}
+                <div class="mb-3"> <div class="d-flex align-items-center">
+                        <span class="d-inline-flex align-items-center bg-dark text-white px-2 py-1 rounded-start" style="height: 31px; white-space: nowrap;">
+                            <i data-feather="hash" class="me-1" style="width: 14px; height: 14px;"></i>
+                            <small><b>Specific DOI</b></small>
+                        </span>
+
+                        <a href="{{ dataset.get_uvlhub_doi() }}" target="_blank"
+                           class="d-inline-flex align-items-center bg-primary text-white px-2 py-1 rounded-end text-decoration-none text-truncate"
+                           style="height: 31px; max-width: 350px;">
+                            <small>{{ dataset.get_uvlhub_doi() }}</small>
+                        </a>
+
+                        <button onclick="copyText('dataset_doi')" class="btn btn-sm btn-light border ms-2" title="Copy to clipboard">
+                            <i data-feather="clipboard" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-1">
+                        <span class="text-secondary">
+                            <small>(Cite this specific version: <b>{{ dataset.version_number }}</b>)</small>
+                        </span>
+                    </div>
+
+                    <div id="dataset_doi" style="display: none">{{ dataset.get_uvlhub_doi() }}</div>
+
+                </div>
+                {% endif %}
+            </div>
         </div>
-
         <div class="card">
 
             <div class="card-body">
 
                 <h3> Related publication </h3>
-                
+
                 David Romero-Organvidez, José A. Galindo, Chico Sundermann, Jose-Miguel Horcas, David Benavides,
                 <i>WeatherHub: A feature model data repository using CSV Files and open science principles</i>,
                 Journal of Systems and Software,
@@ -222,6 +288,39 @@
 
     <div class="col-xl-4 col-lg-12 col-md-12 col-sm-12">
 
+        <div class="card mb-3">
+            <div class="card-header">
+                <h4>Version History</h4>
+            </div>
+           <ul class="list-group list-group-flush">
+
+                {% for version in all_versions %}
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center {% if version.id == dataset.id %}active{% endif %}">
+                        {% if version.id == dataset.id %}
+                            <div>
+                                <strong>{{ version.version_number }}</strong>
+                                <small class="d-block">{{ version.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                        {% else %}
+                            <a href="{{ url_for('dataset.subdomain_index', doi=version.ds_meta_data.dataset_doi) }}">
+                                <strong>{{ version.version_number }}</strong>
+                                <small class="text-muted d-block">{{ version.created_at.strftime('%Y-%m-%d') }}</small>
+                            </a>
+                        {% endif %}
+                        <div>
+                            {% if version.id == latest_version.id %}
+                                <span class="badge bg-primary">Latest</span>
+                            {% endif %}
+                            {% if version.id == dataset.id %}
+                                <span class="badge bg-secondary">Viewing</span>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
         <div class="list-group">
 
             <div class="list-group-item">
@@ -236,15 +335,17 @@
                         </h4>
                     </div>
                 </div>
-                
+
 
             </div>
-            
+
+
+
             {# Show dataset files #}
             {% for feature_model in dataset.feature_models %}
                     {% for file in feature_model.files %}
                     <div class="list-group-item">
-                        
+
                         <div class="row">
                             <div class="col-12">
 
@@ -260,7 +361,7 @@
                                     </div>
                                 </div>
 
-                                
+
                             </div>
                             <div class="col-12 text-end" >
 
@@ -276,14 +377,9 @@
                                         <li>
                                             <a class="dropdown-item disabled" href="javascript:void(0);">No syntax check for CSV</a>
                                         </li>
-                                        <!--
-                                        <li>
-                                            <a class="dropdown-item" href="{{ url_for('flamapy.valid', file_id=file.id) }}">SAT validity check</a>
-                                        </li>
-                                        -->
                                     </ul>
                                 </div>
-                                
+
                                 <div class="btn-group" role="group">
                                     <button id="btnGroupDropExport{{ file.id }}" type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style=" border-radius: 5px;">
                                         <i data-feather="download"></i> Export
@@ -309,8 +405,8 @@
                                         </li>
                                     </ul>
                                 </div>
-                                
-                                
+
+
 
                             </div>
                         </div>
@@ -318,9 +414,9 @@
                 {% endfor %}
             {% endfor %}
         </div>
-        
-        
-    
+
+
+
         <a href="/dataset/download/{{ dataset.id }}" class="btn btn-primary mt-3" style="border-radius: 5px;">
             <i data-feather="download" class="center-button-icon"></i>
             Download all ({{ dataset.get_file_total_size_for_human() }})
@@ -332,27 +428,7 @@
                 <h6 class="mb-0">Dataset Management</h6>
             </div>
             <div class="card-body">
-                {% if current_user.is_authenticated and current_user.id == dataset.user_id %}
-                <a href="{{ url_for('dataset.edit_dataset', dataset_id=dataset.id) }}" 
-                   class="btn btn-outline-primary btn-sm w-100 mb-2" style="border-radius: 5px;">
-                    <i data-feather="edit-2" class="center-button-icon"></i>
-                    Edit Dataset
-                </a>
-                
-                <a href="{{ url_for('dataset.republish_dataset_form', dataset_id=dataset.id) }}" 
-                   class="btn btn-warning btn-sm w-100 mb-2" style="border-radius: 5px;">
-                    <i data-feather="upload-cloud" class="center-button-icon"></i>
-                    Re-publish with New Files
-                </a>
-                {% endif %}
-                
-                <a href="{{ url_for('dataset.view_dataset_versions', dataset_id=dataset.id) }}" 
-                   class="btn btn-outline-secondary btn-sm w-100 mb-2" style="border-radius: 5px;">
-                    <i data-feather="git-branch" class="center-button-icon"></i>
-                    Version History
-                </a>
-                
-                <a href="{{ url_for('dataset.view_dataset_changelog', dataset_id=dataset.id) }}" 
+                <a href="{{ url_for('dataset.view_dataset_changelog', dataset_id=dataset.id) }}"
                    class="btn btn-outline-info btn-sm w-100" style="border-radius: 5px;">
                     <i data-feather="clock" class="center-button-icon"></i>
                     Edit Changelog
@@ -360,7 +436,7 @@
             </div>
         </div>
     </div>
-    
+
 </div>
 
 <!-- Comments Section -->
@@ -472,61 +548,6 @@
     function hideLoading() {
         document.getElementById("loading").style.display = "none";
     }
-
-    // UVL syntax checking removed for CSV files.
-
-
-    /*
-    async function valid() {
-        showLoading()
-        let pyodide = await loadPyodide();
-        await pyodide.loadPackage("micropip");
-        const micropip = pyodide.pyimport("micropip");
-        //await micropip.install("/assets/web_assembly/antlr4_python3_runtime-4.7.2-py3-none-any.whl");
-        await micropip.install("antlr4-python3-runtime==4.13.1");
-        await micropip.install("uvlparser==2.0.1");
-        //await micropip.install("afmparser==1.0.0");
-
-        await pyodide.runPythonAsync(
-        `
-            import micropip
-            #await micropip.install("flamapy-fm-dist", deps=False)#this is to avoid problems with deps later on
-            await micropip.install("flamapy==2.0.1.dev1", deps=False);
-            await micropip.install("flamapy-fm==2.0.1.dev1", deps=False);
-            await micropip.install("flamapy-sat");
-        `
-        )
-        hideLoading()
-
-        try {
-            let output = pyodide.runPython(
-            `
-            import js
-
-            file_content = js.document.getElementById('fileContent').textContent 
-            div = js.document.createElement("result")
-
-            with open("uvlfile.uvl", "w") as text_file:
-                print(file_content, file=text_file)
-
-            from flamapy.interfaces.python.FLAMAFeatureModel import FLAMAFeatureModel
-
-            fm = FLAMAFeatureModel("uvlfile.uvl")
-            result=fm.valid()
-
-            div.innerHTML = "<div id='deleteme'>"+str(result)+"</div>"
-            exists=js.document.getElementById('deleteme')
-            if(exists):
-                exists.remove()
-
-            js.document.getElementById('result').append(div)
-            `
-        );
-        } catch (err) {
-            console.log(err);
-        }
-    }
-    */
     function copyToClipboard() {
         const text = document.getElementById('fileContent').textContent;
         navigator.clipboard.writeText(text).then(() => {

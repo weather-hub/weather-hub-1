@@ -12,7 +12,8 @@ class FakenodoDeposition(db.Model):
     __tablename__ = "fakenodo_deposition"
 
     id = db.Column(db.Integer, primary_key=True)
-    conceptrecid = db.Column(db.Integer, nullable=False)  # En Fakenodo, igual que id
+    conceptrecid = db.Column(db.String(120), nullable=False)  # En Fakenodo, igual que id
+    conceptdoi = db.Column(db.String(120), unique=True, nullable=False)
     state = db.Column(db.String(50), nullable=False, default="draft")  # draft | published
     metadata_json = db.Column(db.Text)  # JSON serializado con metadata
     published = db.Column(db.Boolean, default=False)

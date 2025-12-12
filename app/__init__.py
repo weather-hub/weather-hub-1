@@ -1,7 +1,10 @@
 import os
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, session
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
@@ -18,6 +21,47 @@ load_dotenv()
 db = SQLAlchemy()
 migrate = Migrate()
 
+limiter = Limiter(key_func=get_remote_address, default_limits=[])
+
+MAX_LOGIN_ATTEMPTS = 5
+BLOCK_TIME = 180  # 3 minutos
+
+
+def get_attempts():
+    return session.get("failed_attempts", 0)
+
+
+def get_block_time():
+    return session.get("block_until")
+
+
+def increment_failed_attempts():
+    attempts = get_attempts() + 1
+    session["failed_attempts"] = attempts
+    if attempts >= MAX_LOGIN_ATTEMPTS:
+        block_time = datetime.now(timezone.utc) + timedelta(seconds=BLOCK_TIME)
+        session["block_until"] = block_time.isoformat()  # Guardar como string
+    return attempts
+
+
+def reset_failed_attempts():
+    session.pop("failed_attempts", None)
+    session.pop("block_until", None)
+
+
+def is_blocked():
+    block_until = get_block_time()
+    if block_until:
+        # convertir a naive si es necesario
+        if isinstance(block_until, str):
+            # si session lo guardó como string ISO
+            block_until = datetime.fromisoformat(block_until)
+        if datetime.now(timezone.utc) < block_until:
+            return True
+        else:
+            reset_failed_attempts()
+    return False
+
 
 def create_app(config_name="development"):
     app = Flask(__name__)
@@ -29,7 +73,7 @@ def create_app(config_name="development"):
     # Initialize SQLAlchemy and Migrate with the app
     db.init_app(app)
     migrate.init_app(app, db)
-
+    limiter.init_app(app)
     # Register modules
     module_manager = ModuleManager(app)
     module_manager.register_modules()

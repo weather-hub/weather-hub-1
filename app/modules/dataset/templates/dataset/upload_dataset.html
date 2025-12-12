@@ -75,6 +75,16 @@
                                 </div>
                             </div>
 
+                            <div class="col-lg-6 col-6">
+                                <div class="mb-3">
+                                    {{ form.publication_doi.label(class="form-label") }}
+                                    {{ form.publication_doi(class="form-control") }}
+                                    {% for error in form.publication_doi.errors %}
+                                        <span style="color: red;">{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
                             <div class="col-6">
                                 <div class="mb-3">
                                     {{ form.tags.label(class="form-label") }}
@@ -90,11 +100,9 @@
                         <h1 class="h3 mb-3 mt-4">
                           Authors
                           <a href="#" data-toggle="modal" data-target="#infoModal">
-                            <i data-feather="info"></i> <!-- Usamos "info" porque Feather no tiene un ícono específico llamado "feather" para más info -->
-                          </a>
+                            <i data-feather="info"></i> </a>
                         </h1>
 
-                        <!-- Modal -->
                         <div class="modal fade" id="infoModal" tabindex="-1" role="dialog" aria-labelledby="infoModalLabel" aria-hidden="true" style="display: none">
                           <div class="modal-dialog" role="document">
                             <div class="modal-content">
@@ -419,15 +427,17 @@
     </div>
 
     <div class="row" id="upload_dataset" style="display: none">
-
-                                                        <div class="col-6">
-
-                                                        <label class="form-label">Version</label>
-                                                        <input type="text" class="form-control" name="feature_models-${formUniqueId}-version">
-            <h1 class="h3 mb-3 mt-2">Upload dataset</h1>
+        <div class="col-12"> <h1 class="h3 mb-3 mt-2">Upload dataset</h1>
 
             <div style="padding-left: 2rem">
 
+                <div class="mb-3">
+                    {{ form.version_number.label(class="form-label") }}
+                    {{ form.version_number(class="form-control") }}
+                    {% for error in form.version_number.errors %}
+                        <span style="color: red;">{{ error }}</span>
+                    {% endfor %}
+                </div>
                 <label class="form-check">
                     <input id="agreeCheckbox" class="form-check-input" type="checkbox" value="">
                     <span class="form-check-label" style="font-size: 15px">
@@ -436,7 +446,7 @@
                             </span>
                 </label>
 
-                <button id="upload_button" class="btn btn-primary mt-2" disabled>
+                <button id="upload_button" data-upload-url="{{ url_for('dataset.create_dataset') }}" class="btn btn-primary mt-2" disabled>
                     <i data-feather="upload" class="center-button-icon"></i>
                     Upload dataset</button>
 
@@ -484,15 +494,10 @@
 
             </div>
 
-
-
-
         </div>
 
     </div>
-
-
-{% endblock %}
+    {% endblock %}
 
 {% block scripts %}
     <script src="{{ url_for('zenodo.scripts') }}"></script>

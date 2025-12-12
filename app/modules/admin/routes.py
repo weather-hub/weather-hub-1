@@ -1,5 +1,5 @@
 from flask import jsonify, render_template, request
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app import db
 from app.modules.admin import admin_bp
@@ -31,8 +31,14 @@ def update_user_roles(user_id):
     """
     Update roles for a specific user.
     Expects JSON payload with 'role_ids' array.
+    Business rule: Admins cannot modify their own roles to prevent self-lockout.
     """
     user = User.query.get_or_404(user_id)
+
+    # Prevent admin from modifying their own roles
+    if user.id == current_user.id:
+        return jsonify({"error": "Cannot modify your own roles"}), 403
+
     data = request.get_json()
 
     if not data or "role_ids" not in data:
@@ -40,10 +46,17 @@ def update_user_roles(user_id):
 
     role_ids = data["role_ids"]
 
+    # Business rule: A user must have at least one role at all times.
+    if not role_ids or len(role_ids) == 0:
+        return jsonify({"error": "User must have at least one role"}), 400
+
     # Validate that all role_ids exist
     roles = Role.query.filter(Role.id.in_(role_ids)).all()
-    if len(roles) != len(role_ids):
-        return jsonify({"error": "One or more invalid role IDs"}), 400
+    found_role_ids = {role.id for role in roles}
+    invalid_role_ids = [rid for rid in role_ids if rid not in found_role_ids]
+
+    if invalid_role_ids:
+        return jsonify({"error": "One or more invalid role IDs", "invalid_role_ids": invalid_role_ids}), 400
 
     # Business rule: 'guest' role is exclusive. It cannot be combined with any other role
     if any(r.name == "guest" for r in roles) and len(roles) > 1:
@@ -85,9 +98,14 @@ def add_user_role(user_id, role_id):
 def remove_user_role(user_id, role_id):
     """
     Remove a single role from a user.
+    Business rule: A user must have at least one role at all times.
     """
     user = User.query.get_or_404(user_id)
     role = Role.query.get_or_404(role_id)
+
+    # Prevent removing the last role from a user (RBAC invariant)
+    if len(user.roles) <= 1:
+        return jsonify({"error": "Cannot remove last role. User must have at least one role"}), 400
 
     if role in user.roles:
         user.roles.remove(role)
