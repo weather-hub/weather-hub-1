@@ -1,3 +1,18 @@
+# Version 1.4.4 (2025-12-12)
+
+## Fixes
+- fix: Contact and support section
+
+## Others
+- docs(fix): minor details fix on base_template
+- docs(fix): dark logo added to README
+- docs(fix): logo added to base_template
+- docs(fix): logo added to README
+- docs(fix): another tiny fix in README
+- docs(fix): tiny fix in README
+- docs: new readme version
+
+
 # Version 1.4.3 (2025-12-12)
 
 ## Fixes
