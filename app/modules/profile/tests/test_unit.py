@@ -92,5 +92,24 @@ def test_my_profile_page_get(test_client):
     assert response.status_code == 200, "Could not access my profile page"
     assert b"Name" in response.data, "User profile name not found on page"
     assert b"Surname" in response.data, "User profile surname not found on page"
+    assert b"Manage Active Sessions" in response.data, "Owner should see manage sessions button"
+
+    logout(test_client)
+
+
+def test_manage_sessions_hidden_on_other_profile_when_authenticated(test_client):
+    """
+    Ensure the manage sessions button is hidden when viewing another user's profile while logged in.
+    """
+    login_response = login(test_client, "user@example.com", "test1234")
+    assert login_response.status_code == 200, "Login was unsuccessful."
+
+    with test_client.application.app_context():
+        public_user = db.session.query(User).filter_by(email="public@example.com").first()
+        assert public_user is not None, "Public user not found in database"
+
+    response = test_client.get(f"/profile/{public_user.id}")
+    assert response.status_code == 200, "Could not access other user's profile"
+    assert b"Manage Active Sessions" not in response.data, "Button should not be visible on other user's profile"
 
     logout(test_client)
