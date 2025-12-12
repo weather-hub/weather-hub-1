@@ -2,7 +2,7 @@
 
 ## 📋 Descripción
 
-Fakenodo es un **simulador completo de Zenodo** que usa **base de datos SQL** en lugar de archivos JSON. 
+Fakenodo es un **simulador completo de Zenodo** que usa **base de datos SQL** en lugar de archivos JSON.
 
 ### ✅ Ventajas de SQL vs JSON
 
@@ -105,7 +105,7 @@ SELECT id, state, published, dirty, doi FROM fakenodo_deposition;
 SELECT name, size FROM fakenodo_file WHERE deposition_id = 1;
 
 -- Ver historial de versiones
-SELECT version, doi, created_at FROM fakenodo_version 
+SELECT version, doi, created_at FROM fakenodo_version
 WHERE deposition_id = 1 ORDER BY version DESC;
 ```
 
