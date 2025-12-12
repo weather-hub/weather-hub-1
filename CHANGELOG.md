@@ -4,7 +4,6 @@
 ## Features
 
 - feat: added test
-- feat: added test
 - feat: added test for locust
 - feat: added test for selenium
 - feat: added user profile
