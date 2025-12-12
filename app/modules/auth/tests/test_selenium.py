@@ -24,6 +24,7 @@ class Test2faa:
         self.driver.find_element(By.ID, "password").send_keys("1234")
         self.driver.find_element(By.ID, "submit").click()
         self.driver.find_element(By.ID, "otp_code").click()
-        # comprobamos que falla el codigo otp, porque no podemos comprobar que funcione(no podemos generarlo desde selenium)
+        # comprobamos que falla el código OTP porque no podemos comprobar
+        # que funcione (no podemos generarlo desde Selenium)
         self.driver.find_element(By.ID, "otp_code").send_keys("026605")
         self.driver.find_element(By.CSS_SELECTOR, ".btn-primary").click()

@@ -31,9 +31,11 @@ class CommentsSeeder(BaseSeeder):
             self.db.session.query(Comment).filter(Comment.dataset_id == dataset.id, Comment.approved.is_(False)).count()
         )
         if existing_count >= 5:
-            print(
-                f"[CommentsSeeder] Ya existen {existing_count} comentarios no aprobados para dataset id={dataset.id}. No se insertan más."
+            msg = (
+                f"[CommentsSeeder] Ya existen {existing_count} comentarios no aprobados "
+                f"para dataset id={dataset.id}. No se insertan más."
             )
+            print(msg)
             return
 
         # Obtener hasta 5 usuarios distintos para asignar como autores
