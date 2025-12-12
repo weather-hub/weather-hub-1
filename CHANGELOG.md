@@ -1,3 +1,10 @@
+# Version 1.4.7 (2025-12-12)
+
+## Fixes
+- fix: apply publication type on change
+- fix: apply sorting on change
+
+
 # Version 1.4.6 (2025-12-12)
 
 ## Fixes
