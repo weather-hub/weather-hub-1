@@ -1,3 +1,9 @@
+# Version 1.4.8 (2025-12-12)
+
+## Fixes
+- fix: make the version validators more stricts
+
+
 # Version 1.4.7 (2025-12-12)
 
 ## Fixes
