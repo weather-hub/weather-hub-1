@@ -224,5 +224,28 @@ class DSMetaDataEditLog(db.Model):
             ),
         }
 
+    @staticmethod
+    def create_new_DSMetaDataEditLog(
+        ds_meta_data_id,
+        user_id,
+        field_name,
+        old_value,
+        new_value,
+        edited_at,
+        change_summary=None,
+    ):
+        log_entry = DSMetaDataEditLog(
+            ds_meta_data_id=ds_meta_data_id,
+            user_id=user_id,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=new_value,
+            edited_at=edited_at,
+            change_summary=change_summary,
+        )
+        db.session.add(log_entry)
+        db.session.commit()
+        return log_entry
+
     def __repr__(self):
         return f"<DSMetaDataEditLog id={self.id} field={self.field_name} at={self.edited_at}>"

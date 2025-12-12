@@ -139,20 +139,35 @@ class FakenodoAdapter:
             from app.modules.dataset.models import DSMetaDataEditLog
 
             # Detectar qué cambió entre versiones
-            changes = []
             if original_dataset.ds_meta_data.title != new_dataset.ds_meta_data.title:
-                changes.append("title updated")
+                DSMetaDataEditLog.create_new_DSMetaDataEditLog(
+                    ds_meta_data_id=new_dataset.ds_meta_data_id,
+                    user_id=current_user.id,
+                    edited_at=datetime.now(timezone.utc),
+                    field_name="title",
+                    old_value=original_dataset.ds_meta_data.title,
+                    new_value=new_dataset.ds_meta_data.title,
+                )
             if original_dataset.ds_meta_data.description != new_dataset.ds_meta_data.description:
-                changes.append("description updated")
+                DSMetaDataEditLog.create_new_DSMetaDataEditLog(
+                    ds_meta_data_id=new_dataset.ds_meta_data_id,
+                    user_id=current_user.id,
+                    edited_at=datetime.now(timezone.utc),
+                    field_name="description",
+                    old_value=original_dataset.ds_meta_data.description,
+                    new_value=new_dataset.ds_meta_data.description,
+                )
+
             if original_dataset.ds_meta_data.tags != new_dataset.ds_meta_data.tags:
-                changes.append("tags updated")
+                DSMetaDataEditLog.create_new_DSMetaDataEditLog(
+                    ds_meta_data_id=new_dataset.ds_meta_data_id,
+                    user_id=current_user.id,
+                    edited_at=datetime.now(timezone.utc),
+                    field_name="tags",
+                    old_value=original_dataset.ds_meta_data.tags,
+                    new_value=new_dataset.ds_meta_data.tags,
+                )
 
-            files_added = len(new_dataset.feature_models) - len(original_dataset.feature_models)
-            if files_added > 0:
-                changes.append(f"{files_added} file(s) added")
-
-            # Guardar en el ds_meta_data_id de la nueva versión
-            # El changelog se agregará automáticamente al visualizar cualquier versión de esta major
             changelog_entry = DSMetaDataEditLog(
                 ds_meta_data_id=new_dataset.ds_meta_data_id,
                 user_id=current_user.id,
@@ -160,8 +175,7 @@ class FakenodoAdapter:
                 field_name="version",
                 old_value=str(original_dataset.version_number),
                 new_value=str(new_dataset.version_number),
-                change_summary=f"Minor version {new_dataset.version_number}:"
-                + f"{', '.join(changes) if changes else 'metadata revision'}",
+                change_summary=None,
             )
             db.session.add(changelog_entry)
             db.session.commit()
@@ -650,31 +664,35 @@ def search_dataset():
 @login_required
 def view_dataset_changelog(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
-    logs = ds_metadata_edit_log_service.get_changelog_by_dataset_id(dataset_id)
-    return render_template("dataset/changelog.html", dataset=dataset, logs=logs)
+    # Obtener logs ordenados del más antiguo al más reciente para agruparlos correctamente
+    logs_chronological = ds_metadata_edit_log_service.get_changelog_by_dataset_id(dataset_id)
 
+    version_groups = []
+    current_group = None
 
-@dataset_bp.route("/api/dataset/<int:dataset_id>/changelog", methods=["GET"])
-@login_required
-def api_dataset_changelog(dataset_id):
-    """API endpoint for dataset changelog."""
-    dataset = dataset_service.get_or_404(dataset_id)
-    edit_logs = ds_metadata_edit_log_service.get_changelog_by_dataset_id(dataset_id)
+    for log in logs_chronological:
+        if log.field_name == "version":
+            # Si hay un grupo anterior, lo guardamos
+            if current_group:
+                version_groups.append(current_group)
 
-    return jsonify(
-        {
-            "dataset_id": dataset_id,
-            "dataset_title": dataset.ds_meta_data.title,
-            "changelog": [log.to_dict() for log in edit_logs],
-        }
-    )
+            # Empezamos un nuevo grupo con este cambio de versión
+            current_group = {
+                "from_version": log.old_value,
+                "to_version": log.new_value,
+                "user": log.user,
+                "edited_at": log.edited_at,
+                "changes": [],  # Aquí irán los cambios de título, descripción, etc.
+            }
+        elif current_group:
+            # Si no es un log de versión, es un cambio asociado al grupo actual
+            current_group["changes"].append(log)
 
+    # No olvidar añadir el último grupo a la lista
+    if current_group:
+        version_groups.append(current_group)
 
-@dataset_bp.route("/dataset/<int:dataset_id>/versions", methods=["GET"])
-@login_required
-def view_dataset_versions(dataset_id):
-    dataset = dataset_service.get_or_404(dataset_id)
-    versions = []
-    if dataset.concept:
-        versions = dataset.concept.versions
-    return render_template("dataset/versions.html", dataset=dataset, versions=versions)
+    # Invertimos la lista para mostrar los grupos más recientes primero
+    version_groups.reverse()
+
+    return render_template("dataset/changelog.html", dataset=dataset, version_groups=version_groups)
