@@ -1,3 +1,9 @@
+# Version 1.4.3 (2025-12-12)
+
+## Fixes
+- fix: only can create new version from latest
+
+
 # Version 1.4.2 (2025-12-12)
 
 ## Fixes
