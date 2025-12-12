@@ -1,3 +1,13 @@
+# Version 1.3.8 (2025-12-12)
+
+## Fixes
+- fix(admin-roles): prevent removing last role from user
+
+## Others
+- chore: apply pre-commit hooks formatting
+- test(admin-roles): add regression test for last-role removal
+
+
 # Version 1.3.7 (2025-12-12)
 
 ## Fixes
