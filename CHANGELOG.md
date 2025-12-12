@@ -1,3 +1,9 @@
+# Version 1.4.9 (2025-12-12)
+
+## Fixes
+- fix: solved publication doi problem and seeder mini-changes
+
+
 # Version 1.4.8 (2025-12-12)
 
 ## Fixes
