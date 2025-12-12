@@ -1,3 +1,137 @@
+# Version 1.4.0 (2025-12-12)
+
+## Features
+- feat: finish merge
+- feat: merge adding files creates new DOI and fix seeders
+- feat: Adding files creates new DOI, fix seeders
+- feat: Adding files versions implemented
+- feat:
+- feat: add dataset edit changelog and version history
+- feat: Merge Fakenodo service integration from trunk
+- feat: Integrate Fakenodo service for Zenodo simulation
+- feat: Different DOI + Tags fixed
+- feat: Different DOI + Tags fixed
+- feat: following feat added
+- feat: follwing tests
+- feat: following notifications added
+- feat: following feature added
+- feat: Added management session from trunk to main
+- feat: Added management for active sessions
+- feat: notifications for dataset posts to communities and test
+- feat: test notifications in dataset in communities
+- feat: add notifications to community datasets
+- feat: deploy email verification and workflow fixes
+- feat: Added verification email when signing up
+- feat: Added email verification
+- feat(communities): merge feature/WI74-communities into trunk
+- feat: more CI implemented
+- feat: more CI implemented
+- feat: Implemented CD with docker
+- feat: :lipstick: communities on profile screen
+- feat: :lipstick: add to community buttons
+- feat: :sparkles: add community model and migrations
+
+## Fixes
+- fix: remove useless wf
+- fix: remove useless wf
+- fix: added new trunk changes
+- fix: mini-changes in trunk
+- fix: bandit security error
+- fix: bring trunk changes to branch
+- fix: don't show dataset if not latest version(home and my ds pages)
+- fix: migrations error
+- fix: seeders and fakenodo versioning
+- fix: deleted unusued logic, changelog in tasklist
+- fix: prevent adding unpublished datasets
+- fix: fix long URL image loading
+- fix: use MD5 with usedforsecurity=False for file checksums
+- fix: logo images restored
+- fix: logo image restored
+- fix: users can not edit datasets they do not own
+- fix: users can not edit datasets they do not own
+- fix: Remove auto-generated publication_doi and show Zenodo record only for real Zenodo datasets
+- fix: Publication type error in DB
+- fix: initial implementation DOI managements
+- fix: change selenium version
+- fix: change in requirements and unused route deleted
+- fix: minor changes in following
+- fix: eslint errors for  management for active sessions
+- fix: werkzeug version fix
+- fix: skip commit validation for bot users
+- fix: add retry logic and concurrency to changelog and version workflows
+- fix: update automatic commit messages to follow conventional commits
+- fix: improve main deploy worflow error handling
+- fix: WI error
+- fix: fixing errors and improving communinties
+- fix: CD with docker
+
+## Others
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: merge trunk into feature/WI74-communities
+- test(load): add Locust tests
+- test(ui): add Selenium integration tests
+- test(unit): add unit tests
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- test: Added testing for dataset editing functionality
+- chore: clean code
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- 🚀 Deploy: email verification, workflow improvements, pytest-mock
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- Versión automática [skip ci]
+- Actualizar changelog [skip ci]
+- 🚀 Deploy: Communities y mejoras de CI/CD
+- Actualizar changelog [skip ci]
+- Versión automática [skip ci]
+- Versión automática [skip ci]
+- Actualizar changelog [skip ci]
+- Actualizar changelog [skip ci]
+- Versión automática [skip ci]
+- Actualizar changelog [skip ci]
+- Actualizar changelog [skip ci]
+
+
 # Version 1.3.10 (2025-12-12)
 
 ## Fixes
