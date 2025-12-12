@@ -89,7 +89,7 @@
                         </span>
                     </div>
                     <div class="col-md-8 col-12">
-                        {% for author in dataset.ds_meta_data.authors %}
+                        {% for author in authors %}
                         <p class="p-0 m-0">
                             {{ author.name }}
                             {% if author.affiliation %}

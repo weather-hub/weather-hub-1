@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request
 
+from app.modules.dataset.services import AuthorService
+
 from .services import ExploreService
 
 explore_bp = Blueprint(
@@ -22,8 +24,9 @@ def index():
         end_date=request.args.get("end_date") or None,
     )
 
-    datasets = ExploreService().filter(**filters)
-
+    datasets = [ds for ds in ExploreService().filter(**filters) if ds.is_latest]
+    for dataset in datasets:
+        dataset.ds_meta_data.authors = AuthorService.get_unique_authors(dataset)
     return render_template(
         "explore/index.html",
         datasets=datasets,

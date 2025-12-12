@@ -505,7 +505,9 @@ def create_new_ds_version(dataset_id):
     if current_user.id != original_dataset.user_id:
         abort(403, "No eres el autor del dataset.")
 
-    form = DataSetVersionForm(obj=original_dataset.ds_meta_data)
+    meta_data_obj = original_dataset.ds_meta_data
+    meta_data_obj.authors = []
+    form = DataSetVersionForm(obj=meta_data_obj)
 
     if request.method == "POST":
         if form.validate_on_submit():
@@ -593,6 +595,7 @@ def subdomain_index(doi):
         render_template(
             "dataset/view_dataset.html",
             dataset=current_dataset,
+            authors=AuthorService.get_unique_authors(current_dataset),
             all_versions=all_versions,
             latest_version=latest_version,
             conceptual_doi=concept.conceptual_doi,

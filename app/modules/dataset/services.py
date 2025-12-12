@@ -166,7 +166,8 @@ class DataSetService(BaseService):
 
         db.session.commit()
         logger.info(
-            f"Copied {len(original_dataset.feature_models)} feature models from dataset {original_dataset.id} to {new_dataset.id}"
+            f"Copied {len(original_dataset.feature_models)} feature models "
+            + f"from dataset {original_dataset.id} to {new_dataset.id}"
         )
 
     def get_synchronized(self, current_user_id: int) -> DataSet:
@@ -321,6 +322,15 @@ class DataSetService(BaseService):
 class AuthorService(BaseService):
     def __init__(self):
         super().__init__(AuthorRepository())
+
+    @staticmethod
+    def get_unique_authors(dataset: DataSet) -> list:
+        unique_authors = {}
+        for author in dataset.ds_meta_data.authors:
+            key = (author.name, author.affiliation, author.orcid)
+            if key not in unique_authors:
+                unique_authors[key] = author
+        return list(unique_authors.values())
 
 
 class DSDownloadRecordService(BaseService):
