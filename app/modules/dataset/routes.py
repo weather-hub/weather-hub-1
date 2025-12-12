@@ -495,15 +495,16 @@ def download_dataset(dataset_id):
 @dataset_bp.route("/dataset/<int:dataset_id>/new-version", methods=["GET", "POST"])
 @login_required
 def create_new_ds_version(dataset_id):
+    original_dataset = dataset_service.get_or_404(dataset_id)
+    if current_user.id != original_dataset.user_id:
+        abort(403, "No eres el autor del dataset.")
+    if not original_dataset.is_latest:
+        abort(403, "Solo se pueden crear nuevas versiones a partir de la última versión del dataset.")
+
     if request.method == "GET":
         temp_folder = current_user.temp_folder()
         if os.path.exists(temp_folder):
             shutil.rmtree(temp_folder)
-
-    original_dataset = dataset_service.get_or_404(dataset_id)
-
-    if current_user.id != original_dataset.user_id:
-        abort(403, "No eres el autor del dataset.")
 
     meta_data_obj = original_dataset.ds_meta_data
     meta_data_obj.authors = []

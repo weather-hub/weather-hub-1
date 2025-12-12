@@ -31,7 +31,7 @@
         </a>
     </div>
 
-    {% if current_user.is_authenticated and current_user.id == dataset.user_id and dataset.ds_meta_data.dataset_doi %}
+    {% if current_user.is_authenticated and current_user.id == dataset.user_id and dataset.ds_meta_data.dataset_doi and dataset.is_latest %}
     <div class="col-6 text-end">
         <a href="{{ url_for('dataset.create_new_ds_version', dataset_id=dataset.id) }}" class="btn btn-success btn-sm" style="border-radius: 5px;">
             <i data-feather="plus-circle" class="center-button-icon"></i>
