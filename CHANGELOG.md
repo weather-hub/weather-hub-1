@@ -1,3 +1,9 @@
+# Version 1.4.5 (2025-12-12)
+
+## Fixes
+- fix: Remove metadata section from issue templates that needs manual deletion
+
+
 # Version 1.4.4 (2025-12-12)
 
 ## Fixes
