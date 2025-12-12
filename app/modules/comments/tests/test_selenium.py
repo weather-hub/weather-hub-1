@@ -31,18 +31,14 @@ def test_comments_flow():
         driver.find_element(By.ID, "password").send_keys("1234")
         click_safely(driver, By.ID, "submit")
 
+        driver.find_element(By.LINK_TEXT, "Explore").click()
         click_safely(driver, By.LINK_TEXT, "Weather Data (V2)")
 
         driver.find_element(By.ID, "content").send_keys("esto es una prueba")
         click_safely(driver, By.CSS_SELECTOR, "form > .btn")
 
-        click_safely(driver, By.LINK_TEXT, "Home")
-
-        click_safely(driver, By.CSS_SELECTOR, ".card:nth-child(4) .d-flex")
+        driver.find_element(By.LINK_TEXT, "Explore").click()
         click_safely(driver, By.LINK_TEXT, "UVL Models (V1)")
-        # Para esta última parte, asegurarse de que el comentario no esté aprobado en la base de datos
-        # si lo está, el test fallará al no encontrar el comentario, y debe cambiar el 2, por otro índice
-        #
         click_safely(driver, By.XPATH, "//button[contains(text(), 'Approve') or contains(@class, 'btn-success')]")
 
         time.sleep(2)
