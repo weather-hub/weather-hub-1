@@ -75,19 +75,50 @@
                 </div>
                 
                 <div class="col-6">
-                    <label class="form-label">Communities</label>
-                    <div>
-                        {% if communities and communities|length > 0 %}
-                            <div class="d-flex flex-wrap gap-2">
-                                {% for c in communities %}
-                                    <span class="badge bg-secondary">{{ c.name }}</span>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-muted">You are not a member of any community.</div>
-                        {% endif %}
+                <label class="form-label">Curator on communities</label>
+                <div>
+                    {% if communities and communities|length > 0 %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for c in communities %}
+                        <span class="badge bg-secondary">{{ c.name }}</span>
+                        {% endfor %}
                     </div>
+                    {% else %}
+                    <div class="text-muted">You are not a member of any community.</div>
+                    {% endif %}
                 </div>
+
+                  <label class="form-label mt-3">Following communities</label>
+                <div>
+                {% if following_communities and following_communities|length > 0 %}
+                    <div class="d-flex flex-wrap gap-2">
+                    {% for c in following_communities %}
+                        <span class="badge bg-info">{{ c.name }}</span>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-muted">You are not following any community.</div>
+                {% endif %}
+                </div>
+
+                <label class="form-label mt-3">Following users</label>
+                <div>
+                {% if following_users and following_users|length > 0 %}
+                    <ul class="mb-0">
+                    {% for u in following_users %}
+                        <li>
+                            {{ u.profile.name }} {{ u.profile.surname }}
+                        </a>
+                        {% if u.email %} ({{ u.email }}){% endif %}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-muted">You are not following any user.</div>
+                {% endif %}
+                </div>
+                </div>
+
 
             </div>
 
