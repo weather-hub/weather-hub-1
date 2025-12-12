@@ -1,3 +1,13 @@
+# Version 1.4.1 (2025-12-12)
+
+## Fixes
+- fix(admin-roles): prevent admin from modifying own roles
+
+## Others
+- chore: apply pre-commit hooks formatting
+- test(admin-roles): add regression test for self-role modification
+
+
 # Version 1.4.0 (2025-12-12)
 
 ## Features
