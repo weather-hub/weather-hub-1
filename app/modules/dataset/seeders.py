@@ -2,6 +2,7 @@ import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from app.modules.dataset.models import DSMetaDataEditLog  # <-- 1. Importar el modelo
 from app.modules.dataset.models import (
     Author,
     DataSet,
@@ -91,8 +92,8 @@ class DatasetSeeder(BaseSeeder):
                 "num_models": "100",
                 "num_features": "250",
                 "files": [
-                    {"name": "weather_data_2020.uvl", "size": 1024 * 500},
-                    {"name": "metadata.json", "size": 1024 * 10},
+                    {"name": "weather_data_2020.csv", "size": 1024 * 500},
+                    {"name": "metadata.txt", "size": 1024 * 10},
                 ],
             },
             {
@@ -105,9 +106,9 @@ class DatasetSeeder(BaseSeeder):
                 "num_models": "150",
                 "num_features": "320",
                 "files": [
-                    {"name": "weather_data_2020.uvl", "size": 1024 * 500},
-                    {"name": "weather_data_2021.uvl", "size": 1024 * 600},
-                    {"name": "metadata.json", "size": 1024 * 12},
+                    {"name": "weather_data_2020.csv", "size": 1024 * 500},
+                    {"name": "weather_data_2021.csv", "size": 1024 * 600},
+                    {"name": "metadata.md", "size": 1024 * 12},
                 ],
             },
             {
@@ -120,18 +121,21 @@ class DatasetSeeder(BaseSeeder):
                 "num_models": "200",
                 "num_features": "450",
                 "files": [
-                    {"name": "weather_data_2020.uvl", "size": 1024 * 500},
-                    {"name": "weather_data_2021.uvl", "size": 1024 * 600},
-                    {"name": "weather_data_2022.uvl", "size": 1024 * 700},
-                    {"name": "analysis_config.uvl", "size": 1024 * 50},
-                    {"name": "metadata.json", "size": 1024 * 15},
+                    {"name": "weather_data_2020.csv", "size": 1024 * 500},
+                    {"name": "weather_data_2021.csv", "size": 1024 * 600},
+                    {"name": "weather_data_2022.csv", "size": 1024 * 700},
+                    {"name": "analysis_config.csv", "size": 1024 * 50},
+                    {"name": "metadata.txt", "size": 1024 * 15},
                 ],
             },
         ]
 
+        previous_metadata = None
+        previous_version_number = None
         for idx, ver_data in enumerate(versions_data):
             is_latest = idx == len(versions_data) - 1
-            self._create_dataset_version(
+            # El helper ahora devuelve la metadata creada para usarla en la siguiente iteración
+            new_metadata, new_version_number = self._create_dataset_version(
                 user=user,
                 concept=concept,
                 deposition_id=deposition_id,
@@ -139,7 +143,11 @@ class DatasetSeeder(BaseSeeder):
                 is_latest=is_latest,
                 publication_type=PublicationType.CONTINENTAL,
                 tags="weather,climate,temperature,patterns",
+                previous_metadata=previous_metadata,
+                previous_version_number=previous_version_number,
             )
+            previous_metadata = new_metadata
+            previous_version_number = new_version_number
 
     def _create_climate_analysis_dataset(self, user):
         """Crea un dataset con 2 versiones en Fakenodo"""
@@ -178,8 +186,8 @@ class DatasetSeeder(BaseSeeder):
                 "num_models": "75",
                 "num_features": "180",
                 "files": [
-                    {"name": "europe_climate_2019.uvl", "size": 1024 * 400},
-                    {"name": "analysis_results.uvl", "size": 1024 * 150},
+                    {"name": "europe_climate_2019.csv", "size": 1024 * 400},
+                    {"name": "analysis_results.csv", "size": 1024 * 150},
                 ],
             },
             {
@@ -192,17 +200,20 @@ class DatasetSeeder(BaseSeeder):
                 "num_models": "90",
                 "num_features": "220",
                 "files": [
-                    {"name": "europe_climate_2019.uvl", "size": 1024 * 400},
-                    {"name": "europe_climate_2020.uvl", "size": 1024 * 420},
-                    {"name": "analysis_results.uvl", "size": 1024 * 180},
-                    {"name": "refined_model.uvl", "size": 1024 * 80},
+                    {"name": "europe_climate_2019.csv", "size": 1024 * 400},
+                    {"name": "europe_climate_2020.csv", "size": 1024 * 420},
+                    {"name": "analysis_results.csv", "size": 1024 * 180},
+                    {"name": "refined_model.csv", "size": 1024 * 80},
                 ],
             },
         ]
 
+        previous_metadata = None
+        previous_version_number = None
         for idx, ver_data in enumerate(versions_data):
             is_latest = idx == len(versions_data) - 1
-            self._create_dataset_version(
+            # El helper ahora devuelve la metadata creada para usarla en la siguiente iteración
+            new_metadata, new_version_number = self._create_dataset_version(
                 user=user,
                 concept=concept,
                 deposition_id=deposition_id,
@@ -210,7 +221,11 @@ class DatasetSeeder(BaseSeeder):
                 is_latest=is_latest,
                 publication_type=PublicationType.NATIONAL,
                 tags="climate,analysis,europe,temperature",
+                previous_metadata=previous_metadata,
+                previous_version_number=previous_version_number,
             )
+            previous_metadata = new_metadata
+            previous_version_number = new_version_number
 
     def _create_simple_dataset(self, user):
         """Crea un dataset simple con una sola versión"""
@@ -246,8 +261,8 @@ class DatasetSeeder(BaseSeeder):
             "num_models": "50",
             "num_features": "120",
             "files": [
-                {"name": "precipitation_data.uvl", "size": 1024 * 300},
-                {"name": "stations_info.json", "size": 1024 * 5},
+                {"name": "precipitation_data.csv", "size": 1024 * 300},
+                {"name": "stations_info.md", "size": 1024 * 5},
             ],
         }
 
@@ -259,10 +274,23 @@ class DatasetSeeder(BaseSeeder):
             is_latest=True,
             publication_type=PublicationType.REGIONAL,
             tags="precipitation,weather,north-america",
+            previous_metadata=None,  # No hay versión previa
+            previous_version_number=None,
         )
 
-    def _create_dataset_version(self, user, concept, deposition_id, version_data, is_latest, publication_type, tags):
-        """Helper para crear una versión específica de un dataset"""
+    def _create_dataset_version(
+        self,
+        user,
+        concept,
+        deposition_id,
+        version_data,
+        is_latest,
+        publication_type,
+        tags,
+        previous_metadata,
+        previous_version_number,
+    ):
+        """Helper para crear una versión específica de un dataset y sus logs de cambios."""
 
         version_num = version_data["version_num"]
         version_doi = f"10.1234/fakenodo.{deposition_id}.{version_num}"
@@ -285,6 +313,47 @@ class DatasetSeeder(BaseSeeder):
             ds_metrics_id=ds_metrics.id,
         )
         self.seed([ds_metadata])
+
+        # 2.1. Crear logs de cambios si hay una versión anterior
+        if previous_metadata and previous_version_number:
+            # Extraer el número de la versión mayor (el '1' de 'v1.x.x')
+            prev_major_version = previous_version_number.lstrip("v").split(".")[0]
+            current_major_version = version_data["version"].lstrip("v").split(".")[0]
+
+            # Solo crear logs si es una versión menor (la versión mayor no ha cambiado)
+            if prev_major_version == current_major_version:
+                edit_time = datetime.now(timezone.utc) - timedelta(days=version_data["days_ago"])
+                logs_to_create = []
+
+                # Log para el cambio de versión
+                logs_to_create.append(
+                    DSMetaDataEditLog(
+                        ds_meta_data_id=ds_metadata.id,
+                        user_id=user.id,
+                        edited_at=edit_time,
+                        field_name="version",
+                        old_value=previous_version_number,
+                        new_value=version_data["version"],
+                    )
+                )
+
+                # Log para el cambio de descripción (si ha cambiado)
+                if previous_metadata.description != ds_metadata.description:
+                    logs_to_create.append(
+                        DSMetaDataEditLog(
+                            ds_meta_data_id=ds_metadata.id,
+                            user_id=user.id,
+                            edited_at=edit_time,
+                            field_name="description",
+                            old_value=previous_metadata.description,
+                            new_value=ds_metadata.description,
+                        )
+                    )
+
+                # Aquí se podrían añadir más comparaciones (título, tags, etc.)
+
+                if logs_to_create:
+                    self.seed(logs_to_create)
 
         # 3. Crear autores
         authors = [
@@ -324,6 +393,9 @@ class DatasetSeeder(BaseSeeder):
 
         print(f"   ✓ Created {version_data['title']} {version_data['version']}")
 
+        # Devolver la metadata y el número de versión para la siguiente iteración
+        return ds_metadata, version_data["version"]
+
     def _create_feature_models_and_files(self, dataset, files_data, publication_type):
         """Crea feature models y archivos para un dataset"""
 
@@ -336,7 +408,7 @@ class DatasetSeeder(BaseSeeder):
             # Crear metadata del FM
             fm_metadata = FMMetaData(
                 filename=file_data["name"],
-                title=file_data["name"].replace(".uvl", "").replace("_", " ").title(),
+                title=file_data["name"].replace(".csv", "").replace("_", " ").title(),
                 description=f"Feature model for {file_data['name']}",
                 publication_type=publication_type,
                 publication_doi=None,

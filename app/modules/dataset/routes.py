@@ -282,6 +282,11 @@ def create_dataset():
             logger.error(f"Form validation failed: {form.errors}")
             return jsonify({"message": form.errors}), 400
 
+        version_check, version_message = DataSetService.check_upload_version(str(form.version_number.data))
+        if not version_check:
+            logger.error(f"Version check failed: {version_message}")
+            return jsonify({"message": version_message}), 400
+
         try:
             logger.info("Creating dataset...")
             create_args = {"form": form, "current_user": current_user}

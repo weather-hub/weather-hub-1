@@ -328,6 +328,22 @@ class DataSetService(BaseService):
 
         return is_valid, error_message
 
+    @staticmethod
+    def check_upload_version(version: str) -> tuple[bool, str]:
+        clean_version = version.lstrip("v")
+        version_parts = clean_version.split(".")
+
+        if len(version_parts) != 3:
+            return False, "Version format must be X.Y.Z where X, Y, and Z are integers."
+
+        for part in version_parts:
+            if not part.isdigit():
+                return False, "Version components must be integers."
+            if len(part) > 1 and part.startswith("0"):
+                return False, "Version components must not contain leading zeros.(Ej: 01)"
+
+        return True, ""
+
 
 class AuthorService(BaseService):
     def __init__(self):
