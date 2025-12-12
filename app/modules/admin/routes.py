@@ -1,5 +1,5 @@
 from flask import jsonify, render_template, request
-from flask_login import login_required
+from flask_login import current_user, login_required
 
 from app import db
 from app.modules.admin import admin_bp
@@ -31,8 +31,14 @@ def update_user_roles(user_id):
     """
     Update roles for a specific user.
     Expects JSON payload with 'role_ids' array.
+    Business rule: Admins cannot modify their own roles to prevent self-lockout.
     """
     user = User.query.get_or_404(user_id)
+
+    # Prevent admin from modifying their own roles
+    if user.id == current_user.id:
+        return jsonify({"error": "Cannot modify your own roles"}), 403
+
     data = request.get_json()
 
     if not data or "role_ids" not in data:
