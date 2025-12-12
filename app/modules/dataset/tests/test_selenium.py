@@ -462,7 +462,6 @@ def test_add_comment_on_dataset():
         if not match:
             print("Could not extract dataset_id, skipping comment test")
             return
-        dataset_id = match.group(1)
 
         # Scroll to comments section
         try:
@@ -512,7 +511,10 @@ def test_add_comment_on_dataset():
             try:
                 comment_count_element = driver.find_element(By.ID, "commentCount")
                 final_count = int(comment_count_element.text)
-                assert final_count == initial_count + 1, f"Comment count did not increase. Expected {initial_count + 1}, got {final_count}"
+                expected = initial_count + 1
+                assert final_count == expected, (
+                    f"Comment count did not increase. " f"Expected {expected}, got {final_count}"
+                )
             except Exception:
                 pass
 
@@ -639,11 +641,13 @@ def test_edit_own_comment():
 
         # Find the edit button for the comment (should be visible for own comments)
         try:
-            edit_buttons = driver.find_elements(By.XPATH, "//button[contains(@class, 'edit-comment-btn') or contains(text(), 'Edit')]")
+            xpath_edit = "//button[contains(@class, 'edit-comment-btn') " "or contains(text(), 'Edit')]"
+            edit_buttons = driver.find_elements(By.XPATH, xpath_edit)
             if len(edit_buttons) == 0:
                 print("No edit buttons found. Trying alternative selector...")
-                edit_buttons = driver.find_elements(By.XPATH, "//a[contains(@class, 'edit-comment') or contains(text(), 'Edit')]")
-            
+                xpath_edit_alt = "//a[contains(@class, 'edit-comment') " "or contains(text(), 'Edit')]"
+                edit_buttons = driver.find_elements(By.XPATH, xpath_edit_alt)
+
             if len(edit_buttons) > 0:
                 # Click the last edit button (most recent comment)
                 last_edit_button = edit_buttons[-1]
@@ -653,25 +657,27 @@ def test_edit_own_comment():
                 time.sleep(2)
 
                 # Find the edit textarea and update content
-                edit_textarea = driver.find_element(By.XPATH, "//textarea[contains(@class, 'edit-comment-textarea')]")
+                xpath_textarea = "//textarea[contains(@class, 'edit-comment-textarea')]"
+                edit_textarea = driver.find_element(By.XPATH, xpath_textarea)
                 updated_text = f"{comment_text} [EDITED]"
                 edit_textarea.clear()
                 edit_textarea.send_keys(updated_text)
                 time.sleep(1)
 
                 # Save the edited comment
-                save_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Save') or contains(@class, 'save-comment-btn')]")
+                xpath_save = "//button[contains(text(), 'Save') " "or contains(@class, 'save-comment-btn')]"
+                save_button = driver.find_element(By.XPATH, xpath_save)
                 save_button.click()
                 time.sleep(3)
 
                 # Verify the comment was updated
-                updated_comments = driver.find_elements(By.XPATH, f"//div[contains(text(), '[EDITED]')]")
+                updated_comments = driver.find_elements(By.XPATH, "//div[contains(text(), '[EDITED]')]")
                 assert len(updated_comments) > 0, "Edited comment not found"
-                
                 print("Test passed! Comment edited successfully.")
             else:
-                print("Edit functionality may not be available in UI yet. Skipping validation.")
-                
+                print("Edit functionality may not be available in UI yet.")
+                print("Skipping validation.")
+
         except Exception as e:
             print(f"Note: Edit comment UI may not be fully implemented: {e}")
             print("Test noted - edit functionality exists in backend.")
@@ -743,14 +749,16 @@ def test_delete_own_comment():
 
         # Find the delete button for the comment
         try:
-            delete_buttons = driver.find_elements(By.XPATH, "//button[contains(@class, 'delete-comment-btn') or contains(text(), 'Delete')]")
+            xpath_delete = "//button[contains(@class, 'delete-comment-btn') " "or contains(text(), 'Delete')]"
+            delete_buttons = driver.find_elements(By.XPATH, xpath_delete)
             if len(delete_buttons) == 0:
                 print("No delete buttons found. Trying alternative selector...")
-                delete_buttons = driver.find_elements(By.XPATH, "//a[contains(@class, 'delete-comment') or contains(text(), 'Delete')]")
-            
+                xpath_alt = "//a[contains(@class, 'delete-comment') " "or contains(text(), 'Delete')]"
+                delete_buttons = driver.find_elements(By.XPATH, xpath_alt)
+
             if len(delete_buttons) > 0:
-                initial_delete_count = initial_count + 1  # After adding comment
-                
+                initial_delete_count = initial_count + 1
+
                 # Click the last delete button (most recent comment)
                 last_delete_button = delete_buttons[-1]
                 driver.execute_script("arguments[0].scrollIntoView(true);", last_delete_button)
@@ -760,7 +768,8 @@ def test_delete_own_comment():
 
                 # Handle confirmation dialog if present
                 try:
-                    confirm_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Confirm') or contains(text(), 'Yes')]")
+                    xpath_confirm = "//button[contains(text(), 'Confirm') or contains(text(), 'Yes')]"
+                    confirm_button = driver.find_element(By.XPATH, xpath_confirm)
                     confirm_button.click()
                     time.sleep(2)
                 except Exception:
@@ -777,16 +786,21 @@ def test_delete_own_comment():
                 try:
                     comment_count_element = driver.find_element(By.ID, "commentCount")
                     final_count = int(comment_count_element.text)
-                    assert final_count == initial_delete_count - 1, f"Comment count should decrease. Expected {initial_delete_count - 1}, got {final_count}"
+                    expected = initial_delete_count - 1
+                    assert final_count == expected, (
+                        f"Comment count should decrease. " f"Expected {expected}, got {final_count}"
+                    )
                 except Exception:
                     # Alternative verification: comment should not appear
-                    remaining_comments = driver.find_elements(By.XPATH, f"//div[contains(text(), '{comment_text[:30]}')]")
+                    xpath_remain = f"//div[contains(text(), '{comment_text[:30]}')]"
+                    remaining_comments = driver.find_elements(By.XPATH, xpath_remain)
                     assert len(remaining_comments) == 0, "Deleted comment still visible"
 
                 print("Test passed! Comment deleted successfully.")
             else:
-                print("Delete functionality may not be available in UI yet. Skipping validation.")
-                
+                msg = "Delete functionality may not be available in UI yet."
+                print(f"{msg} Skipping validation.")
+
         except Exception as e:
             print(f"Note: Delete comment UI may not be fully implemented: {e}")
             print("Test noted - delete functionality exists in backend.")
@@ -829,7 +843,8 @@ def test_comment_requires_login():
 
         # Verify that comment form is not available or shows login message
         try:
-            login_message = driver.find_element(By.XPATH, "//*[contains(text(), 'login') and contains(text(), 'comment')]")
+            xpath_login = "//*[contains(text(), 'login') " "and contains(text(), 'comment')]"
+            login_message = driver.find_element(By.XPATH, xpath_login)
             assert login_message is not None, "Login requirement message should be displayed"
             print("Test passed! Login requirement message displayed correctly.")
         except Exception:
@@ -902,8 +917,10 @@ def test_empty_comment_validation():
             except Exception:
                 # Alternative: check for error alert or message
                 try:
-                    error_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'required') or contains(text(), 'empty')]")
-                    assert len(error_elements) > 0, "Error message should be displayed for empty comment"
+                    xpath_error = "//*[contains(text(), 'required') or contains(text(), 'empty')]"
+                    error_elements = driver.find_elements(By.XPATH, xpath_error)
+                    assert len(error_elements) > 0, "Error message should be displayed"
+                    assert len(error_elements) > 0
                     print("Test passed! Empty comment rejected with error message.")
                 except Exception:
                     print("Test passed! Empty comment was handled (button may be disabled).")
@@ -982,7 +999,8 @@ def test_comment_count_updates():
             comment_count_element = driver.find_element(By.ID, "commentCount")
             count_after_first = int(comment_count_element.text)
             print(f"Count after first comment: {count_after_first}")
-            assert count_after_first == initial_count + 1, f"Counter should be {initial_count + 1}, but is {count_after_first}"
+            expected = initial_count + 1
+            assert count_after_first == expected, f"Counter should be {expected}, but is {count_after_first}"
         except AssertionError as e:
             print(f"Verification error: {e}")
             raise
@@ -1011,7 +1029,8 @@ def test_comment_count_updates():
             comment_count_element = driver.find_element(By.ID, "commentCount")
             count_after_second = int(comment_count_element.text)
             print(f"Count after second comment: {count_after_second}")
-            assert count_after_second == initial_count + 2, f"Counter should be {initial_count + 2}, but is {count_after_second}"
+            expected = initial_count + 2
+            assert count_after_second == expected, f"Counter should be {expected}, but is {count_after_second}"
         except AssertionError as e:
             print(f"Verification error: {e}")
             raise
