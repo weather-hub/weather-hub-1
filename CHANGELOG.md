@@ -1,3 +1,10 @@
+# Version 1.4.2 (2025-12-12)
+
+## Fixes
+- fix: bring trunk into the author duplicity solution
+- fix: authors duplicity listing and viewing datasets
+
+
 # Version 1.4.1 (2025-12-12)
 
 ## Fixes
