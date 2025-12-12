@@ -1,3 +1,12 @@
+# Version 1.3.9 (2025-12-12)
+
+## Fixes
+- fix(admin-roles): reject empty role list in role update endpoint
+
+## Others
+- test(admin-roles): add regression test for empty role list rejection
+
+
 # Version 1.3.8 (2025-12-12)
 
 ## Fixes

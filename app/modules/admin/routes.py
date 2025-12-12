@@ -40,6 +40,10 @@ def update_user_roles(user_id):
 
     role_ids = data["role_ids"]
 
+    # Business rule: A user must have at least one role at all times.
+    if not role_ids or len(role_ids) == 0:
+        return jsonify({"error": "User must have at least one role"}), 400
+
     # Validate that all role_ids exist
     roles = Role.query.filter(Role.id.in_(role_ids)).all()
     if len(roles) != len(role_ids):
