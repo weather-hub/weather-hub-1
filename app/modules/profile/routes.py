@@ -5,14 +5,20 @@ from app import db
 from app.modules.auth.models import User
 from app.modules.auth.services import AuthenticationService
 from app.modules.dataset.models import DataSet
+from app.modules.follow.services import FollowService
 from app.modules.profile import profile_bp
 from app.modules.profile.forms import UserProfileForm
 from app.modules.profile.services import UserProfileService
+
+follow_service = FollowService()
 
 
 @profile_bp.route("/profile/edit", methods=["GET", "POST"])
 @login_required
 def edit_profile():
+    following_communities = follow_service.get_followed_communities(current_user.id)
+    following_users = follow_service.get_followed_authors(current_user.id)
+
     auth_service = AuthenticationService()
     profile = auth_service.get_authenticated_user_profile
     if not profile:
@@ -31,7 +37,13 @@ def edit_profile():
     except Exception:
         user_communities = []
 
-    return render_template("profile/edit.html", form=form, communities=user_communities)
+    return render_template(
+        "profile/edit.html",
+        form=form,
+        communities=user_communities,
+        following_communities=following_communities,
+        following_users=following_users,
+    )
 
 
 @profile_bp.route("/profile/summary")

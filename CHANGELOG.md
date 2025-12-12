@@ -4,7 +4,6 @@
 ## Features
 
 - feat: added test
-- feat: added test
 - feat: added test for locust
 - feat: added test for selenium
 - feat: added user profile
@@ -71,15 +70,12 @@
 
 ## Fixes
 
+- fix: profile settings changes
 - fix: logout modal added
-- fix: logout modal added
-- fix: add curator link on community
 - fix: add curator link in community
 - fix: slint errors
 - fix: added user link for following user
-- fix: added user link for following user
 - fix: fixed link when following an user
-- fix: now users cannot see other users active sessions
 - fix: now users cannot see other users active sessions
 - fix: now users cannot see other users active sessions
 - fix: new functional website logo
@@ -126,20 +122,12 @@
 
 - chore: bump version [skip ci]
 - chore: update changelog [skip ci]
-- chore: bump version [skip ci]
-- chore: update changelog [skip ci]
 - chore: update changelog [skip ci]
 - chore: bump version [skip ci]
 - chore: update changelog [skip ci]
 - chore: bump version [skip ci]
 - chore: update changelog [skip ci]
 - chore: bump version [skip ci]
-- chore: bump version [skip ci]
-- chore: update changelog [skip ci]
-- chore: update changelog [skip ci]
-- chore: bump version [skip ci]
-- chore: bump version [skip ci]
-- chore: update changelog [skip ci]
 - chore: update changelog [skip ci]
 - chore: bump version [skip ci]
 - chore: bump version [skip ci]
