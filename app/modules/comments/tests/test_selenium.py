@@ -1,16 +1,15 @@
 import time
-from selenium.webdriver.common.by import By
+
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 from core.environment.host import get_host_for_selenium_testing
-from core.selenium.common import initialize_driver, close_driver
+from core.selenium.common import close_driver, initialize_driver
 
 
 def click_safely(driver, by, selector):
-    elem = WebDriverWait(driver, 10).until(
-        lambda d: d.find_element(by, selector)
-    )
+    elem = WebDriverWait(driver, 10).until(lambda d: d.find_element(by, selector))
     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
     time.sleep(0.2)
     elem.click()

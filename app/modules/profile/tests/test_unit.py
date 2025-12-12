@@ -1,5 +1,5 @@
-import pytest
 import pyotp
+import pytest
 
 from app import db
 from app.modules.auth.models import User

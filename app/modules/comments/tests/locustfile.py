@@ -1,4 +1,4 @@
-from locust import HttpUser, TaskSet, task, between
+from locust import HttpUser, TaskSet, between, task
 
 from core.environment.host import get_host_for_locust_testing
 from core.locust.common import fake, get_csrf_token

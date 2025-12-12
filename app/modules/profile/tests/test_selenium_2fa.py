@@ -3,14 +3,14 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 
-class TestProfile2fa():
+class TestProfile2fa:
     def setup_method(self, method):
         self.driver = webdriver.Firefox()
         self.vars = {}
 
     def teardown_method(self, method):
         self.driver.quit()
-             
+
     def test_profile2fa(self):
         self.driver.get("http://127.0.0.1:5000/login?next=%2Fprofile%2Fedit")
         self.driver.set_window_size(1400, 861)
@@ -25,4 +25,3 @@ class TestProfile2fa():
         self.driver.find_element(By.CSS_SELECTOR, ".btn-success:nth-child(2)").click()
         self.driver.find_element(By.LINK_TEXT, "Cancel").click()
         self.driver.find_element(By.CSS_SELECTOR, ".content").click()
-      

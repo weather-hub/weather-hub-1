@@ -1,6 +1,7 @@
-import pytest
 import pyotp
+import pytest
 from flask import url_for
+
 import app.modules.auth.routes as auth_routes
 
 
@@ -22,7 +23,7 @@ def twofa_dummy_user():
 
         def check_password(self, password):
             return True
-        
+
         def __init__(self):
             self.profile = type("P", (), {"surname": "Test", "name": "User"})()
 

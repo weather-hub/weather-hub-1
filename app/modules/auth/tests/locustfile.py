@@ -1,10 +1,8 @@
-from locust import HttpUser, TaskSet, task, between
-
 import pyotp  # asegúrate de tenerlo en requirements
+from locust import HttpUser, TaskSet, between, task
 
 from core.environment.host import get_host_for_locust_testing
 from core.locust.common import fake, get_csrf_token
-
 
 # Mapea usuarios de prueba 2FA a su secreto TOTP
 # Deben coincidir con los que tengas en la base de datos

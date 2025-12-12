@@ -14,6 +14,7 @@ from flask_login import current_user, login_required
 
 from app.modules.comments.forms import CommentForm
 from app.modules.comments.models import Comment
+from app.modules.comments.services import CommentService
 from app.modules.dataset import dataset_bp
 from app.modules.dataset.forms import DataSetForm, DataSetVersionForm
 from app.modules.dataset.models import DSDownloadRecord
@@ -28,7 +29,6 @@ from app.modules.dataset.services import (
 )
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.zenodo.services import ZenodoService
-from app.modules.comments.services import CommentService
 
 logger = logging.getLogger(__name__)
 

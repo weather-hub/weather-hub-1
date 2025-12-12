@@ -16,7 +16,6 @@ def comment_on_dataset(dataset_id):
     comment_form = CommentForm()
     comments = comment_service.get_comments_for_dataset(dataset, current_user)
 
-
     if comment_form.validate_on_submit():
         comment_service.create_comment(
             dataset_id=dataset.id,
@@ -29,12 +28,7 @@ def comment_on_dataset(dataset_id):
 
     comments = comment_service.get_comments_for_dataset(dataset, current_user)
 
-    return render_template(
-        "comments/coments.html",
-        dataset=dataset,
-        comment_form=comment_form,
-        comments=comments
-    )
+    return render_template("comments/coments.html", dataset=dataset, comment_form=comment_form, comments=comments)
 
 
 @comments_bp.route("/comments/<int:comment_id>/approve", methods=["POST"])
