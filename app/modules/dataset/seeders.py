@@ -409,4 +409,4 @@ class DatasetSeeder(BaseSeeder):
         """Genera un checksum simulado para un archivo"""
         import hashlib
 
-        return hashlib.md5(f"{filename}-{datetime.now().timestamp()}".encode()).hexdigest()
+        return hashlib.sha256(f"{filename}-{datetime.now().timestamp()}".encode()).hexdigest()
