@@ -69,7 +69,6 @@
 
 - fix: now users cannot see other users active sessions
 - fix: now users cannot see other users active sessions
-- fix: now users cannot see other users active sessions
 - fix: new functional website logo
 - fix: new weather logo for our app
 - fix: sun logo replaced
