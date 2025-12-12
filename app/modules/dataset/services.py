@@ -299,6 +299,10 @@ class DataSetService(BaseService):
         if len(current_parts) != 3 or len(form_parts) != 3:
             return False, "Version format must be X.Y.Z where X, Y, and Z are integers."
 
+        for part in form_parts:
+            if len(part) > 1 and part.startswith("0"):
+                return False, "Version components must not contain leading zeros.(Ej: 01)"
+
         major_current, minor_current, patch_current = map(int, current_parts)
         major_form, minor_form, patch_form = map(int, form_parts)
         if is_major:
@@ -308,6 +312,9 @@ class DataSetService(BaseService):
             if minor_form != 0 or patch_form != 0:
                 is_valid = False
                 error_message = "For a major version, minor and patch versions must be zero.(Ej: 1.0.0 to 2.0.0)"
+            if major_form > major_current + 1:
+                is_valid = False
+                error_message = "Major version can only be increased by one at a time."
         else:
             if major_form > major_current:
                 is_valid = False
@@ -315,6 +322,9 @@ class DataSetService(BaseService):
             if minor_form <= minor_current and patch_form <= patch_current:
                 is_valid = False
                 error_message = "For a non-major version, minor or patch version must be increased."
+            if minor_form > minor_current + 1 or patch_form > patch_current + 1:
+                is_valid = False
+                error_message = "Minor or patch version can only be increased by one at a time."
 
         return is_valid, error_message
 
