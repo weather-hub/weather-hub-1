@@ -155,11 +155,16 @@
               <h6>Curators</h6>
               <ul>
                 {% for u in c.curators %}
-                  <li>{{ u.profile.name }} {{ u.profile.surname }} ({{ u.email }})</li>
+                  <li>
+                    <a href="{{ url_for('profile.view_profile', user_id=u.id) }}">
+                      {{ u.profile.name }} {{ u.profile.surname }}
+                    </a>
+                  </li>
                 {% else %}
                   <li class="text-muted">No curators</li>
                 {% endfor %}
               </ul>
+
               <h6>Datasets</h6>
               <ul>
                 {% set accepted = c.proposals | selectattr('status','equalto','accepted') | list %}
