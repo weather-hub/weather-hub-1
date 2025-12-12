@@ -287,6 +287,43 @@ def test_non_admin_cannot_update_roles(test_client):
     test_client.get("/logout", follow_redirects=True)
 
 
+def test_admin_cannot_modify_own_roles(test_client):
+    """
+    Regression test for INC-04: Admin cannot modify their own roles.
+    Verifies that admins are prevented from changing their own roles to avoid self-lockout.
+    """
+    # Login as admin
+    test_client.post("/login", data={"email": "admin@test.com", "password": "admin123"}, follow_redirects=True)
+
+    # Get admin user and a different role
+    with test_client.application.app_context():
+        admin_user = User.query.filter_by(email="admin@test.com").first()
+        admin_user_id = admin_user.id
+        standard_role = Role.query.filter_by(name="standard").first()
+        standard_role_id = standard_role.id
+
+    # Attempt to modify own roles
+    response = test_client.post(
+        f"/admin/users/{admin_user_id}/roles",
+        json={"role_ids": [standard_role_id]},
+        content_type="application/json",
+    )
+
+    # Should return 403 Forbidden
+    assert response.status_code == 403
+    data = response.get_json()
+    assert "error" in data
+    assert "own roles" in data["error"].lower()
+
+    # Verify roles were not changed
+    with test_client.application.app_context():
+        admin_user = User.query.filter_by(email="admin@test.com").first()
+        assert any(r.name == "admin" for r in admin_user.roles)
+
+    # Cleanup
+    test_client.get("/logout", follow_redirects=True)
+
+
 def test_update_user_roles_rejects_invalid_role_ids(test_client):
     """
     Regression test for INC-03: Strong validation of invalid role IDs.
