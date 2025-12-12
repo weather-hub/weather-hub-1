@@ -285,3 +285,45 @@ def test_non_admin_cannot_update_roles(test_client):
 
     # Cleanup
     test_client.get("/logout", follow_redirects=True)
+
+
+def test_update_user_roles_rejects_invalid_role_ids(test_client):
+    """
+    Regression test for INC-03: Strong validation of invalid role IDs.
+    Verifies that the endpoint explicitly identifies and rejects invalid role IDs.
+    """
+    # Login as admin
+    test_client.post("/login", data={"email": "admin@test.com", "password": "admin123"}, follow_redirects=True)
+
+    # Get regular user and existing roles
+    with test_client.application.app_context():
+        regular_user = User.query.filter_by(email="regular@test.com").first()
+        regular_user_id = regular_user.id
+        standard_role = Role.query.filter_by(name="standard").first()
+        standard_role_id = standard_role.id
+
+    # Attempt to assign a mix of valid and invalid role IDs
+    # Using IDs that are extremely unlikely to exist (9999, 10000)
+    invalid_ids = [9999, 10000]
+    mixed_role_ids = [standard_role_id] + invalid_ids
+
+    response = test_client.post(
+        f"/admin/users/{regular_user_id}/roles",
+        json={"role_ids": mixed_role_ids},
+        content_type="application/json",
+    )
+
+    # Should return 400 Bad Request
+    assert response.status_code == 400
+
+    # Response should contain error details
+    data = response.get_json()
+    assert "error" in data
+    assert "invalid_role_ids" in data
+
+    # The invalid_role_ids should contain the non-existent IDs
+    returned_invalid_ids = data["invalid_role_ids"]
+    assert set(returned_invalid_ids) == set(invalid_ids)
+
+    # Cleanup
+    test_client.get("/logout", follow_redirects=True)
