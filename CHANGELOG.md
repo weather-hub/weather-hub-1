@@ -1,3 +1,12 @@
+# Version 1.3.10 (2025-12-12)
+
+## Fixes
+- fix(admin-roles): reject invalid role IDs in role update endpoint
+
+## Others
+- style(comments): apply automatic code formatting
+
+
 # Version 1.3.9 (2025-12-12)
 
 ## Fixes
