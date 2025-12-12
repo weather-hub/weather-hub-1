@@ -37,6 +37,29 @@ chico sundermann">
 
 </head>
 
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm logout</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to log out?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">
+          Log out
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <body>
 <div class="wrapper">
 
@@ -149,7 +172,7 @@ chico sundermann">
                     {% endif %}
 
                     <li class="sidebar-item">
-                        <a class="sidebar-link" href="{{ url_for('auth.logout') }}">
+                      <a class="sidebar-link" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
                             <i class="align-middle" data-feather="log-out"></i> <span
                                 class="align-middle">Log out</span>
                         </a>
@@ -207,7 +230,7 @@ chico sundermann">
                         <div class="dropdown-menu dropdown-menu-end">
                             <a class="dropdown-item" href="{{ url_for('profile.my_profile') }}">
                                 <i class="align-middle me-1" data-feather="user"></i> My profile</a>
-                            <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
                                 <i class="align-middle me-1" data-feather="log-out"></i> Log out</a>
                         </div>
                         
