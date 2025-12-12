@@ -1,3 +1,9 @@
+# Version 1.3.7 (2025-12-12)
+
+## Fixes
+- fix(comments): fix del test de selenium de comments
+
+
 # Version 1.3.6 (2025-12-12)
 
 ## Fixes
