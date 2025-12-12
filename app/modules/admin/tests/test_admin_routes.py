@@ -162,6 +162,43 @@ def test_remove_role_from_user(test_client):
     test_client.get("/logout", follow_redirects=True)
 
 
+def test_cannot_remove_last_role_from_user(test_client):
+    """Test that removing the last role from a user is rejected (regression test for INC-01)."""
+    # Login as admin
+    test_client.post("/login", data={"email": "admin@test.com", "password": "admin123"}, follow_redirects=True)
+
+    # Get IDs and ensure user has exactly one role
+    with test_client.application.app_context():
+        regular_user = User.query.filter_by(email="regular@test.com").first()
+        guest_role = Role.query.filter_by(name="guest").first()
+        regular_user_id = regular_user.id
+        guest_role_id = guest_role.id
+
+    # Set user to have only guest role
+    test_client.post(
+        f"/admin/users/{regular_user_id}/roles",
+        json={"role_ids": [guest_role_id]},
+        content_type="application/json",
+    )
+
+    # Attempt to remove the only role (should fail with 400)
+    response = test_client.delete(f"/admin/users/{regular_user_id}/roles/{guest_role_id}")
+
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "error" in data
+    assert "last role" in data["error"].lower() or "at least one" in data["error"].lower()
+
+    # Verify role was NOT removed
+    with test_client.application.app_context():
+        user = User.query.get(regular_user_id)
+        assert len(user.roles) == 1
+        assert user.roles[0].name == "guest"
+
+    # Cleanup
+    test_client.get("/logout", follow_redirects=True)
+
+
 def test_update_roles_reject_guest_combo_and_allow_guest_alone(test_client):
     """Bulk update should reject guest+other combo (400) and allow guest alone (200)."""
     # Login as admin
