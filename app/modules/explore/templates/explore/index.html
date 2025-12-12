@@ -193,7 +193,6 @@
 
 {% block scripts %}
 <script>
-  // Sincroniza el valor del buscador superior con la URL actual
   (function syncTopSearch(){
     const top = document.getElementById('search-query');
     if (!top) return;
@@ -201,23 +200,23 @@
     top.value = q;
   })();
 
-  // Construye URL con los filtros del panel derecho
   function navigateWithSideForm() {
     const form = document.getElementById('filters-side-form');
     if (!form) return;
     const params = new URLSearchParams(new FormData(form));
 
-    // Asegura la presencia de query (vacía si procede)
-    if (!params.has('query')) params.set('query', document.querySelector('#filters-side-form input[name="query"]')?.value || '');
+    if (!params.has('query')) {
+      params.set('query', form.querySelector('input[name="query"]')?.value || '');
+    }
 
     window.location = "{{ url_for('explore.index') }}?" + params.toString();
   }
 
-  // Aplica filtros SOLO con Enter
   (function wireSideFilters(){
     const form = document.getElementById('filters-side-form');
     if (!form) return;
 
+    // Apply filters with Enter
     form.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -225,18 +224,27 @@
       }
     });
 
-    // Botón "Clear filters" reactivo
+    // Apply sorting on change
+    const sortSelect = form.querySelector('select[name="sort_by"]');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', (e) => {
+        e.preventDefault();
+        navigateWithSideForm();
+      });
+    }
+
     const clearBtn = form.querySelector('.btn-clear-filters');
     if (clearBtn) {
       clearBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        // Resetea campos visibles del panel
         form.reset();
-        // Fuerza valores por defecto coherentes
+
         const sort = form.querySelector('select[name="sort_by"]');
         if (sort) sort.value = 'newest';
+
         const pub = form.querySelector('select[name="publication_type"]');
         if (pub) pub.value = 'any';
+
         const queryInput = form.querySelector('input[name="query"]');
         if (queryInput) queryInput.value = '';
 
