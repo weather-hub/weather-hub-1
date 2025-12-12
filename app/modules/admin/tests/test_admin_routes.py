@@ -108,6 +108,37 @@ def test_update_user_roles_as_admin(test_client):
     test_client.get("/logout", follow_redirects=True)
 
 
+def test_update_user_roles_rejects_empty_roles(test_client):
+    """Test that admin cannot update a user with an empty role list."""
+    # Login as admin
+    test_client.post("/login", data={"email": "admin@test.com", "password": "admin123"}, follow_redirects=True)
+
+    # Get regular user ID
+    with test_client.application.app_context():
+        regular_user = User.query.filter_by(email="regular@test.com").first()
+        regular_user_id = regular_user.id
+        roles_before = len(regular_user.roles)
+
+    # Try to update user with empty role list
+    response = test_client.post(
+        f"/admin/users/{regular_user_id}/roles", json={"role_ids": []}, content_type="application/json"
+    )
+
+    # Should reject with 400
+    assert response.status_code == 400
+    data = response.get_json()
+    assert "error" in data
+    assert "at least one role" in data["error"]
+
+    # Verify user still has their original roles (DB unchanged)
+    with test_client.application.app_context():
+        regular_user = User.query.filter_by(email="regular@test.com").first()
+        assert len(regular_user.roles) == roles_before
+
+    # Cleanup
+    test_client.get("/logout", follow_redirects=True)
+
+
 def test_add_guest_role_rejected_if_user_has_other_roles(test_client):
     """Adding 'guest' to a user that already has another role should be rejected (400)."""
     # Login as admin
