@@ -44,11 +44,13 @@
           total_datasets }} datasets
         </p>
       </div>
-       <div class="card-footer">
-               <a href="{{ url_for('auth.manage_sessions') }}" class="btn btn-outline-primary btn-sm">
-                   <i class="fa fa-shield-alt"></i> Manage Active Sessions
-               </a>
+      {% if current_user.is_authenticated and current_user.id == user.id %}
+      <div class="card-footer">
+        <a href="{{ url_for('auth.manage_sessions') }}" class="btn btn-outline-primary btn-sm">
+          <i class="fa fa-shield-alt"></i> Manage Active Sessions
+        </a>
       </div>
+      {% endif %}
     </div>
   </div>
 </div>
