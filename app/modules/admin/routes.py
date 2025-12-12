@@ -46,8 +46,11 @@ def update_user_roles(user_id):
 
     # Validate that all role_ids exist
     roles = Role.query.filter(Role.id.in_(role_ids)).all()
-    if len(roles) != len(role_ids):
-        return jsonify({"error": "One or more invalid role IDs"}), 400
+    found_role_ids = {role.id for role in roles}
+    invalid_role_ids = [rid for rid in role_ids if rid not in found_role_ids]
+
+    if invalid_role_ids:
+        return jsonify({"error": "One or more invalid role IDs", "invalid_role_ids": invalid_role_ids}), 400
 
     # Business rule: 'guest' role is exclusive. It cannot be combined with any other role
     if any(r.name == "guest" for r in roles) and len(roles) > 1:
