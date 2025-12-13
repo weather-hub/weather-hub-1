@@ -13,9 +13,14 @@ from app.modules.profile.services import UserProfileService
 @login_required
 def edit_profile():
     auth_service = AuthenticationService()
-    profile = auth_service.get_authenticated_user_profile
+    # Sin los paréntesis, la definición de la función se guarda dentro de la variable profile. Por eso, cuando más
+    # abajo se hace profile.id, Python te dice: "Oye, las funciones no tienen un atributo id, solo los objetos
+    # devueltos por ellas".
+    profile = auth_service.get_authenticated_user_profile()
     if not profile:
         return redirect(url_for("public.index"))
+
+    print(profile)
 
     form = UserProfileForm()
     if request.method == "POST":
