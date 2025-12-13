@@ -1,3 +1,13 @@
+# Version 1.4.11 (2025-12-13)
+
+## Fixes
+- fix: add trunk
+- fix: repair release commit
+
+## Others
+- test(explore): improve coverage for routes, forms and services
+
+
 # Version 1.4.10 (2025-12-13)
 
 ## Fixes
