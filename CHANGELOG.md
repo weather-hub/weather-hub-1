@@ -1,3 +1,12 @@
+# Version 1.6.0 (2025-12-13)
+
+## Features
+- feat: doi display in dataset versions list
+
+## Others
+- docs: add missing setup steps for MariaDB and .env to README and tiny fix at Contact and Support section
+
+
 # Version 1.5.0 (2025-12-13)
 
 ## Features
