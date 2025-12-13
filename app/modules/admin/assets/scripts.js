@@ -1,1 +1,1 @@
-console.log("Hi, I am a script from the admin module ;)")
+console.log("Hi, I am a script loaded from admin module");

@@ -11,18 +11,26 @@ from rosemary.commands.db_reset import db_reset
 
 def get_module_seeders(module_path, specific_module=None):
     seeders = []
+    click.echo(f"🔍 BUSCANDO SEEDERS EN: {module_path}")
+
     for root, dirs, files in os.walk(module_path):
         if "seeders.py" in files:
             relative_path = os.path.relpath(root, module_path)
             module_name = relative_path.replace(os.path.sep, ".")
             full_module_name = f"app.modules.{module_name}.seeders"
 
-            # If a module was specified and does not match the current one, continue with the next one
+            # Check filtering
             if specific_module and specific_module != module_name.split(".")[0]:
                 continue
 
-            seeder_module = importlib.import_module(full_module_name)
-            importlib.reload(seeder_module)  # Reload the module
+            click.echo(f"  👉 Encontrado fichero: {full_module_name}")
+
+            try:
+                seeder_module = importlib.import_module(full_module_name)
+                importlib.reload(seeder_module)  # Force reload
+            except ImportError as e:
+                click.echo(f"  ❌ ERROR IMPORTANDO {full_module_name}: {e}")
+                continue
 
             for attr in dir(seeder_module):
                 potential_seeder_class = getattr(seeder_module, attr)
@@ -31,11 +39,11 @@ def get_module_seeders(module_path, specific_module=None):
                     and issubclass(potential_seeder_class, BaseSeeder)
                     and potential_seeder_class is not BaseSeeder
                 ):
+                    print(f"     ✅ CLASE DETECTADA: {attr} (Prioridad: {potential_seeder_class.priority})")
                     seeders.append(potential_seeder_class())
 
     # Sort seeders by priority
     seeders.sort(key=lambda seeder: seeder.priority)
-
     return seeders
 
 
@@ -65,7 +73,7 @@ def db_seed(reset, yes, module):
         click.echo(click.style(f"Seeding data for the '{module}' module...", fg="green"))
     else:
         click.echo(click.style("Seeding data for all modules...", fg="green"))
-
+        click.echo(click.style("-----------------------------------", fg="green"))
     for seeder in seeders:
         try:
             seeder.run()

@@ -50,6 +50,20 @@ class DSMetaData(db.Model):
     authors = db.relationship("Author", backref="ds_meta_data", lazy=True, cascade="all, delete")
 
 
+class DataSetConcept(db.Model):
+    """
+    Contiene el versionado y el conceptual DOI
+    """
+
+    __tablename__ = "dataset_concept"
+    id = db.Column(db.Integer, primary_key=True)
+    conceptual_doi = db.Column(db.String(120), unique=True, nullable=False)
+    versions = db.relationship("DataSet", backref="concept", lazy="dynamic", order_by="DataSet.created_at.desc()")
+
+    def __repr__(self):
+        return f"<DatasetConcept DOI = {self.conceptual_doi}>"
+
+
 class DataSet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
@@ -59,9 +73,15 @@ class DataSet(db.Model):
 
     # NUEVOS CAMPOS
     # 'uvl' | 'weather' | 'other'
-    dataset_type = db.Column(db.String(50), nullable=False, default="uvl")
+    # dataset_type = db.Column(db.String(50), nullable=False, default="uvl")
     # ruta relativa o url en uploads/
-    storage_path = db.Column(db.String(1024), nullable=True)
+    # storage_path = db.Column(db.String(1024), nullable=True)
+    # id de concepto para versionado múltiple
+    ds_concept_id = db.Column(db.Integer, db.ForeignKey("dataset_concept.id"), nullable=True)
+    # flags de version
+    version_number = db.Column(db.String(64), default="v1.0.0")
+    # puntero de last version
+    is_latest = db.Column(db.Boolean, default=True)  # Puede sobrar
 
     ds_meta_data = db.relationship("DSMetaData", backref=db.backref("data_set", uselist=False))
     feature_models = db.relationship("FeatureModel", backref="data_set", lazy=True, cascade="all, delete")
@@ -78,6 +98,9 @@ class DataSet(db.Model):
 
     def get_cleaned_publication_type(self):
         return self.ds_meta_data.publication_type.name.replace("_", " ").title()
+
+    def get_version_number(self):
+        return self.version_number
 
     def get_zenodo_url(self):
         # Mantengo la compatibilidad (puede quedar None si no aplicable)
@@ -99,6 +122,11 @@ class DataSet(db.Model):
 
         return DataSetService().get_uvlhub_doi(self)
 
+    def get_conceptual_doi(self):
+        from app.modules.dataset.services import DataSetService
+
+        return DataSetService().get_conceptual_doi(self)
+
     def to_dict(self):
         return {
             "title": self.ds_meta_data.title,
@@ -110,6 +138,7 @@ class DataSet(db.Model):
             "publication_type": self.get_cleaned_publication_type(),
             "publication_doi": self.ds_meta_data.publication_doi,
             "dataset_doi": self.ds_meta_data.dataset_doi,
+            "conceptual_doi": self.get_conceptual_doi(),
             "tags": self.ds_meta_data.tags.split(",") if self.ds_meta_data.tags else [],
             "url": self.get_uvlhub_doi(),
             "download": f'{request.host_url.rstrip("/")}/dataset/download/{self.id}',
@@ -119,8 +148,8 @@ class DataSet(db.Model):
             "total_size_in_bytes": self.get_file_total_size(),
             "total_size_in_human_format": self.get_file_total_size_for_human(),
             # CAMPOS NUEVOS para compatibilidad con WeatherHub
-            "dataset_type": self.dataset_type,
-            "storage_path": self.storage_path,
+            # "dataset_type": self.dataset_type,
+            # "storage_path": self.storage_path,
         }
 
     def __repr__(self):
@@ -194,6 +223,29 @@ class DSMetaDataEditLog(db.Model):
                 else None
             ),
         }
+
+    @staticmethod
+    def create_new_DSMetaDataEditLog(
+        ds_meta_data_id,
+        user_id,
+        field_name,
+        old_value,
+        new_value,
+        edited_at,
+        change_summary=None,
+    ):
+        log_entry = DSMetaDataEditLog(
+            ds_meta_data_id=ds_meta_data_id,
+            user_id=user_id,
+            field_name=field_name,
+            old_value=old_value,
+            new_value=new_value,
+            edited_at=edited_at,
+            change_summary=change_summary,
+        )
+        db.session.add(log_entry)
+        db.session.commit()
+        return log_entry
 
     def __repr__(self):
         return f"<DSMetaDataEditLog id={self.id} field={self.field_name} at={self.edited_at}>"

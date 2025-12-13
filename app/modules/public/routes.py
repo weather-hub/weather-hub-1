@@ -2,7 +2,7 @@ import logging
 
 from flask import render_template
 
-from app.modules.dataset.services import DataSetService
+from app.modules.dataset.services import AuthorService, DataSetService
 from app.modules.featuremodel.services import FeatureModelService
 from app.modules.public import public_bp
 
@@ -27,9 +27,14 @@ def index():
     total_dataset_views = dataset_service.total_dataset_views()
     total_feature_model_views = feature_model_service.total_feature_model_views()
 
+    # Get latest versions of the latest synchronized datasets
+    datasets_to_show = [ds for ds in dataset_service.latest_synchronized() if ds.is_latest]
+    for ds in datasets_to_show:
+        ds.ds_meta_data.authors = AuthorService.get_unique_authors(ds)
+
     return render_template(
         "public/index.html",
-        datasets=dataset_service.latest_synchronized(),
+        datasets=datasets_to_show,
         datasets_counter=datasets_counter,
         feature_models_counter=feature_models_counter,
         total_dataset_downloads=total_dataset_downloads,
