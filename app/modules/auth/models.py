@@ -31,7 +31,7 @@ class User(db.Model, UserMixin):
 
     email = db.Column(db.String(256), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
-    otp_secret = db.Column(db.String(16), nullable=True)  # Base32 secret
+    otp_secret = db.Column(db.String(100), nullable=True)  # Base32 secret
     twofa_enabled = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 

@@ -191,27 +191,26 @@
                 </p>
 
                 <!-- QR Code -->
-                <div
-                    style="background-color: white; padding: 20px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
+                <div style="background-color: white; padding: 20px; border-radius: 8px; display: inline-block; margin-bottom: 16px;">
                     <img src="data:image/png;base64,{{ session.qr_b64 }}" alt="QR Code"
                         style="display: block; width: 200px; height: 200px;">
                 </div>
 
-                <!-- Setup key alternativo -->
-                <!-- <p style="color: #a0a0a0; margin-bottom: 12px; font-size: 14px;">
-                    Unable to scan? You can use the
-                    <a href="#" id="showSetupKey" style="color: #4a9eff; text-decoration: underline;">setup key</a>
-                    to manually configure your authenticator app.
-                </p> -->
-
-                <!-- Setup key oculto (se muestra al hacer clic) -->
-                <!-- <div id="setupKeyContainer"
-                    style="display: none; background-color: #2a2a2a; padding: 12px; border-radius: 6px; margin-bottom: 24px;">
-                    <p
-                        style="margin: 0; font-family: monospace; color: #e0e0e0; word-break: break-all; font-size: 14px;">
-                        {{ session.temp_otp_secret }}
+                <div class="mb-4">
+                    <p style="color: #a0a0a0; margin-bottom: 8px; font-size: 14px;">
+                        Can't scan the QR code? Enter this setup key manually:
                     </p>
-                </div> -->
+                    <div class="input-group mb-3" style="max-width: 300px; margin: 0 auto;">
+                        <input type="text" class="form-control" value="{{ session.temp_otp_secret }}" 
+                            id="secretKeyInput" readonly 
+                            style="background-color: #2a2a2a; border: 1px solid #444; color: #e0e0e0; text-align: center; font-family: monospace;">
+                        <button class="btn btn-outline-secondary" type="button" onclick="copySecret()" 
+                                style="border-color: #444; color: #a0a0a0;">
+                            <i class="align-middle" data-feather="copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+
 
                 <!-- Campo de verificación -->
                 <form method="POST" action="{{ url_for('profile.verify_2fa') }}" id="verify2faForm">
@@ -258,6 +257,20 @@
                 alert('Please enter a valid 6-digit code');
             }
         });
+    }
+    function copySecret() {
+        var copyText = document.getElementById("secretKeyInput");
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+            navigator.clipboard.writeText(copyText.value).then(function() {
+                
+            });
+        } catch (err) {
+            // Fallback
+            document.execCommand('copy');
+        }
     }
 </script>
 {% endblock %}
