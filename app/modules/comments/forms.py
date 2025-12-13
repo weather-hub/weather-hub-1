@@ -9,7 +9,12 @@ class CommentForm(FlaskForm):
         "Comment",
         validators=[
             DataRequired(),
-            Length(max=50, message="If you want to leave a comment, please write less than 50 characters. Otherwise, use feedbacks.")
-        ]
+            Length(
+                max=50,
+                message=(
+                    "If you want to leave a comment, please write less than 50 " "characters. Otherwise, use feedbacks."
+                ),
+            ),
+        ],
     )
     submit = SubmitField("Submit")
