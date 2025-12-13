@@ -10,7 +10,7 @@ from app.modules.notifications.service import send_dataset_accepted_email
 from core.services.BaseService import BaseService
 
 follow_service = FollowService()
-MAX_VISUAL_IDENTITY_LENGTH = 100
+MAX_VISUAL_IDENTITY_LENGTH = 60
 
 
 class CommunityService(BaseService):
