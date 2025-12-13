@@ -1,6 +1,7 @@
 from flask import flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
+from app import increment_failed_attempts, is_blocked, reset_failed_attempts
 from app.modules.auth import auth_bp
 from app.modules.auth.forms import LoginForm, SignupForm, Verify2FAForm
 from app.modules.auth.services import AuthenticationService, SessionManagementService
@@ -21,12 +22,16 @@ def show_signup_form():
     if form.validate_on_submit():
         email = form.email.data
         if not authentication_service.is_email_available(email):
-            return render_template("auth/signup_form.html", form=form, error=f"Email {email} in use")
+            error_msg = f"Email {email} in use"
+            template = "auth/signup_form.html"
+            return render_template(template, form=form, error=error_msg)
 
         try:
             user = authentication_service.create_with_profile(**form.data)
         except Exception as exc:
-            return render_template("auth/signup_form.html", form=form, error=f"Error creating user: {exc}")
+            error_msg = f"Error creating user: {exc}"
+            template = "auth/signup_form.html"
+            return render_template(template, form=form, error=error_msg)
 
         # Send a simple confirmation email stating the address is valid.
         try:
@@ -53,20 +58,35 @@ def login():
         return redirect(url_for("public.index"))
 
     form = LoginForm()
-    if request.method == "POST" and form.validate_on_submit():
-        user = authentication_service.login(form.email.data, form.password.data)
-        if user:
-            # if user has 2FA enabled → redirect to verification
-            if user.twofa_enabled:
-                from flask import session
+    if is_blocked():
+        error_m = "Too many attempts. Try again in 3 minutes."
+        template = "auth/login_form.html"
+        return (
+            render_template(template, form=form, error=error_m),
+            429,
+        )
 
+    if request.method == "POST" and form.validate_on_submit():
+        email = form.email.data
+        pwd = form.password.data
+        user = authentication_service.login(email, pwd)
+        if user:
+            # Login exitoso → reinicia contador
+            reset_failed_attempts()
+            if user.twofa_enabled:
                 session["2fa_user_id"] = user.id
                 return redirect(url_for("auth.verify_2fa"))
-
-            # Si no, loguea directamente
             login_user(user, remember=True)
             return redirect(url_for("public.index"))
-
+        # Login fallido → incrementar contador
+        increment_failed_attempts()
+        if is_blocked():
+            error_m = "Too many attempts. Try again in 3 minutes."
+            template = "auth/login_form.html"
+            return (
+                render_template(template, form=form, error=error_m),
+                429,
+            )
         return render_template("auth/login_form.html", form=form, error="Invalid credentials")
 
     return render_template("auth/login_form.html", form=form)
@@ -95,7 +115,9 @@ def verify_2fa():
             login_user(user, remember=True)
             return redirect(url_for("public.index"))
         else:
-            return render_template("auth/verify_2fa.html", form=form, error="Invalid 2FA code")
+            error_msg = "Invalid 2FA code"
+            template = "auth/verify_2fa.html"
+            return render_template(template, form=form, error=error_msg)
     return render_template("auth/verify_2fa.html", form=form)
 
 

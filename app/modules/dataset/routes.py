@@ -21,13 +21,17 @@ from flask import (
 )
 from flask_login import current_user, login_required
 
+from app.modules.comments.forms import CommentForm
+from app.modules.comments.models import Comment
+from app.modules.comments.services import CommentService
 from app.modules.community.repositories import CommunityRepository
 from app.modules.dataset import dataset_bp
-from app.modules.dataset.forms import DataSetForm
+from app.modules.dataset.forms import DataSetForm, DataSetVersionForm
 from app.modules.dataset.models import DSDownloadRecord
 from app.modules.dataset.services import (
     AuthorService,
     DatasetCommentService,
+    DataSetConceptService,
     DataSetService,
     DOIMappingService,
     DSDownloadRecordService,
@@ -47,31 +51,158 @@ logger = logging.getLogger(__name__)
 dataset_service = DataSetService()
 author_service = AuthorService()
 dsmetadata_service = DSMetaDataService()
+dataset_concept_service = DataSetConceptService()
+ds_metadata_edit_log_service = DSMetaDataEditLogService()
 
 
 class FakenodoAdapter:
-    """Adapter that exposes create_new_deposition, upload_file, publish_deposition
-    and get_doi so the rest of the code doesn't need to change.
-
-    Uses dataset.id to generate stable DOIs even if fakenodo_db.json is reset.
-    """
-
     def __init__(self, working_dir: str | None = None):
         self.service = FakenodoService(working_dir=working_dir)
-        self.dataset_id = None  # Store dataset ID for DOI generation
+        self.dataset_id = None
+
+    def publish_new_version(self, form, original_dataset, current_user, is_major=False):
+        from app.modules.dataset.services import DataSetService
+
+        _dataset_service = DataSetService()
+        new_dataset = _dataset_service.create_from_form(form=form, current_user=current_user, allow_empty_package=True)
+        new_dataset.ds_concept_id = original_dataset.ds_concept_id
+        new_dataset.is_latest = True
+        try:
+            from app import db
+
+            db.session.add(new_dataset)
+            db.session.flush()
+            from app.modules.dataset.models import DataSet
+
+            DataSet.query.filter(
+                DataSet.ds_concept_id == original_dataset.ds_concept_id, DataSet.id != new_dataset.id
+            ).update({DataSet.is_latest: False})
+            db.session.commit()
+        except Exception:
+            logger.exception("Failed to update concept linkage or latest flags")
+
+        # Mover los feature models nuevos que haya subido el usuario (si hay)
+        logger.info(
+            f"[VERSIONING] New dataset {new_dataset.id} created."
+            + f" Feature models uploaded by user: {len(new_dataset.feature_models)}"
+        )
+        _dataset_service.move_feature_models(new_dataset)
+        logger.info(f"[VERSIONING] After move_feature_models: {len(new_dataset.feature_models)} files")
+
+        # SIEMPRE copiar archivos del dataset original
+        # Esto permite que las nuevas versiones tengan todos los archivos anteriores
+        # más cualquier archivo nuevo que el usuario haya subido
+        logger.info(
+            f"[VERSIONING] Original dataset {original_dataset.id} has {len(original_dataset.feature_models)} files"
+        )
+        logger.info(
+            f"[VERSIONING] Starting copy from original dataset {original_dataset.id} to new version {new_dataset.id}"
+        )
+        _dataset_service.copy_feature_models_from_original(new_dataset, original_dataset)
+
+        # Refrescar dataset para ver archivos copiados
+        from app import db
+
+        db.session.refresh(new_dataset)
+        logger.info(
+            f"[VERSIONING] After copy_feature_models_from_original: {len(new_dataset.feature_models)} files total"
+        )
+
+        # Reutilizar el deposition existente en lugar de crear uno nuevo
+        # Todas las versiones de un concepto comparten el mismo deposition
+        original_deposition_id = original_dataset.ds_meta_data.deposition_id
+
+        if original_deposition_id:
+            # Reutilizar deposition existente
+            deposition_id = original_deposition_id
+        else:
+            # Fallback: crear nuevo si el original no tiene deposition (datos legacy)
+            data = self.create_new_deposition(new_dataset)
+            deposition_id = data.get("id")
+
+        for feature_model in new_dataset.feature_models:
+            self.upload_file(new_dataset, deposition_id, feature_model)
+
+        # CRÍTICO: Solo crear nueva versión de DOI si es major version
+        self.publish_deposition(deposition_id, is_major=is_major)
+        new_doi = self.get_doi(deposition_id)
+
+        # Para major version: nuevo DOI. Para minor: mismo DOI del original
+        if not is_major and original_dataset.ds_meta_data.dataset_doi:
+            # Minor version: mantener el DOI del original
+            new_doi = original_dataset.ds_meta_data.dataset_doi
+            logger.info(f"[VERSIONING] Minor version - reusing DOI: {new_doi}")
+
+            # Registrar la creación de la minor version en el changelog
+            # El repositorio se encarga de agrupar todos los logs de la misma major version
+            from datetime import datetime, timezone
+
+            from app.modules.dataset.models import DSMetaDataEditLog
+
+            # Detectar qué cambió entre versiones
+            if original_dataset.ds_meta_data.title != new_dataset.ds_meta_data.title:
+                DSMetaDataEditLog.create_new_DSMetaDataEditLog(
+                    ds_meta_data_id=new_dataset.ds_meta_data_id,
+                    user_id=current_user.id,
+                    edited_at=datetime.now(timezone.utc),
+                    field_name="title",
+                    old_value=original_dataset.ds_meta_data.title,
+                    new_value=new_dataset.ds_meta_data.title,
+                )
+            if original_dataset.ds_meta_data.description != new_dataset.ds_meta_data.description:
+                DSMetaDataEditLog.create_new_DSMetaDataEditLog(
+                    ds_meta_data_id=new_dataset.ds_meta_data_id,
+                    user_id=current_user.id,
+                    edited_at=datetime.now(timezone.utc),
+                    field_name="description",
+                    old_value=original_dataset.ds_meta_data.description,
+                    new_value=new_dataset.ds_meta_data.description,
+                )
+
+            if original_dataset.ds_meta_data.tags != new_dataset.ds_meta_data.tags:
+                DSMetaDataEditLog.create_new_DSMetaDataEditLog(
+                    ds_meta_data_id=new_dataset.ds_meta_data_id,
+                    user_id=current_user.id,
+                    edited_at=datetime.now(timezone.utc),
+                    field_name="tags",
+                    old_value=original_dataset.ds_meta_data.tags,
+                    new_value=new_dataset.ds_meta_data.tags,
+                )
+
+            changelog_entry = DSMetaDataEditLog(
+                ds_meta_data_id=new_dataset.ds_meta_data_id,
+                user_id=current_user.id,
+                edited_at=datetime.now(timezone.utc),
+                field_name="version",
+                old_value=str(original_dataset.version_number),
+                new_value=str(new_dataset.version_number),
+                change_summary=None,
+            )
+            db.session.add(changelog_entry)
+            db.session.commit()
+            logger.info(f"[VERSIONING] Changelog entry created for minor version {new_dataset.version_number}")
+        else:
+            logger.info(f"[VERSIONING] Major version - new DOI: {new_doi}")
+
+        _dataset_service.update_dsmetadata(
+            new_dataset.ds_meta_data_id, deposition_id=deposition_id, dataset_doi=new_doi
+        )
+        return new_dataset
 
     def create_new_deposition(self, dataset) -> dict:
-        # Store dataset.id to use for stable DOI generation
         self.dataset_id = getattr(dataset, "id", None)
-        metadata = {
-            "title": getattr(dataset, "title", f"dataset-{self.dataset_id}"),
-        }
-        # Pasar dataset.id como deposition_id para DOI consistente desde v1
+        metadata = {"title": getattr(dataset, "title", f"dataset-{self.dataset_id}")}
+        # Forzar que deposition_id = dataset.id para consistencia
         rec = self.service.create_deposition(metadata=metadata, deposition_id=self.dataset_id)
-        return {"id": rec["id"], "conceptrecid": True, "metadata": rec.get("metadata", {})}
+        return {
+            "id": rec["id"],
+            "conceptrecid": rec.get("conceptrecid"),
+            "conceptid": rec.get("conceptid"),
+            "conceptdoi": rec.get("conceptdoi"),  # CRÍTICO 2: Incluir conceptdoi
+            "metadata": rec.get("metadata", {}),
+        }
 
     def upload_file(self, dataset, deposition_id, feature_model) -> Optional[dict]:
-
         name = getattr(feature_model, "filename", None) or getattr(feature_model, "name", None)
         path = getattr(feature_model, "file_path", None) or getattr(feature_model, "path", None)
         content = None
@@ -81,16 +212,14 @@ class FakenodoAdapter:
                     content = fh.read()
         except Exception:
             content = None
-
         if not name:
             name = f"feature_model_{getattr(feature_model, 'id', uuid.uuid4())}.bin"
-
         return self.service.upload_file(deposition_id, name, content)
 
-    def publish_deposition(self, deposition_id):
-        version = self.service.publish_deposition(deposition_id)
+    def publish_deposition(self, deposition_id, is_major=True):
+        """Publica deposition. Si is_major=False, no crea nueva versión de DOI."""
+        version = self.service.publish_deposition(deposition_id, is_major=is_major)
         if version and self.dataset_id:
-            # This ensures stable DOIs even if fakenodo_db.json is reset
             new_doi = f"10.1234/fakenodo.{self.dataset_id}.v{version.get('version', 1)}"
             version["doi"] = new_doi
         return version
@@ -99,13 +228,9 @@ class FakenodoAdapter:
         rec = self.service.get_deposition(deposition_id)
         if not rec:
             return None
-
         if self.dataset_id and rec.get("versions"):
-            # Get the version number from the last version
             version_num = rec["versions"][-1].get("version", 1)
             return f"10.1234/fakenodo.{self.dataset_id}.v{version_num}"
-
-        # Fallback to stored DOI
         doi = rec.get("doi")
         if doi:
             return doi
@@ -114,33 +239,31 @@ class FakenodoAdapter:
             return versions[-1].get("doi")
         return None
 
+    def get_concept_doi(self, deposition_id):
+        rec = self.service.get_deposition(deposition_id)
+        if not rec:
+            return None
+        cdoi = rec["conceptdoi"]
+        if cdoi:
+            return cdoi
+        return None
+
 
 def get_zenodo_client(working_dir: str | None = None):
-    """Return a zenodo-like client depending on environment configuration.
-
-    If the environment variable `FAKENODO_URL` or `USE_FAKE_ZENODO` is set the
-    function returns a `FakenodoAdapter`, otherwise it returns the real
-    `ZenodoService`.
-    """
-    # Prefer explicit environment opt-in for the fake service
     if os.getenv("FAKENODO_URL") or os.getenv("USE_FAKE_ZENODO"):
         return FakenodoAdapter(working_dir=working_dir)
-
-    # Otherwise try real Zenodo and fall back to the fake service if the
-    # connection fails (e.g. SSL verification issues in some environments).
     try:
         zs = ZenodoService()
         try:
             if zs.test_connection():
                 return zs
+            else:
+                logger.warning("ZenodoService test_connection returned False, falling back to FakenodoAdapter")
+                return FakenodoAdapter(working_dir=working_dir)
         except Exception:
-            # test_connection failed (network/ssl); fall through to fake
-            logger = logging.getLogger(__name__)
-            logger.warning("ZenodoService test_connection failed, falling back to FakenodoAdapter")
+            logger.warning("ZenodoService test_connection failed with error, falling back to FakenodoAdapter")
             return FakenodoAdapter(working_dir=working_dir)
     except Exception:
-        # constructing ZenodoService failed for any reason -> fallback
-        logger = logging.getLogger(__name__)
         logger.warning("Unable to initialize ZenodoService, using FakenodoAdapter")
         return FakenodoAdapter(working_dir=working_dir)
 
@@ -156,68 +279,81 @@ def create_dataset():
     form = DataSetForm()
     if request.method == "POST":
         dataset = None
-
-        # Debug: log raw form data
-        logger.info(f"Raw request data - publication_type: {request.form.get('publication_type')}")
-        logger.info(
-            f"All feature_models publication_type values: {request.form.getlist('feature_models-0-publication_type')}"
-        )
-
-        # Check available choices
-        logger.info(f"Available publication_type choices: {form.publication_type.choices}")
-        if form.feature_models and len(form.feature_models) > 0:
-            logger.info(f"Feature model 0 publication_type choices: {form.feature_models[0].publication_type.choices}")
-
         if not form.validate_on_submit():
             logger.error(f"Form validation failed: {form.errors}")
             return jsonify({"message": form.errors}), 400
 
+        version_check, version_message = DataSetService.check_upload_version(str(form.version_number.data))
+        if not version_check:
+            logger.error(f"Version check failed: {version_message}")
+            return jsonify({"message": version_message}), 400
+
         try:
             logger.info("Creating dataset...")
-            dataset = dataset_service.create_from_form(form=form, current_user=current_user)
-            logger.info(f"Created dataset: {dataset}")
+            create_args = {"form": form, "current_user": current_user}
+            dataset = dataset_service.create_from_form(**create_args, allow_empty_package=False)
+            logger.info("Created dataset: %s", dataset)
             dataset_service.move_feature_models(dataset)
         except ValueError as e:
-            # Business / validation error (e.g. our validate_dataset_package raised ValueError)
             logger.info(f"Validation error while creating dataset: {e}")
             return jsonify({"message": str(e)}), 400
-
         except Exception:
-            # Unexpected error: log full trace, return generic message to client
             logger.exception("Exception while creating dataset")
-            # For security do not leak internal trace to client; return generic message.
-            return jsonify({"message": "Internal server error while creating dataset"}), 500
+            error_msg = {"message": "Internal server error while creating dataset"}
+            return jsonify(error_msg), 500
 
-        # send dataset as deposition to Zenodo
         data = {}
         try:
             zenodo_response_json = zenodo_service.create_new_deposition(dataset)
             response_data = json.dumps(zenodo_response_json)
             data = json.loads(response_data)
-        except Exception as exc:
+        except Exception:
             data = {}
-            zenodo_response_json = {}
-            logger.exception(f"Exception while create dataset data in Zenodo {exc}")
+            logger.exception("Exception while creating dataset data in Zenodo")
 
         if data.get("conceptrecid"):
             deposition_id = data.get("id")
-
-            # update dataset with deposition id in Zenodo
-            dataset_service.update_dsmetadata(dataset.ds_meta_data_id, deposition_id=deposition_id)
+            ds_meta_id = dataset.ds_meta_data_id
+            dataset_service.update_dsmetadata(ds_meta_id, deposition_id=deposition_id)
 
             try:
-                # iterate for each feature model (one feature model = one request to Zenodo)
                 for feature_model in dataset.feature_models:
                     zenodo_service.upload_file(dataset, deposition_id, feature_model)
 
-                # publish deposition
                 zenodo_service.publish_deposition(deposition_id)
-
-                # update DOI
                 deposition_doi = zenodo_service.get_doi(deposition_id)
-                dataset_service.update_dsmetadata(dataset.ds_meta_data_id, dataset_doi=deposition_doi)
+                dataset_service.update_dsmetadata(ds_meta_id, dataset_doi=deposition_doi)
+
+                # Obtener concept_doi del deposition, NUNCA derivar
+                concept_doi = None
+                try:
+                    if hasattr(zenodo_service, "get_concept_doi"):
+                        concept_doi = zenodo_service.get_concept_doi(deposition_id)
+                except Exception:
+                    logger.exception("Failed to get concept DOI from zenodo service")
+                    concept_doi = None
+
+                # Si no se pudo obtener, crear uno basado en deposition_id como fallback
+                if not concept_doi:
+                    concept_doi = f"10.1234/concept.{deposition_id}"
+                    logger.warning(f"Could not get concept DOI from deposition, using fallback: {concept_doi}")
+
+                if concept_doi:
+                    from app import db
+                    from app.modules.dataset.models import DataSetConcept
+
+                    concept = DataSetConcept.query.filter_by(conceptual_doi=concept_doi).first()
+                    if not concept:
+                        concept = DataSetConcept(conceptual_doi=concept_doi)
+                        db.session.add(concept)
+                        db.session.flush()
+
+                    dataset.ds_concept_id = concept.id
+                    db.session.add(dataset)
+                    db.session.commit()
+
             except Exception as e:
-                msg = f"it has not been possible upload feature models in Zenodo and update the DOI: {e}"
+                msg = "it has not been possible upload feature models in Zenodo " + f"and update the DOI: {e}"
                 return jsonify({"message": msg}), 200
 
         try:
@@ -225,7 +361,6 @@ def create_dataset():
         except Exception:
             current_app.logger.exception("Error sending 'dataset published' notification")
 
-        # Delete temp folder
         file_path = current_user.temp_folder()
         if os.path.exists(file_path) and os.path.isdir(file_path):
             shutil.rmtree(file_path)
@@ -239,16 +374,17 @@ def create_dataset():
 @dataset_bp.route("/dataset/list", methods=["GET", "POST"])
 @login_required
 def list_dataset():
-    # load communities to allow proposing datasets to a community from the list view
     try:
         community_repo = CommunityRepository()
         communities = community_repo.session.query(community_repo.model).all()
+        datasets = dataset_service.get_synchronized(current_user.id)
+        dataset_to_show = [ds for ds in datasets if ds.is_latest]
     except Exception:
         communities = []
 
     return render_template(
         "dataset/list_datasets.html",
-        datasets=dataset_service.get_synchronized(current_user.id),
+        datasets=dataset_to_show,
         local_datasets=dataset_service.get_unsynchronized(current_user.id),
         communities=communities,
     )
@@ -261,7 +397,6 @@ def upload():
     file = request.files.get("file")
     temp_folder = current_user.temp_folder()
 
-    # Validate file exists and has valid extension (case-insensitive)
     if not file or not file.filename:
         logger.warning("No file provided in upload request")
         return jsonify({"message": "No file provided"}), 400
@@ -272,19 +407,22 @@ def upload():
     if not any(filename_lower.endswith(ext) for ext in valid_extensions):
         logger.warning(f"Invalid file extension: {file.filename}")
         return jsonify({"message": f"Invalid file type. Allowed: {', '.join(valid_extensions)}"}), 400
-    # create temp folder
     if not os.path.exists(temp_folder):
         os.makedirs(temp_folder)
 
     file_path = os.path.join(temp_folder, file.filename)
 
     if os.path.exists(file_path):
-        # Generate unique filename (by recursion)
         base_name, extension = os.path.splitext(file.filename)
         i = 1
-        while os.path.exists(os.path.join(temp_folder, f"{base_name} ({i}){extension}")):
-            i += 1
-        new_filename = f"{base_name} ({i}){extension}"
+        while True:
+            candidate_name = f"{base_name} ({i}){extension}"
+            candidate = os.path.join(temp_folder, candidate_name)
+            if os.path.exists(candidate):
+                i += 1
+                continue
+            new_filename = candidate_name
+            break
         file_path = os.path.join(temp_folder, new_filename)
     else:
         new_filename = file.filename
@@ -324,9 +462,7 @@ def delete():
 @dataset_bp.route("/dataset/download/<int:dataset_id>", methods=["GET"])
 def download_dataset(dataset_id):
     dataset = dataset_service.get_or_404(dataset_id)
-
     file_path = f"uploads/user_{dataset.user_id}/dataset_{dataset.id}/"
-
     temp_dir = tempfile.mkdtemp()
     zip_path = os.path.join(temp_dir, f"dataset_{dataset_id}.zip")
 
@@ -334,19 +470,14 @@ def download_dataset(dataset_id):
         for subdir, dirs, files in os.walk(file_path):
             for file in files:
                 full_path = os.path.join(subdir, file)
-
                 relative_path = os.path.relpath(full_path, file_path)
-
-                zipf.write(
-                    full_path,
-                    arcname=os.path.join(os.path.basename(zip_path[:-4]), relative_path),
-                )
+                arc_base = os.path.basename(zip_path[:-4])
+                arcname = os.path.join(arc_base, relative_path)
+                zipf.write(full_path, arcname=arcname)
 
     user_cookie = request.cookies.get("download_cookie")
     if not user_cookie:
-        # Generate a new unique identifier if it does not exist
         user_cookie = str(uuid.uuid4())
-        # Save the cookie to the user's browser
         resp = make_response(
             send_from_directory(
                 temp_dir,
@@ -364,7 +495,6 @@ def download_dataset(dataset_id):
             mimetype="application/zip",
         )
 
-    # Check if the download record already exists for this cookie
     existing_record = DSDownloadRecord.query.filter_by(
         user_id=current_user.id if current_user.is_authenticated else None,
         dataset_id=dataset_id,
@@ -372,7 +502,6 @@ def download_dataset(dataset_id):
     ).first()
 
     if not existing_record:
-        # Record the download in your database
         DSDownloadRecordService().create(
             user_id=current_user.id if current_user.is_authenticated else None,
             dataset_id=dataset_id,
@@ -383,406 +512,199 @@ def download_dataset(dataset_id):
     return resp
 
 
+@dataset_bp.route("/dataset/<int:dataset_id>/new-version", methods=["GET", "POST"])
+@login_required
+def create_new_ds_version(dataset_id):
+    original_dataset = dataset_service.get_or_404(dataset_id)
+    if current_user.id != original_dataset.user_id:
+        abort(403, "No eres el autor del dataset.")
+    if not original_dataset.is_latest:
+        abort(403, "Solo se pueden crear nuevas versiones a partir de la última versión del dataset.")
+
+    if request.method == "GET":
+        temp_folder = current_user.temp_folder()
+        if os.path.exists(temp_folder):
+            shutil.rmtree(temp_folder)
+
+    meta_data_obj = original_dataset.ds_meta_data
+    meta_data_obj.authors = []
+    form = DataSetVersionForm(obj=meta_data_obj)
+
+    if request.method == "POST":
+        if form.validate_on_submit():
+            try:
+                if form.version_number.data == str(original_dataset.version_number):
+                    return jsonify({"message": "The new version number must be different from the original."}), 400
+
+                is_major_from_form = DataSetService.infer_is_major_from_form(form)
+                is_valid_version, error_version_msg = DataSetService.check_introduced_version(
+                    current_version=str(original_dataset.version_number),
+                    form_version=form.version_number.data,
+                    is_major=is_major_from_form,
+                )
+                if not is_valid_version:
+                    return jsonify({"message": error_version_msg}), 400
+
+                new_dataset = zenodo_service.publish_new_version(
+                    form=form,
+                    original_dataset=original_dataset,
+                    current_user=current_user,
+                    is_major=is_major_from_form,
+                )
+
+                target_url = ""
+                if new_dataset.ds_meta_data.dataset_doi:
+                    target_url = url_for("dataset.subdomain_index", doi=new_dataset.ds_meta_data.dataset_doi)
+                else:
+                    target_url = url_for("dataset.get_unsynchronized_dataset", dataset_id=new_dataset.id)
+
+                temp_folder = current_user.temp_folder()
+                if os.path.exists(temp_folder):
+                    shutil.rmtree(temp_folder)
+
+                return jsonify({"message": "Version created successfully", "redirect_url": target_url}), 200
+
+            except Exception:
+                logger.exception("Error al crear la nueva versión")
+                return jsonify({"message": "Hubo un error interno al publicar la versión."}), 500
+        else:
+            return jsonify({"message": form.errors}), 400
+
+    # Cargar datos del dataset original en el formulario
+    form.version_number.data = str(original_dataset.version_number)
+    form.title.data = original_dataset.ds_meta_data.title
+    form.desc.data = original_dataset.ds_meta_data.description
+    form.publication_type.data = original_dataset.ds_meta_data.publication_type.value
+    form.publication_doi.data = original_dataset.ds_meta_data.publication_doi
+    form.tags.data = original_dataset.ds_meta_data.tags
+
+    return render_template("dataset/new_version.html", form=form, dataset=original_dataset)
+
+
 @dataset_bp.route("/doi/<path:doi>/", methods=["GET"])
 def subdomain_index(doi):
-    # Find dataset by DOI - each version is a separate dataset
-    ds_meta_data = dsmetadata_service.filter_by_doi(doi)
+    new_doi = doi_mapping_service.get_new_doi(doi)
+    if new_doi:
+        new_url = url_for("dataset.subdomain_index", doi=new_doi)
+        return redirect(new_url, code=302)
 
-    if not ds_meta_data:
-        abort(404)
+    current_dataset = None
+    concept = dataset_concept_service.filter_by_doi(doi=doi) if dataset_concept_service.filter_by_doi(doi=doi) else None
 
-    # Get dataset
-    dataset = ds_meta_data.data_set
+    if concept:
+        if concept.versions:
+            current_dataset = concept.versions.first()
+        else:
+            abort(404)
+    else:
+        ds_meta_data = dsmetadata_service.filter_latest_by_doi(doi)
+        if ds_meta_data:
+            current_dataset = ds_meta_data.data_set
+            concept = current_dataset.concept
+        else:
+            abort(404)
 
-    # Save the cookie to the user's browser
-    user_cookie = ds_view_record_service.create_cookie(dataset=dataset)
-    resp = make_response(render_template("dataset/view_dataset.html", dataset=dataset))
+    all_versions = concept.versions.all()
+    latest_version = all_versions[0] if all_versions else None
+
+    comment_service = CommentService()
+    comments = comment_service.get_comments_for_dataset(current_dataset, current_user)
+
+    comment_form = CommentForm()
+    user_cookie = ds_view_record_service.create_cookie(dataset=current_dataset)
+    resp = make_response(
+        render_template(
+            "dataset/view_dataset.html",
+            dataset=current_dataset,
+            authors=AuthorService.get_unique_authors(current_dataset),
+            all_versions=all_versions,
+            latest_version=latest_version,
+            conceptual_doi=concept.conceptual_doi,
+            comment_form=comment_form,
+            comments=comments,
+        )
+    )
     resp.set_cookie("view_cookie", user_cookie)
-
     return resp
 
 
 @dataset_bp.route("/dataset/unsynchronized/<int:dataset_id>/", methods=["GET"])
 @login_required
 def get_unsynchronized_dataset(dataset_id):
-    # Get dataset
     dataset = dataset_service.get_unsynchronized_dataset(current_user.id, dataset_id)
-
     if not dataset:
         abort(404)
 
-    return render_template("dataset/view_dataset.html", dataset=dataset)
-
-
-edit_log_service = DSMetaDataEditLogService()
-
-
-@dataset_bp.route("/dataset/<int:dataset_id>/edit", methods=["GET", "POST"])
-@login_required
-def edit_dataset(dataset_id):
-    """Edit dataset metadata (minor edits that don't generate new version)."""
-    dataset = dataset_service.get_or_404(dataset_id)
-
-    # Check ownership
-    if dataset.user_id != current_user.id:
-        abort(403)
-
-    if request.method == "GET":
-        return render_template("dataset/edit_dataset.html", dataset=dataset)
-
-    try:
-        changes = []
-        ds_meta = dataset.ds_meta_data
-
-        new_title = request.form.get("title", "").strip()
-        if new_title and new_title != ds_meta.title:
-            changes.append({"field": "title", "old": ds_meta.title, "new": new_title})
-            ds_meta.title = new_title
-
-        new_description = request.form.get("description", "").strip()
-        if new_description and new_description != ds_meta.description:
-            changes.append(
-                {
-                    "field": "description",
-                    "old": ds_meta.description[:100] + "..." if len(ds_meta.description) > 100 else ds_meta.description,
-                    "new": new_description[:100] + "..." if len(new_description) > 100 else new_description,
-                }
-            )
-            ds_meta.description = new_description
-
-        new_tags = request.form.get("tags", "").strip()
-        if new_tags != (ds_meta.tags or ""):
-            changes.append({"field": "tags", "old": ds_meta.tags or "", "new": new_tags})
-            ds_meta.tags = new_tags
-
-        if changes:
-            edit_log_service.log_multiple_edits(
-                ds_meta_data_id=ds_meta.id,
-                user_id=current_user.id,
-                changes=changes,
-            )
-
-            if ds_meta.deposition_id:
-                fakenodo_service = FakenodoService()
-                fakenodo_service.update_metadata(
-                    ds_meta.deposition_id,
-                    {"title": ds_meta.title, "description": ds_meta.description, "tags": ds_meta.tags},
-                )
-
-            from app import db
-
-            db.session.commit()
-
-            return jsonify({"message": "Dataset updated successfully", "changes": len(changes)}), 200
-        else:
-            return jsonify({"message": "No changes detected"}), 200
-
-    except Exception as e:
-        logger.exception(f"Error updating dataset {dataset_id}: {e}")
-        return jsonify({"message": f"Error updating dataset: {str(e)}"}), 500
-
-
-@dataset_bp.route("/dataset/<int:dataset_id>/versions", methods=["GET"])
-def view_dataset_versions(dataset_id):
-    """View all published versions of a dataset."""
-    dataset = dataset_service.get_or_404(dataset_id)
-    ds_meta = dataset.ds_meta_data
-
-    versions = []
-    if ds_meta.deposition_id:
-        fakenodo_service = FakenodoService()
-        raw_versions = fakenodo_service.list_versions(ds_meta.deposition_id) or []
-
-        for v in raw_versions:
-            # v["files"] already contains the parsed list of files from to_dict()
-            files_list = v.get("files", [])
-            v["files_count"] = len(files_list)
-            logger.info(f"Version {v.get('version')}: {len(files_list)} files - {[f['name'] for f in files_list]}")
-            versions.append(v)
-
+    if current_user.is_authenticated and current_user.id == dataset.user_id:
+        comments = Comment.query.filter_by(dataset_id=dataset.id).order_by(Comment.created_at.desc()).all()
+    else:
+        comments = (
+            Comment.query.filter_by(dataset_id=dataset.id, approved=True).order_by(Comment.created_at.desc()).all()
+        )
+    comment_form = CommentForm()
     return render_template(
-        "dataset/versions.html",
+        "dataset/view_dataset.html",
         dataset=dataset,
-        versions=versions,
+        comment_form=comment_form,
+        comments=comments,
     )
+
+
+@dataset_bp.route("/dataset/search", methods=["GET", "POST"])
+@login_required
+def search_dataset():
+    filters = {
+        "author": request.args.get("author"),
+        "affiliation": request.args.get("affiliation"),
+        "tags": request.args.get("tags", "").split(","),
+        "start_date": request.args.get("start_date"),
+        "end_date": request.args.get("end_date"),
+        "title": request.args.get("title"),
+        "publication_type": request.args.get("publication_type"),
+    }
+    results = dataset_service.search(**filters)
+    return render_template("dataset/search_results.html", datasets=results, filters=filters)
 
 
 @dataset_bp.route("/dataset/<int:dataset_id>/changelog", methods=["GET"])
+@login_required
 def view_dataset_changelog(dataset_id):
-    """View changelog of minor edits."""
     dataset = dataset_service.get_or_404(dataset_id)
-    edit_logs = edit_log_service.get_changelog_by_dataset_id(dataset_id)
+    # Obtener logs ordenados del más antiguo al más reciente para agruparlos correctamente
+    logs_chronological = ds_metadata_edit_log_service.get_changelog_by_dataset_id(dataset_id)
 
-    return render_template(
-        "dataset/changelog.html",
-        dataset=dataset,
-        edit_logs=edit_logs,
-    )
+    version_groups = []
+    current_group = None
 
+    for log in logs_chronological:
+        if log.field_name == "version":
+            # Si hay un grupo anterior, lo guardamos
+            if current_group:
+                version_groups.append(current_group)
 
-@dataset_bp.route("/api/dataset/<int:dataset_id>/changelog", methods=["GET"])
-def api_dataset_changelog(dataset_id):
-    """API endpoint for dataset changelog."""
-    dataset = dataset_service.get_or_404(dataset_id)
-    edit_logs = edit_log_service.get_changelog_by_dataset_id(dataset_id)
+            # Empezamos un nuevo grupo con este cambio de versión
+            current_group = {
+                "from_version": log.old_value,
+                "to_version": log.new_value,
+                "user": log.user,
+                "edited_at": log.edited_at,
+                "changes": [],  # Aquí irán los cambios de título, descripción, etc.
+            }
+        elif current_group:
+            # Si no es un log de versión, es un cambio asociado al grupo actual
+            current_group["changes"].append(log)
 
-    return jsonify(
-        {
-            "dataset_id": dataset_id,
-            "dataset_title": dataset.ds_meta_data.title,
-            "changelog": [log.to_dict() for log in edit_logs],
-        }
-    )
+    # No olvidar añadir el último grupo a la lista
+    if current_group:
+        version_groups.append(current_group)
 
+    # Invertimos la lista para mostrar los grupos más recientes primero
+    version_groups.reverse()
 
-@dataset_bp.route("/dataset/<int:dataset_id>/republish", methods=["GET"])
-@login_required
-def republish_dataset_form(dataset_id):
-    """Show form to upload new files for re-publication."""
-    dataset = dataset_service.get_or_404(dataset_id)
-
-    if dataset.user_id != current_user.id:
-        abort(403)
-
-    # Check if dataset is published
-    if not dataset.ds_meta_data.dataset_doi:
-        return redirect(url_for("dataset.subdomain_index", doi=dataset.ds_meta_data.dataset_doi))
-
-    return render_template("dataset/republish_dataset.html", dataset=dataset)
-
-
-@dataset_bp.route("/dataset/<int:dataset_id>/republish", methods=["POST"])
-@login_required
-def republish_dataset(dataset_id):
-    """
-    Re-publish dataset with new/modified files.
-    Generates new version with new DOI.
-    """
-    dataset = dataset_service.get_or_404(dataset_id)
-
-    if dataset.user_id != current_user.id:
-        logger.warning(
-            f"User {current_user.id} ({current_user.email}) attempted to republish "
-            f"dataset {dataset_id} owned by user {dataset.user_id}"
-        )
-        abort(403)
-
-    temp_folder = current_user.temp_folder()
-    logger.info(
-        f"Republish request for dataset {dataset_id} by user {current_user.id} "
-        f"({current_user.email}), temp folder: {temp_folder}"
-    )
-
-    if not os.path.exists(temp_folder):
-        logger.warning(f"Temp folder does not exist: {temp_folder}")
-        return (
-            jsonify(
-                {
-                    "message": "No files uploaded yet. Please drag and drop files to the upload area "
-                    "before clicking Republish."
-                }
-            ),
-            400,
-        )
-
-    temp_files = os.listdir(temp_folder)
-    if not temp_files:
-        logger.warning(f"Temp folder is empty: {temp_folder}")
-        return (
-            jsonify(
-                {
-                    "message": "No files uploaded yet. Please drag and drop files to the upload area "
-                    "before clicking Republish."
-                }
-            ),
-            400,
-        )
-
-    logger.info(f"Found {len(temp_files)} files in temp folder: {temp_files}")
-
-    try:
-        ds_meta = dataset.ds_meta_data
-
-        if not ds_meta.deposition_id:
-            return jsonify({"message": "Dataset has no Fakenodo deposition"}), 400
-
-        fakenodo_service = FakenodoService()
-
-        # Upload each file from temp folder (marks dirty=True)
-        uploaded_files = []
-        temp_folder_files = os.listdir(temp_folder) if os.path.exists(temp_folder) else []
-        logger.info(f"Files in temp folder {temp_folder}: {temp_folder_files}")
-
-        for filename in temp_folder_files:
-            file_path = os.path.join(temp_folder, filename)
-            logger.info(f"Processing file: {filename}, path: {file_path}, is_file: {os.path.isfile(file_path)}")
-
-            if os.path.isfile(file_path):
-                with open(file_path, "rb") as f:
-                    content = f.read()
-                logger.info(f"File {filename} size: {len(content)} bytes")
-
-                result = fakenodo_service.upload_file(ds_meta.deposition_id, filename, content)
-                logger.info(f"Fakenodo upload result for {filename}: {result}")
-
-                if result:
-                    uploaded_files.append(filename)
-                    logger.info(f"Uploaded file {filename} to deposition {ds_meta.deposition_id}")
-                else:
-                    logger.warning(f"Fakenodo upload returned None/False for {filename}")
-            else:
-                logger.warning(f"Skipping {filename} - not a file")
-
-        if not uploaded_files:
-            logger.error(f"No files uploaded. Temp folder: {temp_folder}, files found: {temp_folder_files}")
-            return (
-                jsonify({"message": "No valid files were uploaded. Please check that files are properly uploaded."}),
-                400,
-            )
-
-        # Publish new version (dirty=True generates v2, v3, etc.)
-        version = fakenodo_service.publish_deposition(ds_meta.deposition_id)
-
-        if not version:
-            return jsonify({"message": "Failed to publish new version"}), 500
-
-        # Get new DOI
-        new_doi = version.get("doi")
-        old_doi = ds_meta.dataset_doi
-
-        logger.info(f"Creating NEW dataset for version {version.get('version')}: {new_doi}")
-
-        # Create a CLONE of the current dataset with the new DOI
-        from app import db
-        from app.modules.dataset.models import DataSet as DataSetModel
-        from app.modules.dataset.models import DSMetaData, DSMetrics
-        from app.modules.featuremodel.models import FeatureModel
-        from app.modules.hubfile.models import Hubfile
-
-        # Clone metrics (or create default if none exist)
-        old_metrics = ds_meta.ds_metrics
-        if old_metrics:
-            new_metrics = DSMetrics(
-                number_of_models=old_metrics.number_of_models, number_of_features=old_metrics.number_of_features
-            )
-        else:
-            # Create default metrics if original dataset has none
-            new_metrics = DSMetrics(number_of_models="0", number_of_features="0")
-        db.session.add(new_metrics)
-        db.session.flush()
-
-        # Clone DSMetaData
-        logger.info(f"Cloning DSMetaData - Original deposition_id: {ds_meta.deposition_id}")
-        new_ds_meta = DSMetaData(
-            deposition_id=ds_meta.deposition_id,  # MANTENER el mismo deposition_id
-            title=ds_meta.title,
-            description=ds_meta.description,
-            publication_type=ds_meta.publication_type,
-            publication_doi=ds_meta.publication_doi,
-            dataset_doi=new_doi,  # NEW DOI
-            tags=ds_meta.tags,
-            ds_metrics_id=new_metrics.id,
-        )
-        db.session.add(new_ds_meta)
-        db.session.flush()
-        logger.info(
-            f"New DSMetaData created - deposition_id: {new_ds_meta.deposition_id}, "
-            f"dataset_doi: {new_ds_meta.dataset_doi}"
-        )
-
-        # Clone Dataset
-        new_dataset = DataSetModel(
-            user_id=dataset.user_id, ds_meta_data_id=new_ds_meta.id, created_at=datetime.now(timezone.utc)
-        )
-        db.session.add(new_dataset)
-        db.session.flush()
-
-        # Clone ALL existing FeatureModels and Hubfiles
-        for fm in dataset.feature_models:
-            new_fm = FeatureModel(data_set_id=new_dataset.id)
-            db.session.add(new_fm)
-            db.session.flush()
-
-            # Clone all files from this feature model
-            for file in fm.files:
-                new_file = Hubfile(name=file.name, checksum=file.checksum, size=file.size, feature_model_id=new_fm.id)
-                db.session.add(new_file)
-
-                # Copy physical file
-                import shutil as sh
-
-                old_path = file.get_path()
-                new_path = new_file.get_path()
-                os.makedirs(os.path.dirname(new_path), exist_ok=True)
-                if os.path.exists(old_path):
-                    sh.copy2(old_path, new_path)
-                    logger.info(f"Copied file: {old_path} -> {new_path}")
-
-        db.session.flush()
-
-        # Now add NEW files from temp to the new dataset
-        # Get or create a FeatureModel for new files
-        new_fm = FeatureModel.query.filter_by(data_set_id=new_dataset.id).first()
-        if not new_fm:
-            new_fm = FeatureModel(data_set_id=new_dataset.id)
-            db.session.add(new_fm)
-            db.session.flush()
-
-        # Copy new files from temp folder
-        import hashlib
-
-        for filename in uploaded_files:
-            temp_file_path = os.path.join(temp_folder, filename)
-
-            # Read file content to calculate checksum
-            with open(temp_file_path, "rb") as f:
-                content = f.read()
-                checksum = hashlib.md5(content, usedforsecurity=False).hexdigest()
-
-            # Create Hubfile entry
-            new_hubfile = Hubfile(name=filename, checksum=checksum, size=len(content), feature_model_id=new_fm.id)
-            db.session.add(new_hubfile)
-            db.session.flush()
-
-            # Copy physical file to dataset folder
-            dest_path = new_hubfile.get_path()
-            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-            sh.copy2(temp_file_path, dest_path)
-            logger.info(f"Added new file: {filename} -> {dest_path}")
-
-        db.session.commit()
-
-        # Clean temp folder
-        if os.path.exists(temp_folder):
-            shutil.rmtree(temp_folder)
-
-        logger.info(
-            f"Created NEW dataset {new_dataset.id} (cloned from {dataset_id}) "
-            f"for version v{version.get('version')} with DOI: {new_doi}. "
-            f"Added {len(uploaded_files)} new files."
-        )
-
-        return (
-            jsonify(
-                {
-                    "message": "New version published successfully",
-                    "version": version.get("version"),
-                    "doi": new_doi,
-                    "old_doi": old_doi,
-                    "files_uploaded": len(uploaded_files),
-                    "files": uploaded_files,
-                }
-            ),
-            200,
-        )
-
-    except Exception as e:
-        logger.exception(f"Error republishing dataset {dataset_id}: {e}")
-        return jsonify({"message": f"Error: {str(e)}"}), 500
+    return render_template("dataset/changelog.html", dataset=dataset, version_groups=version_groups)
 
 
 # ===================== DATASET COMMENTS ROUTES =====================
-
 
 comment_service = DatasetCommentService()
 

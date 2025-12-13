@@ -10,7 +10,7 @@ def test_metadata_edit_does_not_create_new_doi(test_client, tmp_path):
     # create and publish -> first DOI
     rec = service.create_deposition(metadata={"title": "original"})
     dep_id = rec["id"]
-    ver1 = service.publish_deposition(dep_id)
+    ver1 = service.publish_deposition(dep_id, False)
     assert ver1 is not None and "doi" in ver1
     doi1 = ver1["doi"]
 
@@ -19,7 +19,7 @@ def test_metadata_edit_does_not_create_new_doi(test_client, tmp_path):
     assert updated is not None
 
     # publish again -> DOI should be the same (no new version)
-    ver2 = service.publish_deposition(dep_id)
+    ver2 = service.publish_deposition(dep_id, False)
     assert ver2 is not None
     assert ver2["doi"] == doi1
 

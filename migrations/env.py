@@ -25,8 +25,7 @@ def get_engine():
 
 def get_engine_url():
     try:
-        url = get_engine().url.render_as_string(hide_password=False)
-        return url.replace("%", "%%")
+        return get_engine().url.render_as_string(hide_password=False).replace("%", "%%")
     except AttributeError:
         return str(get_engine().url).replace("%", "%%")
 
@@ -63,11 +62,7 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=get_metadata(),
-        literal_binds=True,
-    )
+    context.configure(url=url, target_metadata=get_metadata(), literal_binds=True)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -98,11 +93,7 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=get_metadata(),
-            **conf_args,
-        )
+        context.configure(connection=connection, target_metadata=get_metadata(), **conf_args)
 
         with context.begin_transaction():
             context.run_migrations()

@@ -69,14 +69,6 @@ def upload_file(deposition_id):
     return jsonify(file_record), 201
 
 
-@fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/actions/publish", methods=["POST"])
-def publish_deposition(deposition_id):
-    version = _service.publish_deposition(deposition_id)
-    if not version:
-        return jsonify({"message": "Deposition not found"}), 404
-    return jsonify(version), 202
-
-
 @fakenodo_bp.route("/deposit/depositions/<int:deposition_id>/versions", methods=["GET"])
 def list_deposition_versions(deposition_id):
     versions = _service.list_versions(deposition_id)
