@@ -1,3 +1,9 @@
+# Version 1.5.0 (2025-12-13)
+
+## Features
+- feat: enable 2fa with key
+
+
 # Version 1.4.12 (2025-12-13)
 
 ## Fixes
