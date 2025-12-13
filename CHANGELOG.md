@@ -1,3 +1,9 @@
+# Version 1.4.10 (2025-12-13)
+
+## Fixes
+- fix: add file to git ignore
+
+
 # Version 1.4.9 (2025-12-12)
 
 ## Fixes
