@@ -1,3 +1,9 @@
+# Version 1.4.12 (2025-12-13)
+
+## Fixes
+- fix: profile/edit internal server error
+
+
 # Version 1.4.11 (2025-12-13)
 
 ## Fixes
