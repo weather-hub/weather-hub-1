@@ -31,9 +31,11 @@
         </a>
     </div>
 
-    {% if current_user.is_authenticated and current_user.id == dataset.user_id and dataset.ds_meta_data.dataset_doi and dataset.is_latest %}
+    {% if current_user.is_authenticated and current_user.id == dataset.user_id and dataset.ds_meta_data.dataset_doi and
+    dataset.is_latest %}
     <div class="col-6 text-end">
-        <a href="{{ url_for('dataset.create_new_ds_version', dataset_id=dataset.id) }}" class="btn btn-success btn-sm" style="border-radius: 5px;">
+        <a href="{{ url_for('dataset.create_new_ds_version', dataset_id=dataset.id) }}" class="btn btn-success btn-sm"
+            style="border-radius: 5px;">
             <i data-feather="plus-circle" class="center-button-icon"></i>
             Create New Version
         </a>
@@ -113,7 +115,8 @@
                         </span>
                     </div>
                     <div class="col-md-8 col-12">
-                        <a href="{{ dataset.ds_meta_data.publication_doi }}" target="_blank">{{ dataset.ds_meta_data.publication_doi }}</a>
+                        <a href="{{ dataset.ds_meta_data.publication_doi }}" target="_blank">{{
+                            dataset.ds_meta_data.publication_doi }}</a>
                     </div>
                 </div>
                 {% endif %}
@@ -126,31 +129,32 @@
                 {% if dataset.ds_meta_data.dataset_doi %}
                 <div class="row mb-2">
 
-                        <div class="col-md-4 col-12">
-                            <span class=" text-secondary">
-                                Zenodo record
-                            </span>
-                        </div>
+                    <div class="col-md-4 col-12">
+                        <span class=" text-secondary">
+                            Zenodo record
+                        </span>
+                    </div>
 
-                        {% if FLASK_ENV == 'production' %}
-                            <div class="col-md-8 col-12">
-                                <a href="https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}" target="_blank">
-                                    https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
-                                </a>
-                            </div>
-                        {% elif FLASK_ENV == 'development' %}
-                            <div class="col-md-8 col-12">
-                                <a href="https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}" target="_blank">
-                                    https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
-                                </a>
-                            </div>
-                        {% else %}
-                            <div class="col-md-8 col-12">
-                                <a href="https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}" target="_blank">
-                                    https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
-                                </a>
-                            </div>
-                        {% endif %}
+                    {% if FLASK_ENV == 'production' %}
+                    <div class="col-md-8 col-12">
+                        <a href="https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}" target="_blank">
+                            https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
+                        </a>
+                    </div>
+                    {% elif FLASK_ENV == 'development' %}
+                    <div class="col-md-8 col-12">
+                        <a href="https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}"
+                            target="_blank">
+                            https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="col-md-8 col-12">
+                        <a href="https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}" target="_blank">
+                            https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
+                        </a>
+                    </div>
+                    {% endif %}
 
                 </div>
                 {% endif %}
@@ -174,57 +178,64 @@
                 {# CONCEPTUAL DOI SECTION #}
                 <div class="mb-3"> {% if dataset.get_conceptual_doi() %}
 
-                        <div class="d-flex align-items-center">
-                            <span class="d-inline-flex align-items-center bg-dark text-white px-2 py-1 rounded-start" style="height: 31px; white-space: nowrap;">
-                                <i data-feather="tag" class="me-1" style="width: 14px; height: 14px;"></i>
-                                <small><b>Conceptual DOI</b></small>
-                            </span>
+                    <div class="d-flex align-items-center">
+                        <span class="d-inline-flex align-items-center bg-dark text-white px-2 py-1 rounded-start"
+                            style="height: 31px; white-space: nowrap;">
+                            <i data-feather="tag" class="me-1" style="width: 14px; height: 14px;"></i>
+                            <small><b>Conceptual DOI</b></small>
+                        </span>
 
-                            <a href="{{ url_for('dataset.subdomain_index', doi=conceptual_doi) }}" target="_blank"
-                               class="d-inline-flex align-items-center bg-primary text-white px-2 py-1 rounded-end text-decoration-none text-truncate"
-                               style="height: 31px; max-width: 350px;">
-                                <small>{{ dataset.get_conceptual_doi() }}</small>
-                            </a>
+                        <a href="{{ url_for('dataset.subdomain_index', doi=conceptual_doi) }}" target="_blank"
+                            class="d-inline-flex align-items-center bg-primary text-white px-2 py-1 rounded-end text-decoration-none text-truncate"
+                            style="height: 31px; max-width: 350px;">
+                            <small>{{ dataset.get_conceptual_doi() }}</small>
+                        </a>
 
-                            <button onclick="copyText('dataset_conceptual_doi')" class="btn btn-sm btn-light border ms-2" title="Copy to clipboard">
-                                <i data-feather="clipboard" style="width: 16px; height: 16px;"></i>
-                            </button>
-                        </div>
+                        <button onclick="copyText('dataset_conceptual_doi')" class="btn btn-sm btn-light border ms-2"
+                            title="Copy to clipboard">
+                            <i data-feather="clipboard" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
 
-                        <div class="mt-1">
-                            <small class="text-secondary">(Cite the concept - always resolves to latest version)</small>
-                        </div>
+                    <div class="mt-1">
+                        <small class="text-secondary">(Cite the concept - always resolves to latest version)</small>
+                    </div>
 
-                        <div id="dataset_conceptual_doi" style="display: none">{{ dataset.get_conceptual_doi() }}</div>
+                    <div id="dataset_conceptual_doi" style="display: none">{{ dataset.get_conceptual_doi() }}</div>
 
                     {% else %}
-                        <span class="text-muted" style="display: none">Conceptual DOI: Not assigned yet (Unsynchronized)</span>
+                    <span class="text-muted" style="display: none">Conceptual DOI: Not assigned yet
+                        (Unsynchronized)</span>
                     {% endif %}
                 </div>
 
 
                 {# ALERT IF DOI NOT ASSIGNED #}
                 {% if not dataset.ds_meta_data.dataset_doi %}
-                    <div class="alert alert-warning mt-3" role="alert">
-                        <i data-feather="alert-triangle" class="center-button-icon"></i>
-                        This dataset version has not been synchronized with Zenodo yet. Therefore, it does not have a DOI assigned.
-                    </div>
+                <div class="alert alert-warning mt-3" role="alert">
+                    <i data-feather="alert-triangle" class="center-button-icon"></i>
+                    This dataset version has not been synchronized with Zenodo yet. Therefore, it does not have a DOI
+                    assigned.
+                </div>
                 {% else %}
 
                 {# SPECIFIC DOI SECTION #}
-                <div class="mb-3"> <div class="d-flex align-items-center">
-                        <span class="d-inline-flex align-items-center bg-dark text-white px-2 py-1 rounded-start" style="height: 31px; white-space: nowrap;">
+                <div class="mb-3">
+                    <div class="d-flex align-items-center">
+                        <span class="d-inline-flex align-items-center bg-dark text-white px-2 py-1 rounded-start"
+                            style="height: 31px; white-space: nowrap;">
                             <i data-feather="hash" class="me-1" style="width: 14px; height: 14px;"></i>
                             <small><b>Specific DOI</b></small>
                         </span>
 
                         <a href="{{ dataset.get_uvlhub_doi() }}" target="_blank"
-                           class="d-inline-flex align-items-center bg-primary text-white px-2 py-1 rounded-end text-decoration-none text-truncate"
-                           style="height: 31px; max-width: 350px;">
+                            class="d-inline-flex align-items-center bg-primary text-white px-2 py-1 rounded-end text-decoration-none text-truncate"
+                            style="height: 31px; max-width: 350px;">
                             <small>{{ dataset.get_uvlhub_doi() }}</small>
                         </a>
 
-                        <button onclick="copyText('dataset_doi')" class="btn btn-sm btn-light border ms-2" title="Copy to clipboard">
+                        <button onclick="copyText('dataset_doi')" class="btn btn-sm btn-light border ms-2"
+                            title="Copy to clipboard">
                             <i data-feather="clipboard" style="width: 16px; height: 16px;"></i>
                         </button>
                     </div>
@@ -253,13 +264,15 @@
                 2024,
                 112150,
                 ISSN 0164-1212,
-                <a href="https://doi.org/10.1016/j.jss.2024.112150" target="_blank">https://doi.org/10.1016/j.jss.2024.112150</a>
+                <a href="https://doi.org/10.1016/j.jss.2024.112150"
+                    target="_blank">https://doi.org/10.1016/j.jss.2024.112150</a>
 
             </div>
 
             <div class="card-body mt-0 pt-0">
 
-                <button onclick="copyText('bibtex_cite')" class="btn btn-light btn-sm" style="border-radius: 5px; margin-right: 10px">
+                <button onclick="copyText('bibtex_cite')" class="btn btn-light btn-sm"
+                    style="border-radius: 5px; margin-right: 10px">
                     <i data-feather="clipboard" class="center-button-icon"></i>
                     Copy in BibTex
                 </button>
@@ -292,31 +305,45 @@
             <div class="card-header">
                 <h4>Version History</h4>
             </div>
-           <ul class="list-group list-group-flush">
+            <ul class="list-group list-group-flush">
 
                 {% for version in all_versions %}
 
-                    <li class="list-group-item d-flex justify-content-between align-items-center {% if version.id == dataset.id %}active{% endif %}">
-                        {% if version.id == dataset.id %}
-                            <div>
-                                <strong>{{ version.version_number }}</strong>
-                                <small class="d-block">{{ version.created_at.strftime('%Y-%m-%d') }}</small>
-                            </div>
-                        {% else %}
-                            <a href="{{ url_for('dataset.subdomain_index', doi=version.ds_meta_data.dataset_doi) }}">
-                                <strong>{{ version.version_number }}</strong>
-                                <small class="text-muted d-block">{{ version.created_at.strftime('%Y-%m-%d') }}</small>
-                            </a>
+                <li
+                    class="list-group-item d-flex justify-content-between align-items-center {% if version.id == dataset.id %}active{% endif %}">
+                    {% if version.id == dataset.id %}
+                    <div style="overflow: hidden;"> <strong>{{ version.version_number }}</strong>
+                        <small class="d-block">{{ version.created_at.strftime('%Y-%m-%d') }}</small>
+
+                        {% if version.ds_meta_data.dataset_doi %}
+                        <small class="d-block mt-1" style="font-size: 0.75rem; opacity: 0.9;">
+                            DOI: {{ version.ds_meta_data.dataset_doi }}
+                        </small>
                         {% endif %}
-                        <div>
-                            {% if version.id == latest_version.id %}
-                                <span class="badge bg-primary">Latest</span>
-                            {% endif %}
-                            {% if version.id == dataset.id %}
-                                <span class="badge bg-secondary">Viewing</span>
-                            {% endif %}
-                        </div>
-                    </li>
+                    </div>
+
+                    {% else %}
+                    <a href="{{ url_for('dataset.subdomain_index', doi=version.ds_meta_data.dataset_doi) }}"
+                        class="text-decoration-none text-reset" style="overflow: hidden;">
+                        <strong>{{ version.version_number }}</strong>
+                        <small class="text-muted d-block">{{ version.created_at.strftime('%Y-%m-%d') }}</small>
+
+                        {% if version.ds_meta_data.dataset_doi %}
+                        <small class="d-block text-muted mt-1" style="font-size: 0.75rem;">
+                            DOI: {{ version.ds_meta_data.dataset_doi }}
+                        </small>
+                        {% endif %}
+                    </a>
+                    {% endif %}
+                    <div>
+                        {% if version.id == latest_version.id %}
+                        <span class="badge bg-primary">Latest</span>
+                        {% endif %}
+                        {% if version.id == dataset.id %}
+                        <span class="badge bg-secondary">Viewing</span>
+                        {% endif %}
+                    </div>
+                </li>
                 {% endfor %}
             </ul>
         </div>
@@ -343,75 +370,83 @@
 
             {# Show dataset files #}
             {% for feature_model in dataset.feature_models %}
-                    {% for file in feature_model.files %}
-                    <div class="list-group-item">
+            {% for file in feature_model.files %}
+            <div class="list-group-item">
+
+                <div class="row">
+                    <div class="col-12">
 
                         <div class="row">
-                            <div class="col-12">
-
-                                <div class="row">
-                                    <div class="col-8">
-                                        <i data-feather="file"></i> {{ file.name }}
-                                        <br>
-                                        <small class="text-muted">({{ file.get_formatted_size() }})</small>
-                                    </div>
-                                    <div class="col-2">
-                                        <div id="check_{{ file.id }}">
-                                        </div>
-                                    </div>
-                                </div>
-
-
+                            <div class="col-8">
+                                <i data-feather="file"></i> {{ file.name }}
+                                <br>
+                                <small class="text-muted">({{ file.get_formatted_size() }})</small>
                             </div>
-                            <div class="col-12 text-end" >
-
-                                <button onclick="viewFile('{{ file.id }}')" class="btn btn-outline-secondary btn-sm" style="border-radius: 5px;">
-                                    <i data-feather="eye"></i> View
-                                </button>
-
-                                <div class="btn-group" role="group">
-                                    <button id="btnGroupDrop{{ file.id }}" type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style=" border-radius: 5px;">
-                                        <i data-feather="check"></i> Check
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="btnGroupDrop{{ file.id }}">
-                                        <li>
-                                            <a class="dropdown-item disabled" href="javascript:void(0);">No syntax check for CSV</a>
-                                        </li>
-                                    </ul>
+                            <div class="col-2">
+                                <div id="check_{{ file.id }}">
                                 </div>
-
-                                <div class="btn-group" role="group">
-                                    <button id="btnGroupDropExport{{ file.id }}" type="button" class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" style=" border-radius: 5px;">
-                                        <i data-feather="download"></i> Export
-                                    </button>
-                                    <ul class="dropdown-menu" aria-labelledby="btnGroupDropExport{{ file.id }}">
-                                        <li>
-                                            <a class="dropdown-item" href="{{ url_for('hubfile.download_file', file_id=file.id) }}">
-                                                File
-                                            </a>
-                                            <a class="dropdown-item" href="{{ url_for('flamapy.to_glencoe', file_id=file.id) }}">
-                                                Glencoe
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="{{ url_for('flamapy.to_cnf', file_id=file.id) }}">
-                                                DIMACS
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="{{ url_for('flamapy.to_splot', file_id=file.id) }}">
-                                                SPLOT
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-
-
-
                             </div>
                         </div>
+
+
                     </div>
-                {% endfor %}
+                    <div class="col-12 text-end">
+
+                        <button onclick="viewFile('{{ file.id }}')" class="btn btn-outline-secondary btn-sm"
+                            style="border-radius: 5px;">
+                            <i data-feather="eye"></i> View
+                        </button>
+
+                        <div class="btn-group" role="group">
+                            <button id="btnGroupDrop{{ file.id }}" type="button"
+                                class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown"
+                                aria-expanded="false" style=" border-radius: 5px;">
+                                <i data-feather="check"></i> Check
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="btnGroupDrop{{ file.id }}">
+                                <li>
+                                    <a class="dropdown-item disabled" href="javascript:void(0);">No syntax check for
+                                        CSV</a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="btn-group" role="group">
+                            <button id="btnGroupDropExport{{ file.id }}" type="button"
+                                class="btn btn-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown"
+                                aria-expanded="false" style=" border-radius: 5px;">
+                                <i data-feather="download"></i> Export
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="btnGroupDropExport{{ file.id }}">
+                                <li>
+                                    <a class="dropdown-item"
+                                        href="{{ url_for('hubfile.download_file', file_id=file.id) }}">
+                                        File
+                                    </a>
+                                    <a class="dropdown-item"
+                                        href="{{ url_for('flamapy.to_glencoe', file_id=file.id) }}">
+                                        Glencoe
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('flamapy.to_cnf', file_id=file.id) }}">
+                                        DIMACS
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('flamapy.to_splot', file_id=file.id) }}">
+                                        SPLOT
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+
+
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
             {% endfor %}
         </div>
 
@@ -429,7 +464,7 @@
             </div>
             <div class="card-body">
                 <a href="{{ url_for('dataset.view_dataset_changelog', dataset_id=dataset.id) }}"
-                   class="btn btn-outline-info btn-sm w-100" style="border-radius: 5px;">
+                    class="btn btn-outline-info btn-sm w-100" style="border-radius: 5px;">
                     <i data-feather="clock" class="center-button-icon"></i>
                     Edit Changelog
                 </a>
@@ -457,7 +492,8 @@
                 </div>
             </div>
             <div class="modal-body" style="overflow-y: auto; height: calc(100vh - 50px);">
-                <pre id="fileContent" style="height: 100%; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; background-color: #f5f5f5; padding: 20px; border-radius: 5px; border: 1px solid #ccc;"></pre>
+                <pre id="fileContent"
+                    style="height: 100%; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; background-color: #f5f5f5; padding: 20px; border-radius: 5px; border: 1px solid #ccc;"></pre>
 
             </div>
         </div>
