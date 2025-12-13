@@ -33,7 +33,6 @@ Weather-Hub includes a simple configuration to create a complete and reproducibl
 - **pip**: Python package manager
 - **Git**: Version control
 - **Terminal/Console Access**: For executing commands
-
 ### 🔧 Manual Step-by-Step Installation
 
 Follow these steps to set up your development environment:
@@ -44,35 +43,91 @@ git clone https://github.com/weather-hub/weather-hub-1.git
 cd weather-hub-1
 ```
 
-#### 2. Create virtual environment
+#### 2. Install and Configure MariaDB
+
+**If you already have MariaDB installed**, skip to [Step 2.4: Configure databases and users](#24-configure-databases-and-users)
+
+##### 2.1 Install MariaDB
 ```bash
-python -m venv venv
+sudo apt install mariadb-server -y
+```
+
+##### 2.2 Start the MariaDB service
+```bash
+sudo systemctl start mariadb
+```
+
+##### 2.3 Configure MariaDB (Security)
+```bash
+sudo mysql_secure_installation
+```
+
+When prompted, use these values:
+- Enter current password for root: (press Enter)
+- Switch to unix_socket authentication: `y`
+- Change the root password: `y`
+- New password: `uvlhubdb_root_password`
+- Re-enter new password: `uvlhubdb_root_password`
+- Remove anonymous users: `y`
+- Disallow root login remotely: `y`
+- Remove test database and access to it: `y`
+- Reload privilege tables now: `y`
+
+##### 2.4 Configure databases and users
+```bash
+sudo mysql -u root -p
+```
+
+Use `uvlhubdb_root_password` as root password, then execute:
+
+```sql
+CREATE DATABASE uvlhubdb;
+CREATE DATABASE uvlhubdb_test;
+CREATE USER 'uvlhubdb_user'@'localhost' IDENTIFIED BY 'uvlhubdb_password';
+GRANT ALL PRIVILEGES ON uvlhubdb.* TO 'uvlhubdb_user'@'localhost';
+GRANT ALL PRIVILEGES ON uvlhubdb_test.* TO 'uvlhubdb_user'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+```
+
+#### 3. Configure Environment Variables
+```bash
+cp .env.local.example .env
+echo "webhook" > .moduleignore
+```
+
+This copies the environment variables template with default values. The `.env` file is listed in `.gitignore` to prevent exposing sensitive credentials.
+
+#### 4. Create virtual environment
+```bash
+python3.12 -m venv venv
 source venv/bin/activate
 ```
 
-#### 3. Install dependencies
+#### 5. Install dependencies
 ```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e ./
 ```
 
-#### 4. Apply Migrations
+#### 6. Apply Migrations
 ```bash
 flask db upgrade
 ```
 
-#### 5. Populate Database
+#### 7. Populate Database
 ```bash
 rosemary db:seed
 ```
 
-#### 6. Configure pre-commit hooks
+#### 8. Configure pre-commit hooks
 ```bash
 pre-commit install
 pre-commit install --hook-type commit-msg
 ```
 
-#### 7. Run the application
+#### 9. Run the application
 ```bash
 flask run --host=0.0.0.0 --reload --debug
 ```
@@ -121,8 +176,7 @@ Please ensure that your changes:
 
 ## 📧 Contact and Support
 
-- 🐛 Open an issue on the repository to [report a bug](https://github.com/weather-hub/weather-hub-1/issues/new?template=bug_report.md)
-- 💡 [Request a feature](https://github.com/weather-hub/weather-hub-1/issues/new?template=feature_request.md)
+- 🐛 [Report a bug](https://github.com/weather-hub/weather-hub-1/issues/new?template=unplanned-work.md)
 - 📖 [Check the Wiki](https://github.com/weather-hub/weather-hub-1/wiki)
 - 📚 [Official Documentation](https://docs.uvlhub.io/)
 
