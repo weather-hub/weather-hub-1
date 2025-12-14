@@ -1,3 +1,13 @@
+# Version 1.11.0 (2025-12-14)
+
+## Features
+- feat: selenium test for create new version and added more coverage in dataset routes
+- feat: added tests for ds versions and routes
+
+## Fixes
+- fix: test selenium 2fa and test edit cl
+
+
 # Version 1.10.0 (2025-12-14)
 
 ## Features
