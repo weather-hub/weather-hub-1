@@ -12,13 +12,13 @@ class Test2faa:
     def teardown_method(self, method):
         self.driver.quit()
 
-    # USER2 MUST HAVE ENABLED THE 2FA
     def test_2faa(self):
         self.driver.get("http://127.0.0.1:5000/")
         self.driver.set_window_size(1440, 900)
         self.driver.find_element(By.LINK_TEXT, "Login").click()
         self.driver.find_element(By.ID, "email").click()
-        self.driver.find_element(By.ID, "email").send_keys("user2@example.com")
+        # usamos un user que por defecto tiene activado el 2fa
+        self.driver.find_element(By.ID, "email").send_keys("user3_2fa@example.com")
         self.driver.find_element(By.CSS_SELECTOR, ".row:nth-child(4) > .col-md-6").click()
         self.driver.find_element(By.ID, "password").click()
         self.driver.find_element(By.ID, "password").send_keys("1234")
