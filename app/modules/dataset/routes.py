@@ -604,6 +604,9 @@ def subdomain_index(doi):
         else:
             abort(404)
 
+    if not concept:
+        abort(404)
+
     all_versions = concept.versions.all()
     latest_version = all_versions[0] if all_versions else None
 
