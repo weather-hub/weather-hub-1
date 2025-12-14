@@ -1,7 +1,7 @@
 import os
 import tempfile
 import uuid
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -15,9 +15,9 @@ from app.modules.dataset.models import (
 )
 from app.modules.dataset.services import (
     AuthorService,
+    DatasetCommentService,
     DataSetConceptService,
     DataSetService,
-    DatasetCommentService,
     DOIMappingService,
     DSDownloadRecordService,
     DSMetaDataService,
@@ -68,9 +68,7 @@ def sample_dataset(test_client, test_app, sample_user):
         db.session.add(ds_meta)
         db.session.flush()
 
-        dataset = DataSet(
-            user_id=sample_user.id, ds_meta_data_id=ds_meta.id, version_number="1.0.0"
-        )
+        dataset = DataSet(user_id=sample_user.id, ds_meta_data_id=ds_meta.id, version_number="1.0.0")
         db.session.add(dataset)
         db.session.commit()
 
@@ -92,9 +90,7 @@ def dataset_with_feature_models(test_app, sample_dataset):
         db.session.add(fm_meta)
         db.session.flush()
 
-        feature_model = FeatureModel(
-            data_set_id=dataset.id, fm_meta_data_id=fm_meta.id
-        )
+        feature_model = FeatureModel(data_set_id=dataset.id, fm_meta_data_id=fm_meta.id)
         db.session.add(feature_model)
         db.session.commit()
 
@@ -138,14 +134,10 @@ class TestDataSetService:
             result = dataset_service.get_unsynchronized(sample_user.id)
             assert result is not None or result == []
 
-    def test_get_unsynchronized_dataset(
-        self, test_app, dataset_service, sample_user, sample_dataset
-    ):
+    def test_get_unsynchronized_dataset(self, test_app, dataset_service, sample_user, sample_dataset):
         """Test getting a specific unsynchronized dataset."""
         with test_app.app_context():
-            result = dataset_service.get_unsynchronized_dataset(
-                sample_user.id, sample_dataset.id
-            )
+            result = dataset_service.get_unsynchronized_dataset(sample_user.id, sample_dataset.id)
             assert result is not None or result is None
 
     def test_latest_synchronized(self, test_app, dataset_service):
@@ -195,9 +187,7 @@ class TestDataSetService:
             ds_meta = DSMetaData.query.get(sample_dataset.ds_meta_data_id)
             original_title = ds_meta.title
 
-            updated = dataset_service.update_dsmetadata(
-                sample_dataset.ds_meta_data_id, title="Updated Title"
-            )
+            updated = dataset_service.update_dsmetadata(sample_dataset.ds_meta_data_id, title="Updated Title")
 
             assert updated is not None
             assert updated.title == "Updated Title" or updated.title == original_title
@@ -212,14 +202,12 @@ class TestDataSetService:
             assert "doi" in doi_url
             assert dataset.ds_meta_data.dataset_doi in doi_url
 
-    def test_get_conceptual_doi_with_concept(
-        self, test_app, dataset_service
-    ):
+    def test_get_conceptual_doi_with_concept(self, test_app, dataset_service):
         """Test getting conceptual DOI when concept exists."""
         with test_app.app_context():
             # Create a dataset with concept
             from app.modules.dataset.models import DataSetConcept
-            
+
             ds_meta = DSMetaData(
                 title="Test with Concept",
                 description="Dataset with concept",
@@ -228,11 +216,10 @@ class TestDataSetService:
             )
             db.session.add(ds_meta)
             db.session.flush()
-            
             concept = DataSetConcept(conceptual_doi="10.1234/concept")
             db.session.add(concept)
             db.session.flush()
-            
+
             dataset = DataSet(
                 user_id=1,
                 ds_meta_data_id=ds_meta.id,
@@ -247,9 +234,7 @@ class TestDataSetService:
             assert "doi" in doi_url
             assert "10.1234/concept" in doi_url
 
-    def test_get_conceptual_doi_without_concept(
-        self, test_app, dataset_service, sample_dataset
-    ):
+    def test_get_conceptual_doi_without_concept(self, test_app, dataset_service, sample_dataset):
         """Test getting conceptual DOI when concept doesn't exist."""
         with test_app.app_context():
             dataset = DataSet.query.get(sample_dataset.id)
@@ -318,89 +303,63 @@ class TestDataSetService:
 
     def test_check_introduced_version_valid_major(self, dataset_service):
         """Test version check for valid major version."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", True, "2.0.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", True, "2.0.0")
 
         assert is_valid is True
         assert error == ""
 
-    def test_check_introduced_version_invalid_major_not_incremented(
-        self, dataset_service
-    ):
+    def test_check_introduced_version_invalid_major_not_incremented(self, dataset_service):
         """Test version check for major version not incremented."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", True, "1.0.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", True, "1.0.0")
 
         assert is_valid is False
         assert "major version must be increased" in error.lower()
 
-    def test_check_introduced_version_invalid_major_minor_not_zero(
-        self, dataset_service
-    ):
+    def test_check_introduced_version_invalid_major_minor_not_zero(self, dataset_service):
         """Test version check for major version with non-zero minor."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", True, "2.1.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", True, "2.1.0")
 
         assert is_valid is False
         assert "must be zero" in error.lower()
 
     def test_check_introduced_version_invalid_major_too_large(self, dataset_service):
         """Test version check for major version incremented by more than 1."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", True, "3.0.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", True, "3.0.0")
 
         assert is_valid is False
         assert "one at a time" in error.lower()
 
     def test_check_introduced_version_valid_minor(self, dataset_service):
         """Test version check for valid minor version."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", False, "1.1.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", False, "1.1.0")
 
         assert is_valid is True
         assert error == ""
 
-    def test_check_introduced_version_invalid_minor_major_increased(
-        self, dataset_service
-    ):
+    def test_check_introduced_version_invalid_minor_major_increased(self, dataset_service):
         """Test version check for minor version with major increased."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", False, "2.0.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", False, "2.0.0")
 
         assert is_valid is False
         assert "cannot be increased" in error.lower() or "must be increased" in error.lower()
 
-    def test_check_introduced_version_invalid_minor_not_incremented(
-        self, dataset_service
-    ):
+    def test_check_introduced_version_invalid_minor_not_incremented(self, dataset_service):
         """Test version check for minor version not incremented."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.1.0", False, "1.1.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.1.0", False, "1.1.0")
 
         assert is_valid is False
         assert "must be increased" in error.lower()
 
     def test_check_introduced_version_invalid_format(self, dataset_service):
         """Test version check with invalid format."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0", True, "2.0.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0", True, "2.0.0")
 
         assert is_valid is False
         assert "X.Y.Z" in error
 
     def test_check_introduced_version_with_leading_zeros(self, dataset_service):
         """Test version check with leading zeros."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", True, "2.01.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", True, "2.01.0")
 
         assert is_valid is False
         assert "leading zeros" in error.lower()
@@ -435,31 +394,21 @@ class TestDataSetService:
 
     def test_check_introduced_version_valid_patch(self, dataset_service):
         """Test version check for valid patch version."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", False, "1.0.1"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", False, "1.0.1")
 
         assert is_valid is True
         assert error == ""
 
-    def test_check_introduced_version_minor_too_large_increment(
-        self, dataset_service
-    ):
+    def test_check_introduced_version_minor_too_large_increment(self, dataset_service):
         """Test version check for minor version incremented by more than 1."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", False, "1.2.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", False, "1.2.0")
 
         assert is_valid is False
         assert "one at a time" in error.lower()
 
-    def test_check_introduced_version_patch_too_large_increment(
-        self, dataset_service
-    ):
+    def test_check_introduced_version_patch_too_large_increment(self, dataset_service):
         """Test version check for patch version incremented by more than 1."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "1.0.0", False, "1.0.2"
-        )
+        is_valid, error = DataSetService.check_introduced_version("1.0.0", False, "1.0.2")
 
         assert is_valid is False
         assert "one at a time" in error.lower()
@@ -473,9 +422,7 @@ class TestDataSetService:
 
     def test_check_introduced_version_with_v_prefix(self, dataset_service):
         """Test version check with v prefix in current version."""
-        is_valid, error = DataSetService.check_introduced_version(
-            "v1.0.0", True, "v2.0.0"
-        )
+        is_valid, error = DataSetService.check_introduced_version("v1.0.0", True, "v2.0.0")
 
         # Should strip v prefix and validate
         assert is_valid is True or is_valid is False
@@ -502,9 +449,7 @@ class TestDataSetService:
             mock_user = Mock()
             mock_user.id = 1
             mock_user.temp_folder.return_value = "/tmp/test"
-            mock_auth_service.return_value.get_authenticated_user.return_value = (
-                mock_user
-            )
+            mock_auth_service.return_value.get_authenticated_user.return_value = mock_user
 
             # Mock file exists - return True first time, False second time
             mock_exists.side_effect = [True, False]
@@ -531,9 +476,7 @@ class TestDataSetService:
             mock_user = Mock()
             mock_user.id = 1
             mock_user.temp_folder.return_value = "/tmp/test"
-            mock_auth_service.return_value.get_authenticated_user.return_value = (
-                mock_user
-            )
+            mock_auth_service.return_value.get_authenticated_user.return_value = mock_user
 
             # Mock file doesn't exist
             mock_exists.return_value = False
@@ -558,8 +501,6 @@ class TestDataSetService:
         """Test copying feature models from original dataset."""
         with test_app.app_context():
             # Create a new empty dataset to copy into
-            from app.modules.dataset.models import DataSetConcept
-
             ds_meta_new = DSMetaData(
                 title="New Dataset Version",
                 description="Copy of original",
@@ -568,9 +509,7 @@ class TestDataSetService:
             db.session.add(ds_meta_new)
             db.session.flush()
 
-            new_dataset = DataSet(
-                user_id=1, ds_meta_data_id=ds_meta_new.id, version_number="2.0.0"
-            )
+            new_dataset = DataSet(user_id=1, ds_meta_data_id=ds_meta_new.id, version_number="2.0.0")
             db.session.add(new_dataset)
             db.session.commit()
 
@@ -579,9 +518,7 @@ class TestDataSetService:
             # Mock file operations
             mock_exists.return_value = True
 
-            dataset_service.copy_feature_models_from_original(
-                new_dataset, original_dataset
-            )
+            dataset_service.copy_feature_models_from_original(new_dataset, original_dataset)
 
             # Verify makedirs was called
             mock_makedirs.assert_called()
@@ -606,9 +543,7 @@ class TestDataSetService:
             db.session.add(ds_meta_new)
             db.session.flush()
 
-            new_dataset = DataSet(
-                user_id=1, ds_meta_data_id=ds_meta_new.id, version_number="2.0.0"
-            )
+            new_dataset = DataSet(user_id=1, ds_meta_data_id=ds_meta_new.id, version_number="2.0.0")
             db.session.add(new_dataset)
             db.session.commit()
 
@@ -618,9 +553,7 @@ class TestDataSetService:
             mock_exists.return_value = False
 
             # Should not raise exception, just log warning
-            dataset_service.copy_feature_models_from_original(
-                new_dataset, original_dataset
-            )
+            dataset_service.copy_feature_models_from_original(new_dataset, original_dataset)
 
     @patch("app.modules.dataset.services.shutil.copy2")
     @patch("app.modules.dataset.services.os.path.exists")
@@ -644,9 +577,7 @@ class TestDataSetService:
             db.session.add(ds_meta_new)
             db.session.flush()
 
-            new_dataset = DataSet(
-                user_id=1, ds_meta_data_id=ds_meta_new.id, version_number="2.0.0"
-            )
+            new_dataset = DataSet(user_id=1, ds_meta_data_id=ds_meta_new.id, version_number="2.0.0")
             db.session.add(new_dataset)
             db.session.commit()
 
@@ -657,9 +588,7 @@ class TestDataSetService:
             mock_copy2.side_effect = Exception("Permission denied")
 
             # Should not raise exception, just log error
-            dataset_service.copy_feature_models_from_original(
-                new_dataset, original_dataset
-            )
+            dataset_service.copy_feature_models_from_original(new_dataset, original_dataset)
 
     @patch("app.modules.dataset.services.shutil.move")
     @patch("app.modules.dataset.services.os.remove")
@@ -682,9 +611,7 @@ class TestDataSetService:
             mock_user = Mock()
             mock_user.id = 1
             mock_user.temp_folder.return_value = "/tmp/test"
-            mock_auth_service.return_value.get_authenticated_user.return_value = (
-                mock_user
-            )
+            mock_auth_service.return_value.get_authenticated_user.return_value = mock_user
 
             # Mock file exists but move fails
             mock_exists.side_effect = [True, False]
@@ -782,18 +709,14 @@ class TestDSViewRecordService:
         return DSViewRecordService()
 
     @patch("app.modules.dataset.repositories.current_user")
-    def test_the_record_exists_false(
-        self, mock_current_user, test_app, view_record_service, sample_dataset
-    ):
+    def test_the_record_exists_false(self, mock_current_user, test_app, view_record_service, sample_dataset):
         """Test checking if view record exists when it doesn't."""
         with test_app.app_context():
             # Mock current_user as not authenticated
             mock_current_user.is_authenticated = False
             mock_current_user.id = None
-            
             dataset = DataSet.query.get(sample_dataset.id)
             user_cookie = str(uuid.uuid4())
-
             exists = view_record_service.the_record_exists(dataset, user_cookie)
 
             # the_record_exists returns None if record doesn't exist (from .first())
@@ -806,19 +729,16 @@ class TestDSViewRecordService:
             # Mock current_user as not authenticated
             mock_current_user.is_authenticated = False
             mock_current_user.id = None
-            
+
             dataset = DataSet.query.get(sample_dataset.id)
             user_cookie = str(uuid.uuid4())
-
             record = view_record_service.create_new_record(dataset, user_cookie)
 
             assert record is not None
             assert isinstance(record, DSViewRecord)
 
     @patch("app.modules.dataset.repositories.current_user")
-    def test_create_cookie_new_user(
-        self, mock_current_user, test_app, view_record_service, sample_dataset
-    ):
+    def test_create_cookie_new_user(self, mock_current_user, test_app, view_record_service, sample_dataset):
         """Test creating cookie for new user."""
         with test_app.test_request_context():
             # Mock current_user as not authenticated
@@ -833,14 +753,10 @@ class TestDSViewRecordService:
             assert len(cookie) > 0
 
     @patch("app.modules.dataset.repositories.current_user")
-    def test_create_cookie_existing_user(
-        self, mock_current_user, test_app, view_record_service, sample_dataset
-    ):
+    def test_create_cookie_existing_user(self, mock_current_user, test_app, view_record_service, sample_dataset):
         """Test creating cookie for existing user."""
         existing_cookie = str(uuid.uuid4())
-        with test_app.test_request_context(
-            environ_base={'HTTP_COOKIE': f'view_cookie={existing_cookie}'}
-        ):
+        with test_app.test_request_context(environ_base={"HTTP_COOKIE": f"view_cookie={existing_cookie}"}):
             # Mock current_user as not authenticated
             mock_current_user.is_authenticated = False
             mock_current_user.id = None
@@ -853,14 +769,10 @@ class TestDSViewRecordService:
             assert cookie == existing_cookie
 
     @patch("app.modules.dataset.repositories.current_user")
-    def test_create_cookie_existing_record(
-        self, mock_current_user, test_app, view_record_service, sample_dataset
-    ):
+    def test_create_cookie_existing_record(self, mock_current_user, test_app, view_record_service, sample_dataset):
         """Ensure no new record when one exists."""
         existing_cookie = str(uuid.uuid4())
-        with test_app.test_request_context(
-            environ_base={'HTTP_COOKIE': f'view_cookie={existing_cookie}'}
-        ):
+        with test_app.test_request_context(environ_base={"HTTP_COOKIE": f"view_cookie={existing_cookie}"}):
             mock_current_user.is_authenticated = False
             mock_current_user.id = None
 
@@ -932,9 +844,7 @@ class TestDOIMappingService:
             from app.modules.dataset.models import DOIMapping
 
             # Create a DOI mapping
-            mapping = DOIMapping(
-                dataset_doi_old="10.1234/old", dataset_doi_new="10.1234/new"
-            )
+            mapping = DOIMapping(dataset_doi_old="10.1234/old", dataset_doi_new="10.1234/new")
             db.session.add(mapping)
             db.session.commit()
 
@@ -1008,9 +918,7 @@ class TestDSMetaDataService:
     def test_update(self, test_app, dsmetadata_service, sample_dataset):
         """Test updating metadata."""
         with test_app.app_context():
-            updated = dsmetadata_service.update(
-                sample_dataset.ds_meta_data_id, title="Updated via service"
-            )
+            updated = dsmetadata_service.update(sample_dataset.ds_meta_data_id, title="Updated via service")
 
             assert updated is not None
 
@@ -1056,9 +964,7 @@ class TestDataSetConceptService:
             db.session.commit()
 
             # Update it
-            updated = concept_service.update(
-                concept.id, conceptual_doi="10.1234/updated"
-            )
+            updated = concept_service.update(concept.id, conceptual_doi="10.1234/updated")
 
             assert updated is not None
 
@@ -1087,9 +993,7 @@ class TestDatasetCommentService:
 
             assert isinstance(comments, list)
 
-    def test_count_comments_by_dataset(
-        self, test_app, comment_service, sample_dataset
-    ):
+    def test_count_comments_by_dataset(self, test_app, comment_service, sample_dataset):
         """Test counting comments by dataset."""
         with test_app.app_context():
             count = comment_service.count_comments_by_dataset(sample_dataset.id)
@@ -1104,9 +1008,7 @@ class TestDatasetCommentService:
 
             assert isinstance(comments, list)
 
-    def test_create_comment_success(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_create_comment_success(self, test_app, comment_service, sample_dataset, sample_user):
         """Test creating a comment successfully."""
         with test_app.app_context():
             comment = comment_service.create_comment(
@@ -1118,29 +1020,19 @@ class TestDatasetCommentService:
             assert comment is not None
             assert comment.content == "This is a test comment"
 
-    def test_create_comment_empty_content(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_create_comment_empty_content(self, test_app, comment_service, sample_dataset, sample_user):
         """Test creating a comment with empty content."""
         with test_app.app_context():
             with pytest.raises(ValueError, match="Comment content cannot be empty"):
-                comment_service.create_comment(
-                    dataset_id=sample_dataset.id, user_id=sample_user.id, content=""
-                )
+                comment_service.create_comment(dataset_id=sample_dataset.id, user_id=sample_user.id, content="")
 
-    def test_create_comment_whitespace_only(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_create_comment_whitespace_only(self, test_app, comment_service, sample_dataset, sample_user):
         """Test creating a comment with whitespace only."""
         with test_app.app_context():
             with pytest.raises(ValueError, match="Comment content cannot be empty"):
-                comment_service.create_comment(
-                    dataset_id=sample_dataset.id, user_id=sample_user.id, content="   "
-                )
+                comment_service.create_comment(dataset_id=sample_dataset.id, user_id=sample_user.id, content="   ")
 
-    def test_update_comment_success(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_update_comment_success(self, test_app, comment_service, sample_dataset, sample_user):
         """Test updating a comment successfully."""
         with test_app.app_context():
             # Create a comment first
@@ -1170,9 +1062,7 @@ class TestDatasetCommentService:
                     user_id=sample_user.id,
                 )
 
-    def test_update_comment_wrong_user(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_update_comment_wrong_user(self, test_app, comment_service, sample_dataset, sample_user):
         """Test updating a comment by wrong user."""
         with test_app.app_context():
             # Create a comment
@@ -1184,13 +1074,9 @@ class TestDatasetCommentService:
 
             # Try to update with different user
             with pytest.raises(ValueError, match="You can only edit your own comments"):
-                comment_service.update_comment(
-                    comment_id=comment.id, content="Hacked!", user_id=99999
-                )
+                comment_service.update_comment(comment_id=comment.id, content="Hacked!", user_id=99999)
 
-    def test_update_comment_empty_content(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_update_comment_empty_content(self, test_app, comment_service, sample_dataset, sample_user):
         """Test updating a comment with empty content."""
         with test_app.app_context():
             comment = comment_service.create_comment(
@@ -1200,13 +1086,9 @@ class TestDatasetCommentService:
             )
 
             with pytest.raises(ValueError, match="Comment content cannot be empty"):
-                comment_service.update_comment(
-                    comment_id=comment.id, content="", user_id=sample_user.id
-                )
+                comment_service.update_comment(comment_id=comment.id, content="", user_id=sample_user.id)
 
-    def test_delete_comment_success(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_delete_comment_success(self, test_app, comment_service, sample_dataset, sample_user):
         """Test deleting a comment successfully."""
         with test_app.app_context():
             comment = comment_service.create_comment(
@@ -1215,9 +1097,7 @@ class TestDatasetCommentService:
                 content="To be deleted",
             )
 
-            result = comment_service.delete_comment(
-                comment_id=comment.id, user_id=sample_user.id
-            )
+            result = comment_service.delete_comment(comment_id=comment.id, user_id=sample_user.id)
 
             assert result is not None or result is True
 
@@ -1227,9 +1107,7 @@ class TestDatasetCommentService:
             with pytest.raises(ValueError, match="Comment not found"):
                 comment_service.delete_comment(comment_id=99999, user_id=sample_user.id)
 
-    def test_delete_comment_wrong_user(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_delete_comment_wrong_user(self, test_app, comment_service, sample_dataset, sample_user):
         """Test deleting a comment by wrong user."""
         with test_app.app_context():
             comment = comment_service.create_comment(
@@ -1238,16 +1116,10 @@ class TestDatasetCommentService:
                 content="Protected comment",
             )
 
-            with pytest.raises(
-                ValueError, match="You can only delete your own comments"
-            ):
-                comment_service.delete_comment(
-                    comment_id=comment.id, user_id=99999, is_admin=False
-                )
+            with pytest.raises(ValueError, match="You can only delete your own comments"):
+                comment_service.delete_comment(comment_id=comment.id, user_id=99999, is_admin=False)
 
-    def test_delete_comment_admin(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_delete_comment_admin(self, test_app, comment_service, sample_dataset, sample_user):
         """Test deleting a comment as admin."""
         with test_app.app_context():
             comment = comment_service.create_comment(
@@ -1256,15 +1128,11 @@ class TestDatasetCommentService:
                 content="To be deleted by admin",
             )
 
-            result = comment_service.delete_comment(
-                comment_id=comment.id, user_id=99999, is_admin=True
-            )
+            result = comment_service.delete_comment(comment_id=comment.id, user_id=99999, is_admin=True)
 
             assert result is not None or result is True
 
-    def test_create_comment_with_whitespace(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_create_comment_with_whitespace(self, test_app, comment_service, sample_dataset, sample_user):
         """Test creating a comment with leading/trailing whitespace."""
         with test_app.app_context():
             comment = comment_service.create_comment(
@@ -1276,9 +1144,7 @@ class TestDatasetCommentService:
             # Content should be stripped
             assert comment.content == "Test comment with spaces"
 
-    def test_update_comment_with_whitespace(
-        self, test_app, comment_service, sample_dataset, sample_user
-    ):
+    def test_update_comment_with_whitespace(self, test_app, comment_service, sample_dataset, sample_user):
         """Test updating a comment with whitespace."""
         with test_app.app_context():
             comment = comment_service.create_comment(
