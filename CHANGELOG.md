@@ -1,3 +1,9 @@
+# Version 1.7.2 (2025-12-14)
+
+## Fixes
+- fix: change migrations version
+
+
 # Version 1.7.1 (2025-12-14)
 
 ## Fixes
