@@ -321,7 +321,9 @@
         <div class="card h-100 shadow-sm">
           <div class="card-body d-flex flex-column">
             <h5 class="card-title">
-              {{ u.profile.name }} {{ u.profile.surname }}
+              <a href="{{ url_for('profile.view_profile', user_id=u.id) }}">
+                {{ u.profile.name }} {{ u.profile.surname }}
+              </a>
             </h5>
             <p class="card-text text-muted mb-2">{{ u.email }}</p>
 

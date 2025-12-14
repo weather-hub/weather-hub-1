@@ -123,6 +123,11 @@ class DataSetForm(FlaskForm):
         return [fm.get_feature_model() for fm in self.feature_models]
 
 
+class DatasetCommentForm(FlaskForm):
+    content = TextAreaField("Comment", validators=[DataRequired()])
+    submit = SubmitField("Post Comment")
+
+
 class DataSetVersionForm(DataSetForm):
     """
     Un formulario para crear una *nueva versión* de un dataset existente.

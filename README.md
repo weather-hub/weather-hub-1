@@ -1,12 +1,9 @@
-<div style="text-align: center">
-  <img src="app/static/img/logos/logo-weather-dark.png" alt="Weather-hub Logo" />
-</div>
 
-# 🌦️ Weather-Hub
+# Weather-hub
 
-**Weather-Hub** is a centralized repository of *meteorological datasets* designed to facilitate data analysis, academic research, and machine learning model development. The goal is to provide clean, well-organized, and thoroughly documented data related to weather phenomena following Open Science principles.
+Repository of a Weather Dataset following Open Science principles - Developed by Weather-hub-1
 
----
+## Official documentation
 
 ## 🌍 Project Deployment on Render
 

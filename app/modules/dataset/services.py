@@ -20,13 +20,13 @@ from app.modules.dataset.repositories import (
     DSViewRecordRepository,
 )
 from app.modules.dataset.validator import validate_dataset_package
+from app.modules.fakenodo.services import FakenodoService
 from app.modules.featuremodel.repositories import FeatureModelRepository, FMMetaDataRepository
 from app.modules.hubfile.repositories import (
     HubfileDownloadRecordRepository,
     HubfileRepository,
     HubfileViewRecordRepository,
 )
-from app.modules.zenodo.services import ZenodoService
 from core.services.BaseService import BaseService
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class DataSetService(BaseService):
         self.dsviewrecord_repostory = DSViewRecordRepository()
         self.hubfileviewrecord_repository = HubfileViewRecordRepository()
         self.dsmetadata_service = DSMetaDataService()
-        self.zenodo_service = ZenodoService()
+        self.fakenodo_service = FakenodoService()
         self.ds_metadata_edit_log_service = DSMetaDataEditLogService()
 
     def move_feature_models(self, dataset: DataSet):
@@ -480,3 +480,54 @@ class DSMetaDataEditLogService(BaseService):
 
     def get_changelog_by_dataset_id(self, dataset_id: int) -> list:
         return self.repository.get_by_dataset_id(dataset_id)
+
+
+class DatasetCommentService(BaseService):
+    def __init__(self):
+        from app.modules.dataset.repositories import DatasetCommentRepository
+
+        super().__init__(DatasetCommentRepository())
+
+    def get_comments_by_dataset(self, dataset_id: int) -> list:
+        """Get all comments for a specific dataset."""
+        return self.repository.get_by_dataset_id(dataset_id)
+
+    def count_comments_by_dataset(self, dataset_id: int) -> int:
+        """Count total comments for a specific dataset."""
+        return self.repository.count_by_dataset_id(dataset_id)
+
+    def get_comments_by_user(self, user_id: int) -> list:
+        """Get all comments by a specific user."""
+        return self.repository.get_by_user_id(user_id)
+
+    def create_comment(self, dataset_id: int, user_id: int, content: str):
+        """Create a new comment on a dataset."""
+        if not content or not content.strip():
+            raise ValueError("Comment content cannot be empty")
+
+        return self.repository.create(dataset_id=dataset_id, user_id=user_id, content=content.strip())
+
+    def update_comment(self, comment_id: int, content: str, user_id: int):
+        """Update an existing comment. Only the author can update their comment."""
+        comment = self.repository.get_by_id(comment_id)
+        if not comment:
+            raise ValueError("Comment not found")
+
+        if comment.user_id != user_id:
+            raise ValueError("You can only edit your own comments")
+
+        if not content or not content.strip():
+            raise ValueError("Comment content cannot be empty")
+
+        return self.repository.update(comment_id, content=content.strip())
+
+    def delete_comment(self, comment_id: int, user_id: int, is_admin: bool = False):
+        """Delete a comment. Only the author or admin can delete a comment."""
+        comment = self.repository.get_by_id(comment_id)
+        if not comment:
+            raise ValueError("Comment not found")
+
+        if not is_admin and comment.user_id != user_id:
+            raise ValueError("You can only delete your own comments")
+
+        return self.repository.delete(comment_id)

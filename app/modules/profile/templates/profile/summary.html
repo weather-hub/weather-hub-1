@@ -43,12 +43,28 @@
           <i class="fa fa-database"></i> <strong>Uploaded datasets:</strong> {{
           total_datasets }} datasets
         </p>
+        <p class="card-text h5">
+        <i class="fa fa-layer-group"></i>
+        <strong>Curator in communities:</strong>
+        {% if communities and communities|length > 0 %}
+          <div class="mt-2 d-flex flex-wrap gap-2">
+            {% for c in communities %}
+              <span class="badge bg-secondary">{{ c.name }}</span>
+            {% endfor %}
+          </div>
+        {% else %}
+          <span class="text-muted">None</span>
+        {% endif %}
+      </p>
+
       </div>
-       <div class="card-footer">
-               <a href="{{ url_for('auth.manage_sessions') }}" class="btn btn-outline-primary btn-sm">
-                   <i class="fa fa-shield-alt"></i> Manage Active Sessions
-               </a>
+      {% if current_user.is_authenticated and current_user.id == user.id %}
+      <div class="card-footer">
+        <a href="{{ url_for('auth.manage_sessions') }}" class="btn btn-outline-primary btn-sm">
+          <i class="fa fa-shield-alt"></i> Manage Active Sessions
+        </a>
       </div>
+      {% endif %}
     </div>
   </div>
 </div>

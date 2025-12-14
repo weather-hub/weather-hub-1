@@ -1,7 +1,7 @@
 (function() {
 
   function initCommunityUI() {
-    // Para la foto
+    // Para la foto 
     const input = document.getElementById('visual_identity_input');
     const previewContainer = document.getElementById('visual_identity_preview_container');
     const previewImg = document.getElementById('visual_identity_preview');
@@ -23,7 +23,7 @@
     }
   }
 
-  document.readyState === 'loading'
+  document.readyState === 'loading' 
     ? document.addEventListener('DOMContentLoaded', initCommunityUI)
     : initCommunityUI();
 

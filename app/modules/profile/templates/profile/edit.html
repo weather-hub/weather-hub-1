@@ -75,19 +75,50 @@
                 </div>
 
                 <div class="col-6">
-                    <label class="form-label">Communities</label>
-                    <div>
-                        {% if communities and communities|length > 0 %}
-                            <div class="d-flex flex-wrap gap-2">
-                                {% for c in communities %}
-                                    <span class="badge bg-secondary">{{ c.name }}</span>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-muted">You are not a member of any community.</div>
-                        {% endif %}
+                <label class="form-label">Curator on communities</label>
+                <div>
+                    {% if communities and communities|length > 0 %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for c in communities %}
+                        <span class="badge bg-secondary">{{ c.name }}</span>
+                        {% endfor %}
                     </div>
+                    {% else %}
+                    <div class="text-muted">You are not a member of any community.</div>
+                    {% endif %}
                 </div>
+
+                  <label class="form-label mt-3">Following communities</label>
+                <div>
+                {% if following_communities and following_communities|length > 0 %}
+                    <div class="d-flex flex-wrap gap-2">
+                    {% for c in following_communities %}
+                        <span class="badge bg-info">{{ c.name }}</span>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-muted">You are not following any community.</div>
+                {% endif %}
+                </div>
+
+                <label class="form-label mt-3">Following users</label>
+                <div>
+                {% if following_users and following_users|length > 0 %}
+                    <ul class="mb-0">
+                    {% for u in following_users %}
+                        <li>
+                            {{ u.profile.name }} {{ u.profile.surname }}
+                        </a>
+                        {% if u.email %} ({{ u.email }}){% endif %}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-muted">You are not following any user.</div>
+                {% endif %}
+                </div>
+                </div>
+
 
             </div>
 
@@ -201,10 +232,10 @@
                         Can't scan the QR code? Enter this setup key manually:
                     </p>
                     <div class="input-group mb-3" style="max-width: 300px; margin: 0 auto;">
-                        <input type="text" class="form-control" value="{{ session.temp_otp_secret }}" 
-                            id="secretKeyInput" readonly 
+                        <input type="text" class="form-control" value="{{ session.temp_otp_secret }}"
+                            id="secretKeyInput" readonly
                             style="background-color: #2a2a2a; border: 1px solid #444; color: #e0e0e0; text-align: center; font-family: monospace;">
-                        <button class="btn btn-outline-secondary" type="button" onclick="copySecret()" 
+                        <button class="btn btn-outline-secondary" type="button" onclick="copySecret()"
                                 style="border-color: #444; color: #a0a0a0;">
                             <i class="align-middle" data-feather="copy"></i> Copy
                         </button>
@@ -262,10 +293,10 @@
         var copyText = document.getElementById("secretKeyInput");
         copyText.select();
         copyText.setSelectionRange(0, 99999); // For mobile devices
-        
+
         try {
             navigator.clipboard.writeText(copyText.value).then(function() {
-                
+
             });
         } catch (err) {
             // Fallback

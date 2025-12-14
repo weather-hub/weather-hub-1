@@ -102,10 +102,6 @@ class DataSet(db.Model):
     def get_version_number(self):
         return self.version_number
 
-    def get_zenodo_url(self):
-        # Mantengo la compatibilidad (puede quedar None si no aplicable)
-        return f"https://zenodo.org/record/{self.ds_meta_data.deposition_id}" if self.ds_meta_data.dataset_doi else None
-
     def get_files_count(self):
         return sum(len(fm.files) for fm in self.feature_models)
 
@@ -142,7 +138,6 @@ class DataSet(db.Model):
             "tags": self.ds_meta_data.tags.split(",") if self.ds_meta_data.tags else [],
             "url": self.get_uvlhub_doi(),
             "download": f'{request.host_url.rstrip("/")}/dataset/download/{self.id}',
-            "zenodo": self.get_zenodo_url(),
             "files": [file.to_dict() for fm in self.feature_models for file in fm.files],
             "files_count": self.get_files_count(),
             "total_size_in_bytes": self.get_file_total_size(),
@@ -249,3 +244,42 @@ class DSMetaDataEditLog(db.Model):
 
     def __repr__(self):
         return f"<DSMetaDataEditLog id={self.id} field={self.field_name} at={self.edited_at}>"
+
+
+class DatasetComment(db.Model):
+    """Comments and feedback on datasets."""
+
+    __tablename__ = "dataset_comment"
+
+    id = db.Column(db.Integer, primary_key=True)
+    dataset_id = db.Column(db.Integer, db.ForeignKey("data_set.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=True, onupdate=datetime.utcnow)
+
+    # Relationships
+    dataset = db.relationship("DataSet", backref=db.backref("comments", lazy="dynamic", cascade="all, delete"))
+    user = db.relationship("User", backref=db.backref("dataset_comments", lazy=True))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "dataset_id": self.dataset_id,
+            "content": self.content,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "user": (
+                {
+                    "id": self.user.id,
+                    "email": self.user.email,
+                    "name": self.user.profile.name if self.user.profile else None,
+                    "surname": self.user.profile.surname if self.user.profile else None,
+                }
+                if self.user
+                else None
+            ),
+        }
+
+    def __repr__(self):
+        return f"<DatasetComment id={self.id} dataset_id={self.dataset_id} user_id={self.user_id}>"
