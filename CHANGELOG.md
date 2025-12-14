@@ -1,3 +1,9 @@
+# Version 1.7.1 (2025-12-14)
+
+## Fixes
+- fix: 2fa Test in auth module
+
+
 # Version 1.7.0 (2025-12-14)
 
 ## Features
