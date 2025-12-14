@@ -5,6 +5,7 @@ from app.modules.comments import comments_bp
 from app.modules.comments.forms import CommentForm
 from app.modules.comments.services import CommentService
 from app.modules.dataset.models import DataSet
+from app.modules.comments.models import Comment
 
 comment_service = CommentService()
 
@@ -34,11 +35,26 @@ def comment_on_dataset(dataset_id):
 @comments_bp.route("/comments/<int:comment_id>/approve", methods=["POST"])
 @login_required
 def approve_comment(comment_id):
-    comment = comment_service.approve_comment(comment_id)
+    comment = Comment.query.get(comment_id)
     if not comment:
         abort(404)
     # Solo el autor del dataset puede aprobar
     if comment.dataset.user_id != current_user.id:
         abort(403)
+    comment_service.approve_comment(comment_id)
+    doi = comment.dataset.ds_meta_data.dataset_doi
+    return redirect(url_for("dataset.subdomain_index", doi=doi))
+
+
+@comments_bp.route("/comments/<int:comment_id>/reject", methods=["POST"])
+@login_required
+def reject_comment(comment_id):
+    comment = Comment.query.get(comment_id)
+    if not comment:
+        abort(404)
+    # Solo el autor del dataset puede rechazar
+    if comment.dataset.user_id != current_user.id:
+        abort(403)
+    comment_service.reject_comment(comment_id)
     doi = comment.dataset.ds_meta_data.dataset_doi
     return redirect(url_for("dataset.subdomain_index", doi=doi))
