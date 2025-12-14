@@ -1,3 +1,149 @@
+# Version 1.7.0 (2025-12-14)
+
+## Features
+- feat: Merge Weather-hub-1 WIs
+- feat: Add migration version 11
+- feat: added test
+- feat: added test
+- feat: added test for locust
+- feat: added test for selenium
+- feat: added user profile
+- feat: add profile user view
+- feat: added selenium test for view user profile
+- feat: added locustfile test for view user profile
+- feat: added unitary test for view user profile
+- feat: added html for users view profile
+- feat: added route for view users profile
+- feat: Added comments on datasets
+- feat: added dataset feedback
+- feat: merge Fakenodo improvements and security fixes from trunk
+- feat: added dataset editing and minor edits viewing features
+
+## Fixes
+- fix: migrations and view problem
+- fix: fixed test for auth module
+- fix: fixed test for auth module
+- fix: added test for auth module
+- fix: reduce max visual identity url length to 60
+- fix: update github repository link
+- fix: merge trunk bring changes
+- fix: duplicated table migration
+- fix: Lint check line too long
+- fix: comments and feedbacks on datasets work
+- fix: Dataset_comments post and get working
+- fix: wrap long lines in tests and comments seeder
+- fix: test bug fixes
+- fix: comments selenium tests fix
+- fix: fixed comments selenium tests
+- fix: profile communities
+- fix: curator in communities on public profile
+- fix: edit profile follows fixed
+- fix: profile settings changes
+- fix: logout modal added
+- fix: logout modal added
+- fix: add curator link on community
+- fix: add curator link in community
+- fix: slint errors
+- fix: added user link for following user
+- fix: added user link for following user
+- fix: fixed link when following an user
+- fix: now users cannot see other users active sessions
+- fix: now users cannot see other users active sessions
+- fix: now users cannot see other users active sessions
+- fix: new functional website logo
+- fix: new weather logo for our app
+- fix: sun logo replaced
+- fix: slint errors
+- fix: unit test
+- fix: code formatting
+
+## Others
+- chore: bring wh-2 issues
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- refactor: deleted unnecesary zenodo
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- refactor: deleted unnecesary zenodo
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- test: added dataset testing for coverage and bug fixes
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- test: Add missing tests for dataset to improve coverage
+- test: added dataset  unit and routes tests
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: merge trunk into main
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- test(community): add route tests for community module
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bring weather-hub-1 WIs
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- Merge trunk into main
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+
+
 # Version 1.6.0 (2025-12-13)
 
 ## Features
