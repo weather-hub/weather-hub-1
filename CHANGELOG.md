@@ -1,3 +1,9 @@
+# Version 1.9.0 (2025-12-14)
+
+## Features
+- feat(comments): fix de los test de comments
+
+
 # Version 1.8.0 (2025-12-14)
 
 ## Features
