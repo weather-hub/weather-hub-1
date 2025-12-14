@@ -329,37 +329,7 @@
                 </div>
 
 
-                {% if dataset.ds_meta_data.dataset_doi %}
-                <div class="row mb-2">
-
-                        <div class="col-md-4 col-12">
-                            <span class=" text-secondary">
-                                Zenodo record
-                            </span>
-                        </div>
-
-                        {% if FLASK_ENV == 'production' %}
-                            <div class="col-md-8 col-12">
-                                <a href="https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}" target="_blank">
-                                    https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
-                                </a>
-                            </div>
-                        {% elif FLASK_ENV == 'development' %}
-                            <div class="col-md-8 col-12">
-                                <a href="https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}" target="_blank">
-                                    https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
-                                </a>
-                            </div>
-                        {% else %}
-                            <div class="col-md-8 col-12">
-                                <a href="https://zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}" target="_blank">
-                                    https://sandbox.zenodo.org/records/{{ dataset.ds_meta_data.deposition_id }}
-                                </a>
-                            </div>
-                        {% endif %}
-
-                </div>
-                {% endif %}
+                
                 <div class="row mb-2">
 
                     <div class="col-md-4 col-12">
@@ -413,7 +383,7 @@
                 {% if not dataset.ds_meta_data.dataset_doi %}
                     <div class="alert alert-warning mt-3" role="alert">
                         <i data-feather="alert-triangle" class="center-button-icon"></i>
-                        This dataset version has not been synchronized with Zenodo yet. Therefore, it does not have a DOI assigned.
+                        This dataset version has not been synchronized yet. Therefore, it does not have a DOI assigned.
                     </div>
                 {% else %}
 

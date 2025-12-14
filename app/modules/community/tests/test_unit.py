@@ -31,7 +31,7 @@ def test_client(test_client):
 
 @pytest.fixture
 def dataset_factory():
-    def _create_dataset(user_id, title="Dataset de Prueba", doi="10.5281/zenodo.12345", tags="tag1,tag2"):
+    def _create_dataset(user_id, title="Dataset de Prueba", doi="10.5281/fakenodo.12345", tags="tag1,tag2"):
         meta = DSMetaData(
             title=title,
             description=f"Descripción para {title}",

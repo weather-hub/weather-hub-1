@@ -34,14 +34,14 @@ class TestCreateDeposition:
         assert "id" in data
         assert data["metadata"] == {}
 
-    def test_create_deposition_response_has_zenodo_fields(self, test_client):
-        """Verify response includes Zenodo-compatible fields"""
+    def test_create_deposition_response_has_compatible_fields(self, test_client):
+        """Verify response includes compatible fields"""
         response = test_client.post(
             "/fakenodo/deposit/depositions", json={"metadata": {"title": "Test"}}, content_type="application/json"
         )
         data = json.loads(response.data)
 
-        # Check Zenodo-compatible fields
+        # Check compatible fields
         assert "id" in data
         assert "conceptrecid" in data
         assert "state" in data
