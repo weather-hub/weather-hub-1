@@ -367,6 +367,7 @@ def list_dataset():
         dataset_to_show = [ds for ds in datasets if ds.is_latest]
     except Exception:
         communities = []
+        return jsonify({"message": "Error fetching datasets"}), 500
 
     return render_template(
         "dataset/list_datasets.html",
@@ -550,9 +551,14 @@ def create_new_ds_version(dataset_id):
 
                 return jsonify({"message": "Version created successfully", "redirect_url": target_url}), 200
 
-            except Exception:
+            except Exception as e:
                 logger.exception("Error al crear la nueva versión")
-                return jsonify({"message": "Hubo un error interno al publicar la versión."}), 500
+                # CORRECCIÓN: Devolver un mensaje de error más detallado en modo DEBUG.
+                if current_app.config.get("DEBUG"):
+                    error_message = f"Hubo un error interno: {str(e)}"
+                else:
+                    error_message = "Hubo un error interno al publicar la versión."
+                return jsonify({"message": error_message}), 500
         else:
             return jsonify({"message": form.errors}), 400
 

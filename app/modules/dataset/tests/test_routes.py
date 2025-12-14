@@ -195,6 +195,104 @@ class TestDatasetUpload:
 
         logout(test_client)
 
+    @patch("app.modules.dataset.routes.follow_service")  # Mockeamos el servicio de notificaciones
+    @patch("app.modules.dataset.routes.deposition_service")
+    def test_create_dataset_notification_failure(self, mock_deposition, mock_follow, test_client, sample_user):
+        """
+        Test: El dataset se crea correctamente (200 OK) AUNQUE falle el envío de notificaciones
+        (bloque try/except final).
+        """
+        # 1. SETUP: Login y Perfil
+        login(test_client, "test@example.com", "test1234")
+        if not sample_user.profile:
+            profile = UserProfile(user_id=sample_user.id, name="Test", surname="User")
+            db.session.add(profile)
+            db.session.commit()
+
+        # 2. SETUP: Mocks
+        # Simulamos que el servicio de notificaciones explota
+        mock_follow.notify_dataset_published.side_effect = Exception("Email server down!")
+
+        # Mocks para que la subida a Zenodo pase bien
+        mock_deposition.create_new_deposition.return_value = {
+            "id": "1",
+            "conceptrecid": "1",
+            "conceptdoi": "10.1234/c",
+            "metadata": {},
+        }
+        mock_deposition.upload_file.return_value = None
+        mock_deposition.get_doi.return_value = "10.1234/ds.1"
+
+        # 3. SETUP: Ficheros (EL CSV VÁLIDO COMPLETO)
+        temp_folder = sample_user.temp_folder()
+        os.makedirs(temp_folder, exist_ok=True)
+
+        # CSV con TODAS las columnas requeridas
+        csv_filename = "data_valid.csv"
+        headers = [
+            "timestamp",
+            "_temp_mean",
+            "_temp_max",
+            "_temp_min",
+            "_cloud_cover",
+            "_global_radiation",
+            "_humidity",
+            "_pressure",
+            "_precipitation",
+            "_sunshine",
+            "_wind_gust",
+            "_wind_speed",
+        ]
+        row_data = "2023-01-01,15,20,10,50,100,60,1013,0,8,25,10"
+
+        with open(os.path.join(temp_folder, csv_filename), "w") as f:
+            f.write(",".join(headers) + "\n" + row_data)
+
+        # README obligatorio
+        with open(os.path.join(temp_folder, "README.md"), "w") as f:
+            f.write("# Readme")
+
+        # 4. Payload del formulario
+        data = {
+            "title": "Dataset No Notif",
+            "desc": "Desc",
+            "publication_type": "REGIONAL",
+            "tags": "tag",
+            "version_number": "v1.0.0",
+            "submit": "true",
+            # Feature Model 0: CSV
+            "feature_models-0-filename": csv_filename,
+            "feature_models-0-title": "Data",
+            "feature_models-0-desc": "D",
+            "feature_models-0-publication_type": "REGIONAL",
+            "feature_models-0-tags": "csv",
+            "feature_models-0-version": "v1.0.0",
+            # Feature Model 1: README
+            "feature_models-1-filename": "README.md",
+            "feature_models-1-title": "R",
+            "feature_models-1-desc": "D",
+            "feature_models-1-publication_type": "REGIONAL",
+            "feature_models-1-tags": "doc",
+            "feature_models-1-version": "v1.0.0",
+        }
+
+        # 5. Ejecución
+        response = test_client.post("/dataset/upload", data=data)
+
+        # 6. Aserción
+        # Si la validación del CSV pasa, llegará al bloque del follow_service.
+        # Como follow_service falla pero está en un try/except, debe devolver 200.
+        if response.status_code != 200:
+            print(f"DEBUG ERROR: {response.get_json()}")
+
+        assert response.status_code == 200
+        assert "Everything works!" in response.get_json()["message"]
+
+        # Verificamos que se intentó llamar a la notificación (y falló controladamente)
+        mock_follow.notify_dataset_published.assert_called_once()
+
+        logout(test_client)
+
 
 class TestDatasetList:
     """Tests for /dataset/list"""
@@ -212,6 +310,22 @@ class TestDatasetList:
         assert response.status_code == 200
         logout(test_client)
 
+    @patch("app.modules.dataset.routes.dataset_service")
+    def test_list_dataset_error_handling(self, mock_service, test_client):
+        """
+        Test: Verifica el comportamiento de la ruta cuando falla la base de datos.
+        Con la implementación actual, se espera un error 500 debido a variables no definidas.
+        """
+        login(test_client, "test@example.com", "test1234")
+
+        # Simulamos que la base de datos ha muerto
+        mock_service.get_synchronized.side_effect = Exception("DB Connection Failed")
+
+        response = test_client.get("/dataset/list")
+        assert response.status_code == 500
+        assert "Error fetching datasets" in response.get_json().get("message", "")
+        logout(test_client)
+
 
 class TestDatasetDownload:
     """Tests for /dataset/download/<id>"""
@@ -227,12 +341,26 @@ class TestDatasetDownload:
         response = test_client.get("/dataset/download/99999")
         assert response.status_code == 404
 
+    def test_download_dataset_with_existing_cookie(self, test_client, sample_dataset):
+        """
+        Test: Descargar enviando ya una cookie.
+        Cubre la rama 'else' donde no se genera una nueva cookie.
+        """
+        test_client.set_cookie("download_cookie", "dummy_value")
+
+        # Hacemos la petición
+        response = test_client.get(f"/dataset/download/{sample_dataset.id}")
+
+        # Verificamos que funciona (200 OK)
+        assert response.status_code == 200
+
 
 class TestDatasetSearch:
     """Tests for /dataset/search"""
 
     def test_search_requires_login(self, test_client):
         """Test that search requires authentication"""
+        logout(test_client)
         response = test_client.get("/dataset/search", follow_redirects=False)
         assert response.status_code in [302, 401]
 
