@@ -148,7 +148,8 @@ def test_get_changelog_by_dataset_id(test_app, edit_log_service, sample_dataset,
         changelog = edit_log_service.get_changelog_by_dataset_id(sample_dataset.id)
 
         assert len(changelog) >= 1
-        assert changelog[0].field_name == "title"
+        found_log = any(log.field_name == "title" and log.new_value == "New Title" for log in changelog)
+        assert found_log, "No se encontró el log de cambio de título en el changelog"
 
 
 def test_get_changelog_by_dataset_id_empty(test_app, edit_log_service, sample_user):
