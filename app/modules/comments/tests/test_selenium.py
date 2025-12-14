@@ -31,14 +31,16 @@ def test_comments_flow():
         click_safely(driver, By.ID, "submit")
 
         driver.find_element(By.LINK_TEXT, "Explore").click()
-        click_safely(driver, By.LINK_TEXT, "Weather Data (V2)")
+        click_safely(driver, By.LINK_TEXT, "Weather Patterns Dataset")
 
         driver.find_element(By.ID, "content").send_keys("esto es una prueba")
         click_safely(driver, By.CSS_SELECTOR, "form > .btn")
 
         driver.find_element(By.LINK_TEXT, "Explore").click()
-        click_safely(driver, By.LINK_TEXT, "UVL Models (V1)")
+        click_safely(driver, By.LINK_TEXT, "Climate Analysis Dataset")
         click_safely(driver, By.XPATH, "//button[contains(text(), 'Approve') or contains(@class, 'btn-success')]")
+        click_safely(driver, By.XPATH, "//button[contains(text(), 'Reject') or contains(@class, 'btn-danger')]")
+
 
         time.sleep(2)
 

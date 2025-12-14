@@ -76,6 +76,18 @@ def test_approve_comment_nonexistent_returns_none(comment_service, test_app):
         result = comment_service.approve_comment(9999)
         assert result is None
 
+def test_reject_comment_success(comment_service, dataset, user, test_app):
+    with test_app.app_context():
+        comment = comment_service.create_comment(dataset.id, user.id, "Approve me")
+        rejected_comment = comment_service.reject_comment(comment.id)
+        assert comment_service.get_comment_by_id(comment.id) is None
+
+
+def test_reject_comment_nonexistent_returns_none(comment_service, test_app):
+    with test_app.app_context():
+        result = comment_service.reject_comment(9999)
+        assert result is None
+
 
 def test_get_comments_for_dataset_owner(comment_service, dataset, user, comment_user, test_app):
     with test_app.app_context():

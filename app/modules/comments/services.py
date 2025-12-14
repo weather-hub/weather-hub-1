@@ -46,3 +46,5 @@ class CommentService:
             )
 
         return comments
+    def get_comment_by_id(self, comment_id):
+        return Comment.query.get(comment_id)
