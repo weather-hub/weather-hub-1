@@ -1,70 +1,88 @@
 from datetime import datetime, timedelta, timezone
 
-from app.modules.auth.models import User
 from app.modules.comments.models import Comment
-from app.modules.dataset.models import DataSet, DSMetaData
 from core.seeders.BaseSeeder import BaseSeeder
+from app.modules.auth.repositories import UserRepository
+from app.modules.dataset.repositories import DataSetRepository
 
 
-class CommentsSeeder(BaseSeeder):
-    """Seeder that creates example comments.
 
-    It inserts 5 unapproved comments associated to the dataset titled
-    "UVL Models (V1)". The seeder is idempotent in the sense that it will
-    first check whether there are already >=5 comments for that dataset and
-    will skip insertion if so.
+class CommentSeeder(BaseSeeder):
+    """
+    Seeder para crear comentarios sin aprobar en datasets.
+    Crea 5 comentarios sin aprobar en un dataset de user2.
     """
 
-    priority = 3
+    priority = 20  # Ejecutar después de DatasetSeeder (priority 15)
 
     def run(self):
+        # Verificar que existen usuarios
+        
+        user_repo = UserRepository()
+        dataset_repo = DataSetRepository()
 
-        # Buscar el dataset por título en DSMetaData
-        dataset = self.db.session.query(DataSet).join(DSMetaData).filter(DSMetaData.title == "UVL Models (V1)").first()
+        user1 = user_repo.get_by_email("user1@example.com")
+        user2 = user_repo.get_by_email("user2@example.com")
 
-        if not dataset:
-            print("[CommentsSeeder] Dataset 'UVL Models (V1)' no encontrado. Saltando seeders de comments.")
+        if not user1 or not user2:
+            print("Warning: Users not found. Run AuthSeeder first.")
             return
 
-        # Comprobar si ya existen suficientes comentarios no aprobados para evitar duplicados
-        existing_count = (
-            self.db.session.query(Comment).filter(Comment.dataset_id == dataset.id, Comment.approved.is_(False)).count()
-        )
-        if existing_count >= 5:
-            msg = (
-                f"[CommentsSeeder] Ya existen {existing_count} comentarios no aprobados "
-                f"para dataset id={dataset.id}. No se insertan más."
-            )
-            print(msg)
+        # Obtener un dataset de user2
+        datasets = dataset_repo.get_by_column("user_id", user2.id)
+        if not datasets:
+            print("Warning: No dataset found for user2. Run DatasetSeeder first.")
             return
 
-        # Obtener hasta 5 usuarios distintos para asignar como autores
-        users = self.db.session.query(User).limit(5).all()
-        if not users:
-            print("[CommentsSeeder] No hay usuarios en la base de datos. Crea usuarios primero.")
-            return
+        # Obtener la ÚLTIMA versión del dataset (la más reciente)
+        # Ordenar por created_at descendente para obtener la más nueva
+        dataset = sorted(datasets, key=lambda d: d.created_at, reverse=True)[0]
+        
+        print("Seeding unapproved comments...")
 
-        # Si hay menos de 5 usuarios, reutilizarlos en rotación
-        comments_to_create = []
-        now = datetime.now(timezone.utc)
-        sample_texts = [
-            "Este dataset es muy útil, gracias por compartirlo.",
-            "He encontrado una pequeña discrepancia en la columna 'temp_max'.",
-            "¿Alguien sabe qué unidad se usa en la columna 'global_radiation'?",
-            "Sería genial tener más ejemplos de uso con este conjunto de datos.",
-            "¿Hay planes para añadir más variables meteorológicas?",
+        self._create_unapproved_comments(dataset, user1)
+
+        print("Comment seeding completed successfully!")
+
+    def _create_unapproved_comments(self, dataset, comment_author):
+        """Crea 5 comentarios sin aprobar en un dataset"""
+
+        comments_data = [
+            {
+                "content": "This is a great dataset! How can I use it in my research?",
+                "days_ago": 7,
+            },
+            {
+                "content": "I found some inconsistencies in the data. Could you check the weather station readings for 2021?",
+                "days_ago": 5,
+            },
+            {
+                "content": "Would it be possible to add temperature records from other regions?",
+                "days_ago": 3,
+            },
+            {
+                "content": "The metadata documentation is very comprehensive. Thank you for the effort!",
+                "days_ago": 2,
+            },
+            {
+                "content": "Are there plans to update this dataset with 2024 data?",
+                "days_ago": 1,
+            },
         ]
 
-        for i in range(5):
-            author = users[i % len(users)]
+        comments = []
+        now = datetime.now(timezone.utc)
+
+        for comment_data in comments_data:
+            created_at = now - timedelta(days=comment_data["days_ago"])
             comment = Comment(
                 dataset_id=dataset.id,
-                author_id=author.id,
-                content=sample_texts[i],
-                created_at=(now - timedelta(minutes=5 * i)),
-                approved=False,
+                author_id=comment_author.id,
+                content=comment_data["content"],
+                created_at=created_at,
+                approved=False,  # No aprobados
             )
-            comments_to_create.append(comment)
+            comments.append(comment)
 
-        # Insertar los comentarios
-        self.seed(comments_to_create)
+        self.seed(comments)
+        print(f"  ✓ Created {len(comments)} unapproved comments for dataset '{dataset.name()}'")

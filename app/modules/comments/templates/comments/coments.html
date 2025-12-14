@@ -17,9 +17,14 @@
                         </div>
 
                         {% if not comment.approved and current_user.id == dataset.user_id %}
-                            <form action="{{ url_for('comments.approve_comment', comment_id=comment.id) }}" method="POST" style="margin:0;">
-                                <button type="submit" class="btn btn-success btn-sm">Approve</button>
-                            </form>
+                            <div class="btn-group" role="group" aria-label="Comment actions">
+                                <form action="{{ url_for('comments.approve_comment', comment_id=comment.id) }}" method="POST" style="margin:0;">
+                                    <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                                </form>
+                                <form action="{{ url_for('comments.reject_comment', comment_id=comment.id) }}" method="POST" style="margin:0;">
+                                    <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                                </form>
+                            </div>
                         {% endif %}
                     </li>
                 {% endfor %}

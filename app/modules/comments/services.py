@@ -20,6 +20,14 @@ class CommentService:
             db.session.commit()
         return comment
 
+    def reject_comment(self, comment_id):
+        comment = Comment.query.get(comment_id)
+        if not comment:
+            return None
+        db.session.delete(comment)
+        db.session.commit()
+        return comment
+
     def get_comments_for_dataset(self, dataset, user=None):
 
         if user and user.is_authenticated and user.id == dataset.user_id:
@@ -27,7 +35,7 @@ class CommentService:
         elif user and user.is_authenticated:
             comments = (
                 Comment.query.filter(
-                    Comment.dataset_id == dataset.id, db.or_(Comment.approved is True, Comment.author_id == user.id)
+                    Comment.dataset_id == dataset.id, db.or_(Comment.approved.is_(True), Comment.author_id == user.id)
                 )
                 .order_by(Comment.created_at.desc())
                 .all()
