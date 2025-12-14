@@ -1,3 +1,13 @@
+# Version 1.8.0 (2025-12-14)
+
+## Features
+- feat(comments): añadido que el dueño de un dataset pueda rechazar un comentario
+
+## Others
+- Merge branch 'task/rechazar-comment' of github.com:weather-hub/weather-hub-1 into task/rechazar-comment
+- task(comments): añadido que el dueño de un dataset pueda rechazar un comentario
+
+
 # Version 1.7.2 (2025-12-14)
 
 ## Fixes
