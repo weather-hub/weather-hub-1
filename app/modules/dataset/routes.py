@@ -41,7 +41,6 @@ from app.modules.dataset.services import (
 )
 from app.modules.fakenodo.services import FakenodoService
 from app.modules.follow.services import FollowService
-from app.modules.zenodo.services import ZenodoService
 
 follow_service = FollowService()
 
@@ -249,26 +248,11 @@ class FakenodoAdapter:
         return None
 
 
-def get_zenodo_client(working_dir: str | None = None):
-    if os.getenv("FAKENODO_URL") or os.getenv("USE_FAKE_ZENODO"):
-        return FakenodoAdapter(working_dir=working_dir)
-    try:
-        zs = ZenodoService()
-        try:
-            if zs.test_connection():
-                return zs
-            else:
-                logger.warning("ZenodoService test_connection returned False, falling back to FakenodoAdapter")
-                return FakenodoAdapter(working_dir=working_dir)
-        except Exception:
-            logger.warning("ZenodoService test_connection failed with error, falling back to FakenodoAdapter")
-            return FakenodoAdapter(working_dir=working_dir)
-    except Exception:
-        logger.warning("Unable to initialize ZenodoService, using FakenodoAdapter")
-        return FakenodoAdapter(working_dir=working_dir)
+def get_deposition_client(working_dir: str | None = None):
+    return FakenodoAdapter(working_dir=working_dir)
 
 
-zenodo_service = get_zenodo_client()
+deposition_service = get_deposition_client()
 doi_mapping_service = DOIMappingService()
 ds_view_record_service = DSViewRecordService()
 
@@ -304,12 +288,12 @@ def create_dataset():
 
         data = {}
         try:
-            zenodo_response_json = zenodo_service.create_new_deposition(dataset)
-            response_data = json.dumps(zenodo_response_json)
+            response_json = deposition_service.create_new_deposition(dataset)
+            response_data = json.dumps(response_json)
             data = json.loads(response_data)
         except Exception:
             data = {}
-            logger.exception("Exception while creating dataset data in Zenodo")
+            logger.exception("Exception while creating dataset data in deposition service")
 
         if data.get("conceptrecid"):
             deposition_id = data.get("id")
@@ -318,19 +302,19 @@ def create_dataset():
 
             try:
                 for feature_model in dataset.feature_models:
-                    zenodo_service.upload_file(dataset, deposition_id, feature_model)
+                    deposition_service.upload_file(dataset, deposition_id, feature_model)
 
-                zenodo_service.publish_deposition(deposition_id)
-                deposition_doi = zenodo_service.get_doi(deposition_id)
+                deposition_service.publish_deposition(deposition_id)
+                deposition_doi = deposition_service.get_doi(deposition_id)
                 dataset_service.update_dsmetadata(ds_meta_id, dataset_doi=deposition_doi)
 
                 # Obtener concept_doi del deposition, NUNCA derivar
                 concept_doi = None
                 try:
-                    if hasattr(zenodo_service, "get_concept_doi"):
-                        concept_doi = zenodo_service.get_concept_doi(deposition_id)
+                    if hasattr(deposition_service, "get_concept_doi"):
+                        concept_doi = deposition_service.get_concept_doi(deposition_id)
                 except Exception:
-                    logger.exception("Failed to get concept DOI from zenodo service")
+                    logger.exception("Failed to get concept DOI from deposition service")
                     concept_doi = None
 
                 # Si no se pudo obtener, crear uno basado en deposition_id como fallback
@@ -353,7 +337,9 @@ def create_dataset():
                     db.session.commit()
 
             except Exception as e:
-                msg = "it has not been possible upload feature models in Zenodo " + f"and update the DOI: {e}"
+                msg = (
+                    "it has not been possible upload feature models in deposition service " + f"and update the DOI: {e}"
+                )
                 return jsonify({"message": msg}), 200
 
         try:
@@ -545,7 +531,7 @@ def create_new_ds_version(dataset_id):
                 if not is_valid_version:
                     return jsonify({"message": error_version_msg}), 400
 
-                new_dataset = zenodo_service.publish_new_version(
+                new_dataset = deposition_service.publish_new_version(
                     form=form,
                     original_dataset=original_dataset,
                     current_user=current_user,

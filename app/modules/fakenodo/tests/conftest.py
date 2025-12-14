@@ -9,9 +9,9 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def use_fake_zenodo_for_tests(monkeypatch):
-    """Force USE_FAKE_ZENODO=true for all Fakenodo tests"""
-    monkeypatch.setenv("USE_FAKE_ZENODO", "true")
+def use_fakenodo_for_tests(monkeypatch):
+    """Force USE_FAKENODO=true for all Fakenodo tests"""
+    monkeypatch.setenv("USE_FAKENODO", "true")
 
 
 @pytest.fixture(autouse=True)

@@ -20,13 +20,13 @@ from app.modules.dataset.repositories import (
     DSViewRecordRepository,
 )
 from app.modules.dataset.validator import validate_dataset_package
+from app.modules.fakenodo.services import FakenodoService
 from app.modules.featuremodel.repositories import FeatureModelRepository, FMMetaDataRepository
 from app.modules.hubfile.repositories import (
     HubfileDownloadRecordRepository,
     HubfileRepository,
     HubfileViewRecordRepository,
 )
-from app.modules.zenodo.services import ZenodoService
 from core.services.BaseService import BaseService
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class DataSetService(BaseService):
         self.dsviewrecord_repostory = DSViewRecordRepository()
         self.hubfileviewrecord_repository = HubfileViewRecordRepository()
         self.dsmetadata_service = DSMetaDataService()
-        self.zenodo_service = ZenodoService()
+        self.fakenodo_service = FakenodoService()
         self.ds_metadata_edit_log_service = DSMetaDataEditLogService()
 
     def move_feature_models(self, dataset: DataSet):

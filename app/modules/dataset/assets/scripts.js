@@ -136,8 +136,6 @@ var currentId = 0;
 
         window.onload = function () {
 
-            test_zenodo_connection();
-
             document.getElementById('upload_button').addEventListener('click', function () {
 
                 clean_upload_errors();
