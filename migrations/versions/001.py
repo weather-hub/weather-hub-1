@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: bc9c1bbcde92
+Revision ID: 001
 Revises:
-Create Date: 2025-12-15 21:16:02.272721
+Create Date: 2025-12-14 11:18:52.409945
 
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "bc9c1bbcde92"
+revision = "001"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -91,6 +91,8 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email"),
     )
+    op.create_table("webhook", sa.Column("id", sa.Integer(),
+                    nullable=False), sa.PrimaryKeyConstraint("id"))
     op.create_table(
         "community_curators",
         sa.Column("community_id", sa.Integer(), nullable=False),
@@ -113,7 +115,8 @@ def upgrade():
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column(
             "publication_type",
-            sa.Enum("NONE", "REGIONAL", "NATIONAL", "CONTINENTAL", "OTHER", name="publicationtype"),
+            sa.Enum("NONE", "REGIONAL", "NATIONAL", "CONTINENTAL",
+                    "OTHER", name="publicationtype"),
             nullable=False,
         ),
         sa.Column("publication_doi", sa.String(length=120), nullable=True),
@@ -165,7 +168,8 @@ def upgrade():
         sa.Column("description", sa.Text(), nullable=False),
         sa.Column(
             "publication_type",
-            sa.Enum("NONE", "REGIONAL", "NATIONAL", "CONTINENTAL", "OTHER", name="publicationtype"),
+            sa.Enum("NONE", "REGIONAL", "NATIONAL", "CONTINENTAL",
+                    "OTHER", name="publicationtype"),
             nullable=False,
         ),
         sa.Column("publication_doi", sa.String(length=120), nullable=True),
@@ -193,7 +197,8 @@ def upgrade():
             ["user.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("follower_id", "author_id", name="uq_user_author_follow"),
+        sa.UniqueConstraint("follower_id", "author_id",
+                            name="uq_user_author_follow"),
     )
     op.create_table(
         "user_community_follow",
@@ -210,7 +215,8 @@ def upgrade():
             ["user.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("user_id", "community_id", name="uq_user_community_follow"),
+        sa.UniqueConstraint("user_id", "community_id",
+                            name="uq_user_community_follow"),
     )
     op.create_table(
         "user_profile",
@@ -260,7 +266,8 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
     with op.batch_alter_table("user_session", schema=None) as batch_op:
-        batch_op.create_index(batch_op.f("ix_user_session_session_id"), ["session_id"], unique=True)
+        batch_op.create_index(batch_op.f("ix_user_session_session_id"), [
+                              "session_id"], unique=True)
 
     op.create_table(
         "author",
@@ -507,6 +514,7 @@ def downgrade():
     op.drop_table("fakenodo_file")
     op.drop_table("ds_meta_data")
     op.drop_table("community_curators")
+    op.drop_table("webhook")
     op.drop_table("user")
     op.drop_table("role")
     op.drop_table("fm_metrics")

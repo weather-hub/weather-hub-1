@@ -145,8 +145,9 @@ setup_native() {
         sudo chown -R $USER:$USER .
 
         # Ahora sí, ejecutamos sin miedo
-        rosemary db:reset -y --clear-migrations
+        rosemary db:reset -y
         rosemary db:seed
+
     fi
     pause
 }
@@ -313,7 +314,7 @@ check_root_dir
 while true; do
     print_header
     echo -e "${CYAN}--- MÉTODO A: NATIVO (LINUX) ---${NC}"
-    echo " 1. Setup y repopular base de datos (Instala dependencias pero hace falta tener la BD instalada)"
+    echo " 1. Setup y repopular base de datos (Instala dependencias pero hace falta tener la BD instalada, no cambia migraciones)"
     echo " 2. Run (Ejecutar Servidor - Puerto 5000)"
     echo ""
     echo -e "${CYAN}--- MÉTODO B: DOCKER ---${NC}"
