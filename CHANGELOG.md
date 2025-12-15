@@ -1,3 +1,9 @@
+# Version 1.13.4 (2025-12-15)
+
+## Fixes
+- fix: bring trunk
+
+
 # Version 1.13.3 (2025-12-15)
 
 ## Fixes
