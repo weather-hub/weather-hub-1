@@ -1,3 +1,24 @@
+# Version 1.13.0 (2025-12-15)
+
+## Features
+- feat: add weatherhub-2 final changes
+
+## Fixes
+- fix: email server fixed
+- fix: Fixed email errors
+- fix: added test
+- fix: improve test_services.py coverage
+- fix: mejorar cobertura de test_service.py
+
+## Others
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+- chore: update changelog [skip ci]
+- chore: bump version [skip ci]
+
+
 # Version 1.12.2 (2025-12-15)
 
 ## Fixes
