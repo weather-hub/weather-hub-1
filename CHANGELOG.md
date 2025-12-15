@@ -1,3 +1,9 @@
+# Version 1.11.1 (2025-12-15)
+
+## Fixes
+- fix: weather-hub logo and icon implemented to template
+
+
 # Version 1.11.0 (2025-12-14)
 
 ## Features
