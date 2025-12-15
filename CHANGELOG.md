@@ -1,3 +1,9 @@
+# Version 1.12.1 (2025-12-15)
+
+## Fixes
+- fix: correct the not found message
+
+
 # Version 1.12.0 (2025-12-15)
 
 ## Features
