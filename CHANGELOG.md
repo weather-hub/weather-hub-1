@@ -1,3 +1,9 @@
+# Version 1.12.2 (2025-12-15)
+
+## Fixes
+- fix(branding): adaptive logo for light/dark themes
+
+
 # Version 1.12.1 (2025-12-15)
 
 ## Fixes
