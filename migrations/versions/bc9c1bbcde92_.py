@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 001
+Revision ID: bc9c1bbcde92
 Revises:
-Create Date: 2025-12-14 11:18:52.409945
+Create Date: 2025-12-15 21:16:02.272721
 
 """
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "001"
+revision = "bc9c1bbcde92"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -91,7 +91,6 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email"),
     )
-    op.create_table("webhook", sa.Column("id", sa.Integer(), nullable=False), sa.PrimaryKeyConstraint("id"))
     op.create_table(
         "community_curators",
         sa.Column("community_id", sa.Integer(), nullable=False),
@@ -508,7 +507,6 @@ def downgrade():
     op.drop_table("fakenodo_file")
     op.drop_table("ds_meta_data")
     op.drop_table("community_curators")
-    op.drop_table("webhook")
     op.drop_table("user")
     op.drop_table("role")
     op.drop_table("fm_metrics")

@@ -20,17 +20,16 @@ class AuthSeeder(BaseSeeder):
         users = [
             User(email="user1@example.com", password="1234"),
             # User 2: Mantenerlo para pruebas de 2FA *desactivado*
-            User(email="user2@example.com", password="1234"), 
-            
+            User(email="user2@example.com", password="1234"),
             # NUEVO USUARIO CON 2FA ACTIVADO POR DEFECTO
             # 1. twofa_enabled=True: Indica que el 2FA está activo.
             # 2. otp_secret: Se requiere una clave secreta (Base32) para que 2FA funcione.
-            #    He usado una clave de ejemplo (simulada) aquí. 
+            #    He usado una clave de ejemplo (simulada) aquí.
             User(
-                email="user3_2fa@example.com", 
-                password="1234", 
+                email="user3_2fa@example.com",
+                password="1234",
                 twofa_enabled=True,
-                otp_secret="BASE32SECRETFORUSER3" # CLAVE SECRETA DE EJEMPLO
+                otp_secret="BASE32SECRET",  # CLAVE SECRETA DE EJEMPLO
             ),
         ]
 
@@ -40,7 +39,7 @@ class AuthSeeder(BaseSeeder):
         # Create profiles for each user inserted.
         user_profiles = []
         # Añadimos un nombre y apellido para el nuevo usuario
-        names = [("John", "Doe"), ("Jane", "Doe"), ("Albert", "Smith")] 
+        names = [("John", "Doe"), ("Jane", "Doe"), ("Albert", "Smith")]
 
         for user, name in zip(seeded_users, names):
             profile_data = {

@@ -113,7 +113,6 @@ ensure_clean_slate() {
 # ==========================================
 # MÉTODOS: NATIVO (MANUAL)
 # ==========================================
-
 setup_native() {
     echo -e "${YELLOW}>>> Instalando dependencias Nativas...${NC}"
 
@@ -126,20 +125,27 @@ setup_native() {
 
     python3.12 -m venv venv
     source venv/bin/activate
-    pip install --upgrade pip > /dev/null
+    pip install --upgrade pip
     echo "Instalando dependencias (esto puede tardar)..."
-    pip install -r requirements.txt > /dev/null
-    pip install -e ./ > /dev/null
-
+    pip install -r requirements.txt
+    pip install -e ./
     echo -e "${GREEN}>>> Setup Nativo listo.${NC}"
+
+    # Asegúrate de que MariaDB esté corriendo
     sudo systemctl start mariadb
-    # Check rápido de BBDD
+
     echo -e "${BLUE}Nota: Asegúrate de tener MariaDB corriendo.${NC}"
     read -p "¿Quieres poblar la base de datos ahora (db:seed)? (s/n): " confirm
     if [[ "$confirm" == "s" ]]; then
-        # Aseguramos el env correcto temporalmente para el seed
+        # Aseguramos el env correcto temporalmente
         switch_env ".env.local.example"
-        flask db upgrade
+
+        # --- FIX: Arreglamos permisos antes de borrar ---
+        echo -e "${YELLOW}>>> Ajustando permisos de archivos antes del reset...${NC}"
+        sudo chown -R $USER:$USER .
+
+        # Ahora sí, ejecutamos sin miedo
+        rosemary db:reset -y --clear-migrations
         rosemary db:seed
     fi
     pause
@@ -307,7 +313,7 @@ check_root_dir
 while true; do
     print_header
     echo -e "${CYAN}--- MÉTODO A: NATIVO (LINUX) ---${NC}"
-    echo " 1. Setup (Instalar dependencias)"
+    echo " 1. Setup y repopular base de datos (Instala dependencias pero hace falta tener la BD instalada)"
     echo " 2. Run (Ejecutar Servidor - Puerto 5000)"
     echo ""
     echo -e "${CYAN}--- MÉTODO B: DOCKER ---${NC}"

@@ -66,6 +66,7 @@ class FakenodoAdapter:
         new_dataset = _dataset_service.create_from_form(form=form, current_user=current_user, allow_empty_package=True)
         new_dataset.ds_concept_id = original_dataset.ds_concept_id
         new_dataset.is_latest = True
+
         try:
             from app import db
 
@@ -197,7 +198,8 @@ class FakenodoAdapter:
             "id": rec["id"],
             "conceptrecid": rec.get("conceptrecid"),
             "conceptid": rec.get("conceptid"),
-            "conceptdoi": rec.get("conceptdoi"),  # CRÍTICO 2: Incluir conceptdoi
+            # CRÍTICO 2: Incluir conceptdoi
+            "conceptdoi": rec.get("conceptdoi"),
             "metadata": rec.get("metadata", {}),
         }
 
@@ -514,7 +516,7 @@ def create_new_ds_version(dataset_id):
             shutil.rmtree(temp_folder)
 
     meta_data_obj = original_dataset.ds_meta_data
-    meta_data_obj.authors = []
+    # meta_data_obj.authors = []
     form = DataSetVersionForm(obj=meta_data_obj)
 
     if request.method == "POST":
@@ -683,7 +685,8 @@ def view_dataset_changelog(dataset_id):
                 "to_version": log.new_value,
                 "user": log.user,
                 "edited_at": log.edited_at,
-                "changes": [],  # Aquí irán los cambios de título, descripción, etc.
+                # Aquí irán los cambios de título, descripción, etc.
+                "changes": [],
             }
         elif current_group:
             # Si no es un log de versión, es un cambio asociado al grupo actual
