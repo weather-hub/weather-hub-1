@@ -1,59 +1,28 @@
 #!/bin/bash
 
 # ---------------------------------------------------------------------------
-# Creative Commons CC BY 4.0 - David Romero - Diverso Lab
-# ---------------------------------------------------------------------------
-# This script is licensed under the Creative Commons Attribution 4.0
-# International License. You are free to share and adapt the material
-# as long as appropriate credit is given, a link to the license is provided,
-# and you indicate if changes were made.
-#
-# For more details, visit:
-# https://creativecommons.org/licenses/by/4.0/
+# Script simplificado para Render
 # ---------------------------------------------------------------------------
 
-# Exit immediately if a command exits with a non-zero status
+# Detener el script si hay cualquier error
 set -e
 
-# Initialize migrations only if the migrations directory doesn't exist
-if [ ! -d "migrations/versions" ]; then
-    # Initialize the migration repository
-    flask db init
-    flask db migrate
-fi
+echo "--> Iniciando proceso de despliegue..."
 
-# Check if the database is empty
-if [ $(mariadb -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -sse "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '$MARIADB_DATABASE';") -eq 0 ]; then
+# 1. Aplicar migraciones SIEMPRE.
+# No hace falta comprobar si la DB está vacía. Alembic sabe qué hacer.
+# Si ya están las tablas, esto no hará nada (tarda 0.1s).
+# Si faltan las tablas, las creará.
+echo "--> Ejecutando flask db upgrade..."
+flask db upgrade
 
-    echo "Empty database, migrating..."
+# 2. Opcional: Seeds
+# Si tu comando 'rosemary db:seed' está programado para no duplicar datos
+# (ej. comprueba si el usuario existe antes de crearlo), descomenta la siguiente línea:
+# echo "--> Ejecutando seeds..."
+# rosemary db:seed
 
-    # Get the latest migration revision
-    LATEST_REVISION=$(ls -1 migrations/versions/*.py | grep -v "__pycache__" | sort -r | head -n 1 | sed 's/.*\/\(.*\)\.py/\1/')
-
-    echo "Latest revision: $LATEST_REVISION"
-
-    # Run the migration process to apply all database schema changes
-    flask db upgrade
-    rosemary db:seed
-
-else
-
-    echo "Database already initialized, updating migrations..."
-
-    # Get the current revision to avoid duplicate stamp
-    CURRENT_REVISION=$(mariadb -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -sse "SELECT version_num FROM alembic_version LIMIT 1;")
-
-    if [ -z "$CURRENT_REVISION" ]; then
-        # If no current revision, stamp with the latest revision
-        flask db stamp head
-    fi
-
-    # Run the migration process to apply all database schema changes
-    flask db upgrade
-fi
-
-# Start the application using Gunicorn, binding it to port 80
-# Set the logging level to info and the timeout to 3600 seconds
-# Usamos ${PORT:-80} para que use la variable PORT de Render,
-# o el 80 si estás en local y no existe la variable.
+# 3. Iniciar la aplicación
+echo "--> Iniciando Gunicorn..."
+# Usamos exec para que Gunicorn tome el PID 1 (importante para Docker)
 exec gunicorn --bind 0.0.0.0:${PORT:-80} app:app --log-level info --timeout 3600
