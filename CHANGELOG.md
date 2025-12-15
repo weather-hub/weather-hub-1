@@ -1,3 +1,9 @@
+# Version 1.12.0 (2025-12-15)
+
+## Features
+- feat: add instalation manager
+
+
 # Version 1.11.1 (2025-12-15)
 
 ## Fixes
