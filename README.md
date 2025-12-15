@@ -1,6 +1,14 @@
-
-# Weather-hub
-
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)"
+            srcset="https://github.com/weather-hub/weather-hub-1/raw/main/app/static/img/logos/logo-weather.png?raw=1">
+    <source media="(prefers-color-scheme: light)"
+            srcset="https://github.com/weather-hub/weather-hub-1/raw/main/app/static/img/logos/logo-weather-dark.png?raw=1">
+    <img alt="Weather-Hub logo"
+         src="https://github.com/weather-hub/weather-hub-1/raw/main/app/static/img/logos/logo-weather.png?raw=1"
+         width="320">
+  </picture>
+</p>
 Repository of a Weather Dataset following Open Science principles - Developed by Weather-hub-1
 
 ## Official documentation
@@ -10,16 +18,19 @@ Repository of a Weather Dataset following Open Science principles - Developed by
 Weather-Hub is currently deployed in two separate instances:
 
 ### ☁️ Production Environment
+
 **URL:** https://weather-hub-1.onrender.com
 
 This is the stable, production-ready instance with the latest released version.
 
 ### 🌧️ Development Environment
+
 **URL:** https://weather-hub-1-trunk.onrender.com
 
 This instance is updated with the latest development changes from the main branch and is used for testing new features before production release.
 
 ---
+
 ## 🚀 Local Installation
 
 Weather-Hub includes a simple configuration to create a complete and reproducible development environment.
@@ -30,11 +41,13 @@ Weather-Hub includes a simple configuration to create a complete and reproducibl
 - **pip**: Python package manager
 - **Git**: Version control
 - **Terminal/Console Access**: For executing commands
+
 ### 🔧 Manual Step-by-Step Installation
 
 Follow these steps to set up your development environment:
 
 #### 1. Clone the repository
+
 ```bash
 git clone https://github.com/weather-hub/weather-hub-1.git
 cd weather-hub-1
@@ -45,21 +58,25 @@ cd weather-hub-1
 **If you already have MariaDB installed**, skip to [Step 2.4: Configure databases and users](#24-configure-databases-and-users)
 
 ##### 2.1 Install MariaDB
+
 ```bash
 sudo apt install mariadb-server -y
 ```
 
 ##### 2.2 Start the MariaDB service
+
 ```bash
 sudo systemctl start mariadb
 ```
 
 ##### 2.3 Configure MariaDB (Security)
+
 ```bash
 sudo mysql_secure_installation
 ```
 
 When prompted, use these values:
+
 - Enter current password for root: (press Enter)
 - Switch to unix_socket authentication: `y`
 - Change the root password: `y`
@@ -71,6 +88,7 @@ When prompted, use these values:
 - Reload privilege tables now: `y`
 
 ##### 2.4 Configure databases and users
+
 ```bash
 sudo mysql -u root -p
 ```
@@ -88,6 +106,7 @@ EXIT;
 ```
 
 #### 3. Configure Environment Variables
+
 ```bash
 cp .env.local.example .env
 echo "webhook" > .moduleignore
@@ -96,12 +115,14 @@ echo "webhook" > .moduleignore
 This copies the environment variables template with default values. The `.env` file is listed in `.gitignore` to prevent exposing sensitive credentials.
 
 #### 4. Create virtual environment
+
 ```bash
 python3.12 -m venv venv
 source venv/bin/activate
 ```
 
 #### 5. Install dependencies
+
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
@@ -109,22 +130,26 @@ pip install -e ./
 ```
 
 #### 6. Apply Migrations
+
 ```bash
 flask db upgrade
 ```
 
 #### 7. Populate Database
+
 ```bash
 rosemary db:seed
 ```
 
 #### 8. Configure pre-commit hooks
+
 ```bash
 pre-commit install
 pre-commit install --hook-type commit-msg
 ```
 
 #### 9. Run the application
+
 ```bash
 flask run --host=0.0.0.0 --reload --debug
 ```
@@ -167,6 +192,7 @@ If you want to contribute to the Weather-Hub project, please:
 4. **Push to the branch** (`git push origin feature/YourFeature`)
 
 Please ensure that your changes:
+
 - Pass the pre-commit hooks
 - Include descriptive commit messages
 - Follow the existing code structure
