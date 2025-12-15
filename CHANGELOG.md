@@ -1,3 +1,10 @@
+# Version 1.13.2 (2025-12-15)
+
+## Fixes
+- fix: bring trunk
+- fix: check dev manager
+
+
 # Version 1.13.1 (2025-12-15)
 
 ## Fixes
