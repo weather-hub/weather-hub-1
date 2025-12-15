@@ -1,28 +1,20 @@
 #!/bin/bash
-
-# ---------------------------------------------------------------------------
-# Script simplificado para Render
-# ---------------------------------------------------------------------------
-
-# Detener el script si hay cualquier error
 set -e
 
-echo "--> Iniciando proceso de despliegue..."
+echo "================================================="
+echo "   REPARACIÓN DE BASE DE DATOS (ZOMBIE FIX)    "
+echo "================================================="
 
-# 1. Aplicar migraciones SIEMPRE.
-# No hace falta comprobar si la DB está vacía. Alembic sabe qué hacer.
-# Si ya están las tablas, esto no hará nada (tarda 0.1s).
-# Si faltan las tablas, las creará.
-echo "--> Ejecutando flask db upgrade..."
+# 1. EL TRUCO: Borrar la tabla de versiones manualmente.
+# Esto obliga a Alembic a creer que es una instalación nueva.
+echo "--> [1/3] Eliminando rastro corrupto de 'alembic_version'..."
+mariadb -u $MARIADB_USER -p$MARIADB_PASSWORD -h $MARIADB_HOSTNAME -P $MARIADB_PORT -D $MARIADB_DATABASE -e "DROP TABLE IF EXISTS alembic_version;"
+
+# 2. Ahora sí, ejecutamos la migración.
+# Como borramos la versión, Alembic intentará crear todas las tablas.
+echo "--> [2/3] Ejecutando: flask db upgrade"
 flask db upgrade
 
-# 2. Opcional: Seeds
-# Si tu comando 'rosemary db:seed' está programado para no duplicar datos
-# (ej. comprueba si el usuario existe antes de crearlo), descomenta la siguiente línea:
-# echo "--> Ejecutando seeds..."
-# rosemary db:seed
-
 # 3. Iniciar la aplicación
-echo "--> Iniciando Gunicorn..."
-# Usamos exec para que Gunicorn tome el PID 1 (importante para Docker)
+echo "--> [3/3] Iniciando Gunicorn..."
 exec gunicorn --bind 0.0.0.0:${PORT:-80} app:app --log-level info --timeout 3600
