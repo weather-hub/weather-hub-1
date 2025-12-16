@@ -1,6 +1,41 @@
 #!/bin/bash
 
 # ==========================================
+# 0. AUTO-ELEVACIÓN Y DETECCIÓN DE USUARIO
+# ==========================================
+# Si no soy root, me reinicio con sudo automáticamente
+if [[ $EUID -ne 0 ]]; then
+   echo "Necesito permisos de administrador para gestionar puertos y servicios."
+   echo "Elevando privilegios..."
+   exec sudo /bin/bash "$0" "$@"
+fi
+
+# Detectamos quién es el usuario real (el humano que está tecleando)
+REAL_USER=${SUDO_USER:-$USER}
+USER_GROUP=$(id -gn $REAL_USER)
+
+# ==========================================
+# 1. TRAMPA DE SEGURIDAD (ANTI-BLOQUEOS)
+# ==========================================
+# Esta función se ejecuta SIEMPRE al final, pase lo que pase.
+cleanup_and_exit() {
+    echo ""
+    echo -e "\033[0;34m[Script] Finalizando... Devolviendo permisos de archivos a $REAL_USER...\033[0m"
+
+    # 1. Devolvemos la propiedad de TODO el directorio al usuario real
+    # Esto evita que aparezcan candados en tus archivos.
+    chown -R $REAL_USER:$USER_GROUP .
+
+    # 2. Borramos basura compilada por root (opcional, buena práctica)
+    find . -name "__pycache__" -exec rm -rf {} + > /dev/null 2>&1
+
+    echo -e "\033[0;32m✔ Listo. Todos los archivos son tuyos de nuevo.\033[0m"
+}
+
+# Activamos la trampa para: Salida Normal, CTRL+C (SIGINT), Kill (SIGTERM)
+trap cleanup_and_exit EXIT SIGINT SIGTERM
+
+# ==========================================
 # COLORES Y ESTILOS
 # ==========================================
 RED='\033[0;31m'
@@ -44,11 +79,12 @@ print_header() {
     get_service_status
     clear
     echo -e "${BLUE}================================================================${NC}"
-    echo -e "${CYAN}             WEATHER HUB - GESTOR DE ENTORNO             ${NC}"
+    echo -e "${CYAN}             WEATHER HUB - GESTOR (MODO ROOT)            ${NC}"
     echo -e "${BLUE}================================================================${NC}"
+    echo -e "   Usuario Real:  ${YELLOW}$REAL_USER${NC}"
     echo -e "   ${MAGENTA}ESTADO ACTUAL DEL SISTEMA:${NC}"
     echo -e "   [Docker]:      $DOCKER_STATUS"
-    echo -e "   [Puerto 5000]: $PORT5000_STATUS (Usado por Native o Vagrant)"
+    echo -e "   [Puerto 5000]: $PORT5000_STATUS"
     echo -e "${BLUE}================================================================${NC}"
     echo ""
 }
@@ -61,44 +97,41 @@ pause() {
 check_root_dir() {
     if [[ ! -f "requirements.txt" ]]; then
         echo -e "${RED}[ERROR] No parece que estés en la raíz del proyecto Weather Hub.${NC}"
+        # Forzamos exit para que salte el trap y arregle permisos por si acaso
         exit 1
     fi
 }
 
-# Cambia el archivo .env según el modo elegido
 switch_env() {
     local source_file=$1
-    echo -e "${BLUE}ℹ Configurando variables de entorno para este modo...${NC}"
+    echo -e "${BLUE}ℹ Configurando variables de entorno...${NC}"
     cp "$source_file" .env
+    # Permiso inmediato para lectura
+    chown $REAL_USER:$USER_GROUP .env
     echo -e "${GREEN}✔ Archivo .env actualizado desde $source_file${NC}"
 }
 
-# Función inteligente para evitar conflictos
 ensure_clean_slate() {
-    local target_method=$1 # "native", "docker", "vagrant"
+    local target_method=$1
 
     echo -e "${YELLOW}>>> Verificando conflictos para iniciar modo $target_method...${NC}"
 
-    # Caso 1: Quiero iniciar NATIVE/VAGRANT pero Docker está corriendo
+    # Caso 1: Docker bloqueando
     if [[ "$target_method" != "docker" ]] && [[ "$DOCKER_RUNNING" == true ]]; then
-        echo -e "${RED}[!] CONFLICTO DETECTADO:${NC} Docker está corriendo y bloqueará los puertos."
-        read -p "¿Quieres detener Docker automáticamente antes de seguir? (s/n): " stop_d
+        echo -e "${RED}[!] CONFLICTO DETECTADO:${NC} Docker está corriendo."
+        read -p "¿Detener Docker? (s/n): " stop_d
         if [[ "$stop_d" == "s" ]]; then
-            echo "Deteniendo Docker..."
             docker compose -f docker/docker-compose.dev.yml down
             DOCKER_RUNNING=false
         else
-            echo -e "${RED}Cancelando operación para evitar errores.${NC}"
-            pause
             return 1
         fi
     fi
 
-    # Caso 2: Quiero iniciar DOCKER pero el puerto 5000 está ocupado (Native/Vagrant)
+    # Caso 2: Puerto 5000 ocupado
     if [[ "$target_method" == "docker" ]] && [[ "$PORT5000_RUNNING" == true ]]; then
-        echo -e "${RED}[!] CONFLICTO DETECTADO:${NC} Algo está usando el puerto 5000 (posiblemente Native o Vagrant)."
-        echo "Docker fallará si no liberas el puerto."
-        read -p "¿Quieres intentar matar el proceso en el puerto 5000? (s/n): " kill_p
+        echo -e "${RED}[!] CONFLICTO DETECTADO:${NC} Puerto 5000 ocupado."
+        read -p "¿Forzar detención del proceso en puerto 5000? (s/n): " kill_p
         if [[ "$kill_p" == "s" ]]; then
             fuser -k 5000/tcp > /dev/null 2>&1
             echo -e "${GREEN}Proceso detenido.${NC}"
@@ -106,7 +139,6 @@ ensure_clean_slate() {
             return 1
         fi
     fi
-
     return 0
 }
 
@@ -114,7 +146,7 @@ ensure_clean_slate() {
 # MÉTODOS: NATIVO (MANUAL)
 # ==========================================
 setup_native() {
-    echo -e "${YELLOW}>>> Instalando dependencias Nativas...${NC}"
+    echo -e "${YELLOW}>>> Instalando dependencias Nativas (Como Root)...${NC}"
 
     if ! command -v python3.12 &> /dev/null; then
         echo -e "${RED}[Error] Python 3.12 no detectado.${NC}"
@@ -123,51 +155,47 @@ setup_native() {
 
     echo "webhook" > .moduleignore
 
+    # Crear entorno virtual
     python3.12 -m venv venv
     source venv/bin/activate
     pip install --upgrade pip
-    echo "Instalando dependencias (esto puede tardar)..."
+
+    echo "Instalando dependencias..."
     pip install -r requirements.txt
     pip install -e ./
+
     echo -e "${GREEN}>>> Setup Nativo listo.${NC}"
 
-    # Asegúrate de que MariaDB esté corriendo
-    sudo systemctl start mariadb
+    systemctl start mariadb
+    echo -e "${BLUE}Nota: MariaDB iniciada.${NC}"
 
-    echo -e "${BLUE}Nota: Asegúrate de tener MariaDB corriendo.${NC}"
     read -p "¿Quieres poblar la base de datos ahora (db:seed)? (s/n): " confirm
     if [[ "$confirm" == "s" ]]; then
-        # Aseguramos el env correcto temporalmente
         switch_env ".env.local.example"
 
-        # --- FIX: Arreglamos permisos antes de borrar ---
-        echo -e "${YELLOW}>>> Ajustando permisos de archivos antes del reset...${NC}"
-        sudo chown -R $USER:$USER .
-
-        # Ahora sí, ejecutamos sin miedo
+        echo -e "${YELLOW}>>> Reseteando DB...${NC}"
+        # Como somos root, rosemary no tendrá problemas de permisos de escritura
         rosemary db:reset -y
         rosemary db:seed
-
     fi
     pause
 }
 
 run_native() {
-    # 1. Verificar limpieza
     ensure_clean_slate "native" || return
-    sudo systemctl start mariadb
-    # 2. Configurar ENV
+    systemctl start mariadb
     switch_env ".env.local.example"
 
-    # 3. Ejecutar
-    echo -e "${YELLOW}>>> Ejecutando entorno Nativo...${NC}"
+    echo -e "${YELLOW}>>> Ejecutando entorno Nativo (Flask)...${NC}"
     if [[ ! -d "venv" ]]; then
-        echo -e "${RED}[Error] Entorno virtual no encontrado. Ejecuta Setup primero.${NC}"; pause; return
+        echo -e "${RED}[Error] Entorno virtual no encontrado.${NC}"; pause; return
     fi
 
     source venv/bin/activate
     echo -e "${GREEN}Servidor iniciándose en http://localhost:5000${NC}"
     echo "Presiona CTRL+C para detener."
+
+    # Ejecutamos Flask. Al cerrar con CTRL+C, saltará el TRAP y arreglará permisos.
     flask run --host=0.0.0.0 --reload --debug
     pause
 }
@@ -175,51 +203,40 @@ run_native() {
 # ==========================================
 # MÉTODOS: DOCKER
 # ==========================================
+# Docker funciona mejor como root/sudo, así que esto es ideal.
 
 setup_docker() {
     echo -e "${YELLOW}>>> Preparando imágenes Docker...${NC}"
-    if ! command -v docker &> /dev/null; then echo -e "${RED}[Error] Docker no instalado.${NC}"; return; fi
-    sudo systemctl stop mariadb
+    systemctl stop mariadb
     docker compose -f docker/docker-compose.dev.yml up -d --build
     echo -e "${GREEN}>>> Imágenes construidas.${NC}"
     pause
 }
 
 run_docker() {
-    # 1. Verificar limpieza
     ensure_clean_slate "docker" || return
-    sudo systemctl stop mariadb
-    # 2. Configurar ENV
+    systemctl stop mariadb
     switch_env ".env.docker.example"
 
-    # 3. Ejecutar
     echo -e "${YELLOW}>>> Levantando contenedores...${NC}"
     docker compose -f docker/docker-compose.dev.yml up -d
-
     echo -e "${GREEN}>>> Contenedores activos.${NC}"
-    echo "App disponible en http://localhost"
     pause
 }
 
 stop_docker() {
     echo -e "${YELLOW}>>> Deteniendo entorno Docker...${NC}"
     docker compose -f docker/docker-compose.dev.yml down
-    echo -e "${GREEN}>>> Contenedores detenidos.${NC}"
     pause
 }
 
 reset_docker() {
-    echo -e "${RED}>>> ¡ATENCIÓN! ESTA ACCIÓN ES DESTRUCTIVA <<<${NC}"
-    echo "Se detendrán los contenedores y SE BORRARÁ LA BASE DE DATOS (Volúmenes)."
-    echo "Perderás todos los datos guardados en Docker."
-
-    read -p "¿Estás seguro? (escribe 'si' para confirmar): " confirm
+    echo -e "${RED}>>> ¡ATENCIÓN! RESET TOTAL DE DOCKER <<<${NC}"
+    echo "Se eliminarán contenedores y VOLÚMENES (Datos)."
+    read -p "¿Estás seguro? (escribe 'si'): " confirm
     if [[ "$confirm" == "si" ]]; then
-        echo -e "${YELLOW}>>> Reiniciando entorno Docker de fábrica...${NC}"
         docker compose -f docker/docker-compose.dev.yml down -v
-        echo -e "${GREEN}>>> Sistema limpio. Ejecuta 'Run Docker' para regenerar la BBDD.${NC}"
-    else
-        echo "Operación cancelada."
+        echo -e "${GREEN}>>> Sistema limpio.${NC}"
     fi
     pause
 }
@@ -227,81 +244,45 @@ reset_docker() {
 # ==========================================
 # MÉTODOS: VAGRANT
 # ==========================================
+# Vagrant NO debe correr como root directo.
+# Usamos 'sudo -u $REAL_USER' para invocar los comandos de vagrant.
 
 setup_vagrant() {
-    echo -e "${YELLOW}>>> Preparando Vagrant...${NC}"
-    echo "Limpiando archivos conflictivos..."
-    sudo rm -r uploads
-    sudo rm -r -f rosemary.egg-info
-    sudo rm  app.log*
+    echo -e "${YELLOW}>>> Limpiando para Vagrant...${NC}"
+    # Como somos root, el rm nunca falla
+    rm -rf uploads rosemary.egg-info app.log*
     echo -e "${GREEN}>>> Archivos preparados.${NC}"
     pause
 }
 
 run_vagrant() {
-    # 1. Verificar limpieza
     ensure_clean_slate "vagrant" || return
 
-    # 2. Configurar ENV (Vagrant lo hace dentro, pero copiamos el base por si acaso)
+    # Copiamos env, pero aseguramos permisos al momento para que Vagrant lo lea
     cp .env.vagrant.example .env
+    chown $REAL_USER:$USER_GROUP .env
 
     cd vagrant || return
+    echo -e "${YELLOW}>>> Iniciando VM (Como usuario $REAL_USER)...${NC}"
 
-    echo -e "${YELLOW}>>> Iniciando Máquina Virtual...${NC}"
-    vagrant up
+    # COMANDO CRÍTICO: Ejecutar como usuario normal
+    sudo -u $REAL_USER vagrant up
+
     echo -e "${GREEN}>>> VM Iniciada. Conectando SSH...${NC}"
-    vagrant ssh
+    sudo -u $REAL_USER vagrant ssh
     cd ..
-}
-
-rerun_vagrant() {
-    # 1. Verificar limpieza
-    ensure_clean_slate "vagrant" || return
-
-    # 2. Configurar ENV (Vagrant lo hace dentro, pero copiamos el base por si acaso)
-    if [[ ! -f ".env" ]]; then cp .env.vagrant.example .env; fi
-
-    cd vagrant || return
-
-    echo -e "${YELLOW}>>> Iniciando Máquina Virtual...${NC}"
-    vagrant up --provision
-    echo -e "${GREEN}>>> VM Iniciada. Conectando SSH...${NC}"
-    vagrant ssh
-    cd ..
-}
-
-reload_vagrant() {
-    # 1. Verificar limpieza
-    ensure_clean_slate "vagrant" || return
-
-    # 2. Configurar ENV (Vagrant lo hace dentro, pero copiamos el base por si acaso)
-    if [[ ! -f ".env" ]]; then cp .env.vagrant.example .env; fi
-
-    cd vagrant || return
-
-    echo -e "${YELLOW}>>> Iniciando Máquina Virtual...${NC}"
-    vagrant reload --provision
-    echo -e "${GREEN}>>> VM recargada. Conectando SSH...${NC}"
-    vagrant ssh
-    cd ..
-}
-
-stop_vagrant() {
-    echo -e "${YELLOW}>>> Deteniendo Vagrant...${NC}"
-    cd vagrant || return
-    vagrant halt
-    cd ..
-    echo -e "${GREEN}>>> VM Detenida.${NC}"
-    pause
 }
 
 destroy_vagrant() {
-    echo -e "${YELLOW}>>> Destruyendo maquina virtual...${NC}"
+    echo -e "${YELLOW}>>> Destruyendo VM...${NC}"
     cd vagrant || return
-    vagrant destroy
-    rm -r .vagrant
+    sudo -u $REAL_USER vagrant destroy -f
+
+    # Limpieza profunda de carpeta .vagrant
+    rm -rf .vagrant
+
     cd ..
-    echo -e "${GREEN}>>> VM Detenida.${NC}"
+    echo -e "${GREEN}>>> VM Eliminada.${NC}"
     pause
 }
 
@@ -313,25 +294,24 @@ check_root_dir
 
 while true; do
     print_header
-    echo -e "${CYAN}--- MÉTODO A: NATIVO (LINUX) ---${NC}"
-    echo " 1. Setup y repopular base de datos (Instala dependencias pero hace falta tener la BD instalada, no cambia migraciones)"
-    echo " 2. Run (Ejecutar Servidor - Puerto 5000)"
+    echo -e "${CYAN}--- NATIVO (Local) ---${NC}"
+    echo " 1. Setup (Instalar dependencias + Seed BD)"
+    echo " 2. Run (Flask Server)"
     echo ""
-    echo -e "${CYAN}--- MÉTODO B: DOCKER ---${NC}"
-    echo " 3. Setup (Construir imágenes)"
-    echo " 4. Run (Levantar Contenedores - Puerto 80)"
-    echo " 5. Stop (Detener - Mantiene datos)"
-    echo -e "${RED} 6. RESET (Detener - BORRA DATOS)${NC}"
+    echo -e "${CYAN}--- DOCKER (Contenedores) ---${NC}"
+    echo " 3. Setup (Build Images)"
+    echo " 4. Run (Up)"
+    echo " 5. Stop"
+    echo -e "${RED} 6. RESET (Borrar Datos Docker)${NC}"
     echo ""
-    echo -e "${CYAN}--- MÉTODO C: VAGRANT ---${NC}"
-    echo " 7. Limpiar conflictos (Preparar archivos)"
-    echo " 8. Run (Iniciar y SSH)"
-    echo " 9. Apagar (Eliminar VM)"
+    echo -e "${CYAN}--- VAGRANT (Máquina Virtual) ---${NC}"
+    echo " 7. Limpiar conflictos"
+    echo " 8. Run (Up + SSH) [Modo Usuario Seguro]"
+    echo " 9. Destruir VM"
     echo ""
-    echo -e "${CYAN}--- OTROS ---${NC}"
-    echo " 10. Salir"
+    echo " 10. Salir (Arregla permisos al salir)"
     echo ""
-    read -p "Selecciona una opción [1-10]: " opcion
+    read -p "Selecciona: " opcion
 
     case $opcion in
         1) setup_native ;;
@@ -343,7 +323,7 @@ while true; do
         7) setup_vagrant ;;
         8) run_vagrant ;;
         9) destroy_vagrant ;;
-        10) echo "Saliendo..."; exit 0 ;;
+        10) exit 0 ;; # Al salir, salta el 'trap' y arregla permisos
         *) echo -e "${RED}Opción no válida.${NC}"; pause ;;
     esac
 done
