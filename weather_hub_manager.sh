@@ -231,9 +231,9 @@ reset_docker() {
 setup_vagrant() {
     echo -e "${YELLOW}>>> Preparando Vagrant...${NC}"
     echo "Limpiando archivos conflictivos..."
-    rm -r uploads
-    rm -r -f rosemary.egg-info
-    rm  app.log*
+    sudo rm -r uploads
+    sudo rm -r -f rosemary.egg-info
+    sudo rm  app.log*
     echo -e "${GREEN}>>> Archivos preparados.${NC}"
     pause
 }
@@ -243,7 +243,7 @@ run_vagrant() {
     ensure_clean_slate "vagrant" || return
 
     # 2. Configurar ENV (Vagrant lo hace dentro, pero copiamos el base por si acaso)
-    if [[ ! -f ".env" ]]; then cp .env.vagrant.example .env; fi
+    cp .env.vagrant.example .env
 
     cd vagrant || return
 
