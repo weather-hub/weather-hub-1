@@ -1,3 +1,9 @@
+# Version 1.13.6 (2025-12-16)
+
+## Fixes
+- fix: error
+
+
 # Version 1.13.5 (2025-12-15)
 
 ## Fixes
