@@ -7,6 +7,7 @@ on:
       - trunk
       - feature/*
       - task/*
+      - hotfix/*
   pull_request:
     branches:
       - main
